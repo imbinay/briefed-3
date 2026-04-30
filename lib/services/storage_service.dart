@@ -54,6 +54,7 @@ class StorageService {
     await prefs.remove(AppConstants.keyTotalQuizzes);
     await prefs.remove(AppConstants.keyUserCountry);
     await prefs.remove(AppConstants.keyQuizHistory);
+    await prefs.remove(AppConstants.keyIsPro);
     await prefs.remove('bonus_played_date');
     await clearQuestionCache();
   }
@@ -119,9 +120,18 @@ class StorageService {
   static Future<void> setTotalQuizzes(int count) =>
       prefs.setInt(AppConstants.keyTotalQuizzes, count);
 
+  // ── SUBSCRIPTION ─────────────────────────────────────────────────────────
+  static bool getIsPro() => prefs.getBool(AppConstants.keyIsPro) ?? false;
+
+  static Future<void> setIsPro(bool value) =>
+      prefs.setBool(AppConstants.keyIsPro, value);
+
   // ── STREAK LOGIC ──────────────────────────────────────────────────────────
   static Future<int> updateStreakAfterQuiz() async {
-    final today = DateTime.now().toIso8601String().substring(0, 10);
+    final now = DateTime.now();
+    final today = '${now.year.toString().padLeft(4, '0')}-'
+        '${now.month.toString().padLeft(2, '0')}-'
+        '${now.day.toString().padLeft(2, '0')}';
     final lastDate = getLastPlayedDate();
     final streak = getStreak();
 
@@ -131,8 +141,17 @@ class StorageService {
     if (lastDate.isEmpty) {
       newStreak = 1;
     } else {
-      final last = DateTime.parse(lastDate);
-      final diff = DateTime.now().difference(last).inDays;
+      // DateTime.parse('YYYY-MM-DD') returns UTC midnight in Dart. Build local
+      // DateTime objects from the date components so inDays reflects calendar
+      // days in the user's timezone rather than raw 24-hour durations.
+      final todayDate = DateTime(now.year, now.month, now.day);
+      final parts = lastDate.split('-');
+      final lastLocal = DateTime(
+        int.parse(parts[0]),
+        int.parse(parts[1]),
+        int.parse(parts[2]),
+      );
+      final diff = todayDate.difference(lastLocal).inDays;
       newStreak = diff == 1 ? streak + 1 : 1;
     }
 
@@ -217,6 +236,7 @@ class StorageService {
       notificationHour: getNotificationHour(),
       notificationMinute: getNotificationMinute(),
       recentResults: getQuizHistory(),
+      isPro: getIsPro(),
     );
   }
 }

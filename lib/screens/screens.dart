@@ -11,8 +11,8 @@ import 'dart:math';
 import 'dart:typed_data';
 import 'package:audioplayers/audioplayers.dart';
 
-import 'package:google_mobile_ads/google_mobile_ads.dart';
 import '../core/theme.dart';
+import '../widgets/ad_widgets.dart';
 import '../core/constants.dart';
 import '../models/models.dart';
 import '../providers/providers.dart';
@@ -20,266 +20,689 @@ import '../services/ad_service.dart';
 import '../services/auth_service.dart';
 import '../services/storage_service.dart';
 import '../services/gemini_service.dart';
+import '../services/pro_purchase_service.dart';
 import '../widgets/widgets.dart';
 
 // STATIC GAME DATA
 
 class _RealOrFakeData {
   static const List<Map<String, dynamic>> headlines = [
+    // ── REAL ──────────────────────────────────────────────────────────────
     {
-      'headline':
-          'Australia bans social media for children under 16, fines up to \$50M',
+      'headline': 'Australia bans social media for children under 16, fines up to \$50M',
       'isReal': true,
-      'explanation':
-          'Australia passed this landmark law in late 2024, the first country globally to do so.'
+      'explanation': 'Australia passed this landmark law in late 2024, the first country globally to do so.'
     },
     {
       'headline': 'Twitter rebrands to X after Elon Musk acquisition',
       'isReal': true,
-      'explanation':
-          'Elon Musk completed his \$44B Twitter acquisition and rebranded it to X in 2023.'
+      'explanation': 'Elon Musk completed his \$44B Twitter acquisition and rebranded it to X in 2023.'
     },
     {
       'headline': 'ChatGPT reaches 100 million users in just two months',
       'isReal': true,
-      'explanation':
-          'ChatGPT became the fastest-growing consumer app in history when it launched in late 2022.'
+      'explanation': 'ChatGPT became the fastest-growing consumer app in history when it launched in late 2022.'
     },
     {
       'headline': 'India overtakes China as world\'s most populous country',
       'isReal': true,
-      'explanation':
-          'India surpassed China in 2023 according to UN population estimates.'
+      'explanation': 'India surpassed China in 2023 according to UN population estimates.'
     },
     {
       'headline': 'Scientists release first ever image of a black hole',
       'isReal': true,
-      'explanation':
-          'The Event Horizon Telescope released the first black hole image in April 2019.'
+      'explanation': 'The Event Horizon Telescope released the first black hole image in April 2019.'
     },
     {
-      'headline':
-          'NASA\'s Artemis I successfully completes uncrewed Moon mission',
+      'headline': 'NASA\'s Artemis I successfully completes uncrewed Moon mission',
       'isReal': true,
-      'explanation':
-          'Artemis I launched in November 2022 and completed a 25-day mission around the Moon.'
+      'explanation': 'Artemis I launched in November 2022 and completed a 25-day mission around the Moon.'
     },
     {
-      'headline':
-          'OpenAI\'s GPT-4 passes the bar exam scoring in top 10 percent',
+      'headline': 'OpenAI\'s GPT-4 passes the bar exam scoring in top 10 percent',
       'isReal': true,
-      'explanation':
-          'GPT-4 scored in approximately the 90th percentile on the Uniform Bar Examination.'
+      'explanation': 'GPT-4 scored in approximately the 90th percentile on the Uniform Bar Examination.'
     },
     {
       'headline': 'Japan\'s population declines for 13th consecutive year',
       'isReal': true,
-      'explanation':
-          'Japan has faced population decline since 2011 due to low birth rates and limited immigration.'
+      'explanation': 'Japan has faced population decline since 2011 due to low birth rates and limited immigration.'
     },
     {
       'headline': 'Netflix loses subscribers for first time in over a decade',
       'isReal': true,
-      'explanation':
-          'Netflix reported losing 200,000 subscribers in Q1 2022, its first loss since 2011.'
+      'explanation': 'Netflix reported losing 200,000 subscribers in Q1 2022, its first loss since 2011.'
     },
     {
       'headline': 'WHO declares COVID-19 a global pandemic',
       'isReal': true,
-      'explanation':
-          'The World Health Organisation officially declared COVID-19 a pandemic on March 11, 2020.'
+      'explanation': 'The World Health Organisation officially declared COVID-19 a pandemic on March 11, 2020.'
     },
     {
-      'headline':
-          'Apple becomes first company to reach \$3 trillion market cap',
+      'headline': 'Apple becomes first company to reach \$3 trillion market cap',
       'isReal': true,
-      'explanation':
-          'Apple briefly crossed \$3 trillion in January 2022, the first company to do so.'
+      'explanation': 'Apple briefly crossed \$3 trillion in January 2022, the first company to do so.'
     },
     {
       'headline': 'Spotify launches in 80 new markets in a single day',
       'isReal': true,
-      'explanation':
-          'Spotify expanded to 80 new markets in February 2021 including parts of Africa and Asia.'
+      'explanation': 'Spotify expanded to 80 new markets in February 2021 including parts of Africa and Asia.'
     },
     {
-      'headline':
-          'France bans all smartphones in public parks to boost social interaction',
+      'headline': 'Elon Musk surpasses Jeff Bezos to become world\'s richest person',
+      'isReal': true,
+      'explanation': 'Musk overtook Bezos in January 2021 after Tesla\'s share price surged.'
+    },
+    {
+      'headline': 'Facebook rebrands its parent company to Meta',
+      'isReal': true,
+      'explanation': 'Mark Zuckerberg announced the rebrand to Meta in October 2021 to reflect the metaverse focus.'
+    },
+    {
+      'headline': 'GameStop shares surge over 1,700% in a matter of weeks',
+      'isReal': true,
+      'explanation': 'Reddit traders on WallStreetBets drove a massive short squeeze in January 2021.'
+    },
+    {
+      'headline': 'Container ship Ever Given runs aground, blocking the Suez Canal for six days',
+      'isReal': true,
+      'explanation': 'The Ever Given grounded in March 2021, blocking one of the world\'s busiest trade routes.'
+    },
+    {
+      'headline': 'Squid Game becomes Netflix\'s most-watched series of all time',
+      'isReal': true,
+      'explanation': 'The Korean thriller was watched in 111 million households within its first 28 days in 2021.'
+    },
+    {
+      'headline': 'James Webb Space Telescope launches on Christmas Day',
+      'isReal': true,
+      'explanation': 'Webb launched on December 25, 2021, from French Guiana and became the most powerful telescope ever built.'
+    },
+    {
+      'headline': 'Microsoft acquires Activision Blizzard for a record \$69 billion',
+      'isReal': true,
+      'explanation': 'Microsoft completed the acquisition in October 2023 after a lengthy regulatory battle.'
+    },
+    {
+      'headline': 'Russia launches a full-scale military invasion of Ukraine',
+      'isReal': true,
+      'explanation': 'Russia began its invasion of Ukraine on February 24, 2022, triggering Europe\'s largest conflict since WWII.'
+    },
+    {
+      'headline': 'Queen Elizabeth II dies after a 70-year reign, aged 96',
+      'isReal': true,
+      'explanation': 'Queen Elizabeth II died at Balmoral Castle on September 8, 2022.'
+    },
+    {
+      'headline': 'FTX crypto exchange collapses; CEO Sam Bankman-Fried is arrested',
+      'isReal': true,
+      'explanation': 'FTX filed for bankruptcy in November 2022 and Bankman-Fried was later convicted of fraud.'
+    },
+    {
+      'headline': 'Argentina wins the FIFA World Cup; Messi lifts the trophy for the first time',
+      'isReal': true,
+      'explanation': 'Argentina beat France on penalties in the 2022 World Cup final in Qatar.'
+    },
+    {
+      'headline': 'NASA\'s DART mission successfully changes an asteroid\'s orbit',
+      'isReal': true,
+      'explanation': 'DART deliberately crashed into the asteroid Dimorphos in September 2022, altering its path.'
+    },
+    {
+      'headline': 'Rishi Sunak becomes the UK\'s first British Asian prime minister',
+      'isReal': true,
+      'explanation': 'Sunak took office in October 2022, becoming the UK\'s youngest PM in modern times.'
+    },
+    {
+      'headline': 'iPhone 15 replaces the Lightning port with USB-C',
+      'isReal': true,
+      'explanation': 'Apple switched to USB-C on all iPhone 15 models in 2023 following EU regulations.'
+    },
+    {
+      'headline': 'OpenAI CEO Sam Altman is fired, then reinstated within five days',
+      'isReal': true,
+      'explanation': 'The OpenAI board ousted Altman in November 2023 before pressure from staff and investors forced his return.'
+    },
+    {
+      'headline': 'Meta launches Threads, gaining over 100 million users in under a week',
+      'isReal': true,
+      'explanation': 'Threads launched in July 2023 and became the fastest app to reach 100 million sign-ups.'
+    },
+    {
+      'headline': 'India\'s Chandrayaan-3 becomes first spacecraft to land near the Moon\'s south pole',
+      'isReal': true,
+      'explanation': 'Chandrayaan-3 successfully landed in August 2023, a world first for the lunar south pole.'
+    },
+    {
+      'headline': 'King Charles III is crowned at Westminster Abbey',
+      'isReal': true,
+      'explanation': 'Charles was coronated on May 6, 2023, the first British coronation in 70 years.'
+    },
+    {
+      'headline': 'Lionel Messi wins a record-breaking eighth Ballon d\'Or',
+      'isReal': true,
+      'explanation': 'Messi claimed his eighth Ballon d\'Or in October 2023, extending his own record.'
+    },
+    {
+      'headline': 'Apple unveils the Vision Pro mixed-reality headset at \$3,499',
+      'isReal': true,
+      'explanation': 'Apple revealed the Vision Pro at WWDC in June 2023; it went on sale in February 2024.'
+    },
+    {
+      'headline': 'YouTube begins blocking ad-blocker extensions for users worldwide',
+      'isReal': true,
+      'explanation': 'YouTube rolled out a global crackdown on ad blockers in late 2023.'
+    },
+    {
+      'headline': 'Reddit goes public via IPO, valued at around \$6.4 billion',
+      'isReal': true,
+      'explanation': 'Reddit listed on the New York Stock Exchange in March 2024.'
+    },
+    {
+      'headline': 'Nvidia briefly becomes the world\'s most valuable publicly traded company',
+      'isReal': true,
+      'explanation': 'Nvidia overtook Microsoft in June 2024 driven by insatiable demand for AI chips.'
+    },
+    {
+      'headline': 'TikTok faces a potential federal ban in the United States',
+      'isReal': true,
+      'explanation': 'A US law requiring ByteDance to divest TikTok was signed in April 2024 over national security concerns.'
+    },
+    {
+      'headline': 'EU fines Apple nearly \$2 billion for anti-competitive App Store practices',
+      'isReal': true,
+      'explanation': 'The European Commission fined Apple €1.84 billion in March 2024 over music streaming rules.'
+    },
+    {
+      'headline': 'SpaceX\'s Starship rocket completes its first fully successful test flight',
+      'isReal': true,
+      'explanation': 'Starship\'s sixth test flight in October 2024 saw both the booster and ship successfully recovered.'
+    },
+    {
+      'headline': 'Boeing 737 Max grounded worldwide after two fatal crashes kill 346 people',
+      'isReal': true,
+      'explanation': 'The Lion Air and Ethiopian Airlines crashes in 2018–19 led to a 20-month global grounding.'
+    },
+    {
+      'headline': 'Notre-Dame Cathedral in Paris catches fire, destroying its medieval spire',
+      'isReal': true,
+      'explanation': 'The April 2019 fire caused catastrophic damage; restoration work continues.'
+    },
+    {
+      'headline': 'Greta Thunberg is named Time magazine\'s Person of the Year, aged 16',
+      'isReal': true,
+      'explanation': 'Time chose the Swedish climate activist as Person of the Year in December 2019.'
+    },
+    {
+      'headline': 'Facebook acquires WhatsApp for \$19 billion',
+      'isReal': true,
+      'explanation': 'Facebook completed the WhatsApp acquisition in October 2014 for \$19 billion.'
+    },
+    {
+      'headline': 'Edward Snowden leaks classified NSA mass-surveillance documents',
+      'isReal': true,
+      'explanation': 'Snowden revealed PRISM and other surveillance programmes to journalists in June 2013.'
+    },
+    {
+      'headline': 'NASA\'s Curiosity rover lands on Mars using a sky-crane system',
+      'isReal': true,
+      'explanation': 'Curiosity touched down in Gale Crater in August 2012 using a novel sky-crane landing.'
+    },
+    {
+      'headline': 'Osama bin Laden is killed by US Navy SEALs in Pakistan',
+      'isReal': true,
+      'explanation': 'Operation Neptune Spear on May 2, 2011 ended the decade-long hunt for the al-Qaeda leader.'
+    },
+    {
+      'headline': 'Steve Jobs dies aged 56 after battling pancreatic cancer',
+      'isReal': true,
+      'explanation': 'Jobs passed away on October 5, 2011, six weeks after stepping down as Apple CEO.'
+    },
+    {
+      'headline': 'Google DeepMind\'s AlphaGo defeats world Go champion Lee Sedol 4-1',
+      'isReal': true,
+      'explanation': 'AlphaGo\'s 2016 victory was seen as a landmark moment in artificial intelligence.'
+    },
+    {
+      'headline': 'Pokémon Go is downloaded 100 million times within its first month',
+      'isReal': true,
+      'explanation': 'The augmented-reality game became a global phenomenon after launching in July 2016.'
+    },
+    {
+      'headline': 'UK votes to leave the European Union in the Brexit referendum',
+      'isReal': true,
+      'explanation': 'The June 2016 vote resulted in 52% of Britons choosing to leave the EU.'
+    },
+    {
+      'headline': 'Scientists confirm the first direct detection of gravitational waves',
+      'isReal': true,
+      'explanation': 'LIGO announced the detection in February 2016, confirming a prediction Einstein made 100 years earlier.'
+    },
+    {
+      'headline': 'Paris Agreement on climate change is signed by 195 nations',
+      'isReal': true,
+      'explanation': 'The landmark agreement was adopted at COP21 in December 2015.'
+    },
+    {
+      'headline': 'Lehman Brothers collapses, filing the largest bankruptcy in US history',
+      'isReal': true,
+      'explanation': 'Lehman\'s September 2008 failure triggered a global financial crisis.'
+    },
+    {
+      'headline': 'Space Shuttle Challenger breaks apart 73 seconds after launch',
+      'isReal': true,
+      'explanation': 'The January 28, 1986 disaster killed all seven crew members due to a failed O-ring seal.'
+    },
+    {
+      'headline': 'IBM\'s Deep Blue defeats world chess champion Garry Kasparov',
+      'isReal': true,
+      'explanation': 'Deep Blue won a six-game match against Kasparov in May 1997, a milestone for AI.'
+    },
+    {
+      'headline': 'Dolly the sheep is revealed as the first mammal cloned from an adult cell',
+      'isReal': true,
+      'explanation': 'Scientists at the Roslin Institute in Scotland cloned Dolly in 1996 and announced it in 1997.'
+    },
+    {
+      'headline': 'Y2K bug causes no major disasters despite widespread global panic',
+      'isReal': true,
+      'explanation': 'Billions spent on fixes meant the millennium date change on January 1, 2000 passed without incident.'
+    },
+    {
+      'headline': 'Euro banknotes and coins enter circulation across 12 EU nations',
+      'isReal': true,
+      'explanation': 'The euro became physical currency on January 1, 2002 in Austria, France, Germany and nine others.'
+    },
+    {
+      'headline': 'Skype launches, making free video calls over the internet widely accessible',
+      'isReal': true,
+      'explanation': 'Skype launched in August 2003 and rapidly changed how people communicated long-distance.'
+    },
+    {
+      'headline': 'WHO renames monkeypox to \'mpox\' amid stigma concerns',
+      'isReal': true,
+      'explanation': 'The WHO officially adopted the new name mpox in November 2022.'
+    },
+    {
+      'headline': 'US Supreme Court overturns Roe v. Wade, ending federal abortion rights',
+      'isReal': true,
+      'explanation': 'The Dobbs v. Jackson ruling in June 2022 left abortion law to individual states.'
+    },
+    {
+      'headline': 'Netflix confirms it will introduce ads for cheaper subscription tier',
+      'isReal': true,
+      'explanation': 'Netflix launched its ad-supported plan in November 2022 to counter subscriber losses.'
+    },
+    {
+      'headline': 'Stephen Hawking dies peacefully at his home in Cambridge, aged 76',
+      'isReal': true,
+      'explanation': 'The theoretical physicist and author of A Brief History of Time died on March 14, 2018.'
+    },
+    {
+      'headline': 'WhatsApp rolls out end-to-end encryption for all one billion users by default',
+      'isReal': true,
+      'explanation': 'WhatsApp enabled full end-to-end encryption for every message in April 2016.'
+    },
+    {
+      'headline': 'Apple launches the iPad, creating the modern tablet computer market',
+      'isReal': true,
+      'explanation': 'Steve Jobs unveiled the first iPad in January 2010; it sold 300,000 units on its first day.'
+    },
+    {
+      'headline': 'Google Maps launches with free street-level navigation for the public',
+      'isReal': true,
+      'explanation': 'Google Maps launched in February 2005 and transformed how people navigate.'
+    },
+
+    // ── FAKE ──────────────────────────────────────────────────────────────
+    {
+      'headline': 'France bans all smartphones in public parks to boost social interaction',
       'isReal': false,
-      'explanation':
-          'France has banned phones in schools, but no such law exists for public parks.'
+      'explanation': 'France banned phones in schools, but no such law exists for public parks.'
     },
     {
       'headline': 'Google announces plans to acquire Reddit for \$8 billion',
       'isReal': false,
-      'explanation':
-          'Reddit went public via IPO in 2024. Google has not acquired it.'
+      'explanation': 'Reddit went public via IPO in 2024. Google has not acquired it.'
     },
     {
-      'headline':
-          'Amazon opens world\'s first fully underwater warehouse in Norway',
+      'headline': 'Amazon opens world\'s first fully underwater warehouse in Norway',
       'isReal': false,
-      'explanation':
-          'This is entirely fictional. Amazon has no underwater facilities.'
+      'explanation': 'Entirely fictional. Amazon has no underwater facilities.'
     },
     {
-      'headline':
-          'Tesla launches solar-powered commercial airline service by 2026',
+      'headline': 'Tesla launches solar-powered commercial airline service by 2026',
       'isReal': false,
-      'explanation':
-          'Tesla operates in EVs and energy storage, not commercial aviation.'
+      'explanation': 'Tesla operates in EVs and energy storage, not commercial aviation.'
     },
     {
-      'headline':
-          'Scientists confirm daily coffee consumption reverses memory loss',
+      'headline': 'Scientists confirm daily coffee consumption reverses memory loss',
       'isReal': false,
-      'explanation':
-          'No study confirms coffee reverses memory loss. Some suggest mild cognitive benefits only.'
+      'explanation': 'No study confirms coffee reverses memory loss. Some suggest mild cognitive benefits only.'
     },
     {
-      'headline':
-          'UN passes resolution making internet access a basic human right with enforcement',
+      'headline': 'UN passes resolution making internet access a basic human right with enforcement powers',
       'isReal': false,
-      'explanation':
-          'The UN has called internet access important but passed no binding enforcement resolution.'
+      'explanation': 'The UN has called internet access important but passed no binding enforcement resolution.'
     },
     {
-      'headline':
-          'Microsoft acquires Nintendo for \$75 billion to enter gaming hardware market',
+      'headline': 'Microsoft acquires Nintendo for \$75 billion to enter gaming hardware market',
       'isReal': false,
-      'explanation':
-          'Microsoft acquired Activision Blizzard but has not acquired Nintendo.'
+      'explanation': 'Microsoft acquired Activision Blizzard but has not acquired Nintendo.'
     },
     {
-      'headline':
-          'New study confirms humans only use 10 percent of their brain capacity',
+      'headline': 'New study confirms humans only use 10 percent of their brain capacity',
       'isReal': false,
-      'explanation':
-          'This is a long-debunked myth. Brain imaging shows all areas of the brain are regularly active.'
+      'explanation': 'This is a long-debunked myth. Brain imaging shows all brain areas are regularly active.'
     },
     {
-      'headline':
-          'Sweden mandates four-day work week for all companies with over 50 employees',
+      'headline': 'Sweden mandates four-day work week for all companies with over 50 employees',
       'isReal': false,
-      'explanation':
-          'Sweden trialled shorter hours in some sectors but has no national four-day work week law.'
+      'explanation': 'Sweden trialled shorter hours in some sectors but has no national four-day work week law.'
     },
     {
-      'headline':
-          'Apple launches its own satellite internet service to rival Starlink',
+      'headline': 'Apple launches its own satellite internet service to rival Starlink',
       'isReal': false,
       'explanation': 'Apple has not launched a satellite internet service.'
+    },
+    {
+      'headline': 'Google announces plans to acquire TikTok for \$30 billion',
+      'isReal': false,
+      'explanation': 'Google has not acquired TikTok. ByteDance still owns it despite US legislative pressure.'
+    },
+    {
+      'headline': 'Tesla unveils a consumer flying car priced at \$25,000 for 2027 delivery',
+      'isReal': false,
+      'explanation': 'Tesla has no flying car programme. It focuses on ground-based electric vehicles.'
+    },
+    {
+      'headline': 'Scientists develop a daily pill that fully replaces the need for physical exercise',
+      'isReal': false,
+      'explanation': 'No approved pill replicates the full benefits of exercise. Research exists but no product.'
+    },
+    {
+      'headline': 'Spotify announces it will pay artists \$1 per stream starting 2025',
+      'isReal': false,
+      'explanation': 'Spotify pays roughly \$0.003–\$0.005 per stream. A \$1 per stream rate is completely fictional.'
+    },
+    {
+      'headline': 'Apple purchases Formula 1 broadcasting rights for \$10 billion',
+      'isReal': false,
+      'explanation': 'Apple has not purchased F1 broadcasting rights. It does have an F1 film in production.'
+    },
+    {
+      'headline': 'Meta shuts down Instagram and migrates all users to Threads',
+      'isReal': false,
+      'explanation': 'Instagram remains one of the world\'s most-used apps. Meta runs both Instagram and Threads.'
+    },
+    {
+      'headline': 'Scientists confirm signs of microbial life in the clouds of Venus',
+      'isReal': false,
+      'explanation': 'Phosphine was detected in Venusian clouds (disputed), but life has not been confirmed.'
+    },
+    {
+      'headline': 'Microsoft acquires Adobe for \$75 billion to dominate creative software',
+      'isReal': false,
+      'explanation': 'Adobe\'s proposed acquisition by Figma (\$20B) was scrapped. Microsoft has not acquired Adobe.'
+    },
+    {
+      'headline': 'EU mandates all social media posts must be fact-checked before publishing',
+      'isReal': false,
+      'explanation': 'No such law exists. The EU\'s Digital Services Act requires platforms to address illegal content, not pre-screen posts.'
+    },
+    {
+      'headline': 'WHO classifies excessive social media use as a recognised mental disorder',
+      'isReal': false,
+      'explanation': 'The WHO has not classified social media use as a mental disorder. Gaming disorder was added in 2018.'
+    },
+    {
+      'headline': 'China successfully lands astronauts on the Moon before NASA\'s Artemis crew',
+      'isReal': false,
+      'explanation': 'As of 2024, no human has walked on the Moon since Apollo 17 in 1972. China targets the Moon by the 2030s.'
+    },
+    {
+      'headline': 'YouTube introduces mandatory 30-second unskippable ads before every video',
+      'isReal': false,
+      'explanation': 'YouTube has non-skippable ads but they are typically 15–20 seconds and not on every video.'
+    },
+    {
+      'headline': 'Bitcoin becomes legal tender in the United States by executive order',
+      'isReal': false,
+      'explanation': 'Bitcoin is legal in the US but is not legal tender. El Salvador adopted it as legal tender in 2021.'
+    },
+    {
+      'headline': 'Facebook sues Google for copying the concept of social \'likes\'',
+      'isReal': false,
+      'explanation': 'No such lawsuit exists. The \'like\' button concept predates Facebook and has never been exclusively claimed.'
+    },
+    {
+      'headline': 'Apple acquires Netflix for \$200 billion in a landmark streaming deal',
+      'isReal': false,
+      'explanation': 'Apple has not acquired Netflix. Both companies run separate, competing streaming services.'
+    },
+    {
+      'headline': 'Scientists successfully grow a fully functional human heart in a laboratory',
+      'isReal': false,
+      'explanation': 'Researchers have grown organoids and partial heart tissue, but not a full functional human heart.'
+    },
+    {
+      'headline': 'Elon Musk purchases Disney to merge it with X and Tesla',
+      'isReal': false,
+      'explanation': 'Musk has not purchased Disney. He has expressed interest but made no formal bid.'
+    },
+    {
+      'headline': 'Netflix announces it will charge extra for watching more than 4 hours of content per day',
+      'isReal': false,
+      'explanation': 'Netflix charges a flat subscription fee with no daily viewing limits.'
+    },
+    {
+      'headline': 'WHO declares climate anxiety a globally recognised mental health emergency',
+      'isReal': false,
+      'explanation': 'Climate anxiety is acknowledged by mental health bodies, but the WHO has not declared it an emergency.'
+    },
+    {
+      'headline': 'Japan introduces a law requiring humanoid robots to hold legal rights by 2030',
+      'isReal': false,
+      'explanation': 'No country has granted legal rights to robots. Japan leads in robotics but has passed no such law.'
+    },
+    {
+      'headline': 'Scientists invent a pill that eliminates the need for sleep',
+      'isReal': false,
+      'explanation': 'No approved drug replaces sleep. Some military research explores wakeful agents, none eliminate sleep need.'
+    },
+    {
+      'headline': 'Google launches a free smartphone to directly compete with the iPhone',
+      'isReal': false,
+      'explanation': 'Google makes the Pixel phone but it is not free. A free Google-branded phone does not exist.'
+    },
+    {
+      'headline': 'NASA confirms it has received a signal from an alien civilisation',
+      'isReal': false,
+      'explanation': 'NASA has found no confirmed signal from extraterrestrial intelligence. The search continues via SETI.'
+    },
+    {
+      'headline': 'Amazon announces free delivery will no longer be included with Prime',
+      'isReal': false,
+      'explanation': 'Free delivery remains a core Prime benefit as of 2024. Amazon has raised prices but kept the feature.'
+    },
+    {
+      'headline': 'Facebook introduces a feature showing exactly who viewed your profile',
+      'isReal': false,
+      'explanation': 'Facebook has never offered a profile-viewer feature and has repeatedly confirmed it cannot be built.'
+    },
+    {
+      'headline': 'PayPal acquires Snapchat to expand into social commerce',
+      'isReal': false,
+      'explanation': 'PayPal has not acquired Snapchat. Snap Inc. remains an independent company.'
+    },
+    {
+      'headline': 'EU bans all targeted advertising aimed at users under the age of 18',
+      'isReal': false,
+      'explanation': 'The EU has restricted some targeting of minors under GDPR and DSA, but not banned all targeted ads.'
+    },
+    {
+      'headline': 'McDonald\'s announces plans to go fully vegetarian across all menus by 2030',
+      'isReal': false,
+      'explanation': 'McDonald\'s has added plant-based options but has no plan to remove meat from its global menu.'
+    },
+    {
+      'headline': 'Amazon builds the world\'s first fully operational drone delivery motorway',
+      'isReal': false,
+      'explanation': 'Amazon Prime Air drone deliveries exist in limited trials. A dedicated drone motorway does not exist.'
+    },
+    {
+      'headline': 'UN votes to ban all private jet travel by 2028 for climate reasons',
+      'isReal': false,
+      'explanation': 'No UN resolution banning private jets has been passed. France banned short domestic flights in 2023.'
+    },
+    {
+      'headline': 'Scientists confirm that drinking a glass of red wine daily significantly extends lifespan',
+      'isReal': false,
+      'explanation': 'Many studies suggest moderate alcohol offers little to no health benefit. No confirmed lifespan extension.'
+    },
+    {
+      'headline': 'Wikipedia permanently bans all AI-generated content from its articles',
+      'isReal': false,
+      'explanation': 'Wikipedia has introduced guidance on AI content but has not issued a blanket permanent ban.'
+    },
+    {
+      'headline': 'OpenAI creates an AI that writes full novels completely indistinguishable from human authors',
+      'isReal': false,
+      'explanation': 'AI can produce novel-length text, but studies show AI writing remains detectable by trained reviewers.'
+    },
+    {
+      'headline': 'South Korea passes a law making social media addiction a criminal offence',
+      'isReal': false,
+      'explanation': 'South Korea treats gaming addiction as a health issue, not a crime. No such social media law exists.'
+    },
+    {
+      'headline': 'China bans all fossil fuel vehicles with immediate 90-day notice to drivers',
+      'isReal': false,
+      'explanation': 'China aims to reduce fossil fuel vehicles by 2035 but has not issued an immediate ban.'
+    },
+    {
+      'headline': 'Apple announces the iPhone will switch to the Android operating system',
+      'isReal': false,
+      'explanation': 'Apple develops its own iOS and has never indicated any plan to adopt Android.'
     },
   ];
 }
 
 class _OldestToLatestData {
   static const List<Map<String, dynamic>> events = [
-    {
-      'event': 'Neil Armstrong walks on the Moon',
-      'year': 1969,
-      'detail': 'Apollo 11 mission, July 20, 1969'
-    },
-    {
-      'event': 'The Berlin Wall falls',
-      'year': 1989,
-      'detail': 'November 9, 1989'
-    },
-    {
-      'event': 'The World Wide Web is invented',
-      'year': 1991,
-      'detail': 'First website live August 6, 1991'
-    },
-    {
-      'event': 'Amazon is founded by Jeff Bezos',
-      'year': 1994,
-      'detail': 'Started as an online bookstore'
-    },
-    {
-      'event': 'Google is founded',
-      'year': 1998,
-      'detail': 'Incorporated September 4, 1998'
-    },
-    {
-      'event': 'Wikipedia launches publicly',
-      'year': 2001,
-      'detail': 'January 15, 2001'
-    },
-    {
-      'event': 'Facebook launches from a Harvard dorm room',
-      'year': 2004,
-      'detail': 'February 4, 2004'
-    },
-    {
-      'event': 'YouTube is founded',
-      'year': 2005,
-      'detail': 'First video uploaded April 23, 2005'
-    },
-    {
-      'event': 'Twitter is founded',
-      'year': 2006,
-      'detail': 'First tweet by Jack Dorsey, March 21, 2006'
-    },
-    {
-      'event': 'First iPhone is unveiled by Steve Jobs',
-      'year': 2007,
-      'detail': 'Macworld, January 9, 2007'
-    },
-    {
-      'event': 'Barack Obama elected as US President',
-      'year': 2008,
-      'detail': 'November 4, 2008'
-    },
-    {
-      'event': 'Bitcoin is created by Satoshi Nakamoto',
-      'year': 2009,
-      'detail': 'Genesis block mined January 3, 2009'
-    },
-    {
-      'event': 'Instagram launches on the App Store',
-      'year': 2010,
-      'detail': 'October 6, 2010'
-    },
-    {
-      'event': 'Snapchat launches',
-      'year': 2011,
-      'detail': 'Originally called "Picaboo"'
-    },
-    {
-      'event': 'SpaceX lands a rocket booster for first time',
-      'year': 2015,
-      'detail': 'Cape Canaveral, December 21, 2015'
-    },
-    {
-      'event': 'TikTok launches internationally',
-      'year': 2018,
-      'detail': 'Merged with Musical.ly, August 2018'
-    },
-    {
-      'event': 'COVID-19 declared a global pandemic',
-      'year': 2020,
-      'detail': 'WHO declaration, March 11, 2020'
-    },
-    {
-      'event': 'Elon Musk acquires Twitter and renames it X',
-      'year': 2022,
-      'detail': 'October 27, 2022'
-    },
-    {
-      'event': 'ChatGPT launches publicly',
-      'year': 2022,
-      'detail': 'OpenAI, November 30, 2022'
-    },
-    {
-      'event': 'India overtakes China as world\'s most populous country',
-      'year': 2023,
-      'detail': 'UN confirmed mid-2023'
-    },
-    {
-      'event': 'Australia bans social media for under-16s',
-      'year': 2024,
-      'detail': 'World-first law, late 2024'
-    },
+    // ── Pre-20th century ──────────────────────────────────────────────────
+    {'event': 'Battle of Hastings: William the Conqueror defeats King Harold', 'year': 1066, 'detail': 'October 14, 1066 — Norman conquest of England'},
+    {'event': 'King John signs the Magna Carta', 'year': 1215, 'detail': 'June 15, 1215 — first limits on royal power'},
+    {'event': 'Gutenberg completes his printing press with movable type', 'year': 1440, 'detail': 'c.1440 — transforms mass communication'},
+    {'event': 'Columbus reaches the Americas on behalf of Spain', 'year': 1492, 'detail': 'October 12, 1492 — lands in the Bahamas'},
+    {'event': 'Copernicus publishes his heliocentric model of the solar system', 'year': 1543, 'detail': 'De revolutionibus, 1543'},
+    {'event': 'Newton publishes his laws of gravity in Principia Mathematica', 'year': 1687, 'detail': 'July 5, 1687 — foundations of classical mechanics'},
+    {'event': 'American Declaration of Independence signed in Philadelphia', 'year': 1776, 'detail': 'July 4, 1776'},
+    {'event': 'French Revolution begins: the Bastille is stormed', 'year': 1789, 'detail': 'July 14, 1789 — Bastille Day'},
+    {'event': 'Napoleon Bonaparte defeated at the Battle of Waterloo', 'year': 1815, 'detail': 'June 18, 1815 — end of the Napoleonic Wars'},
+    {'event': 'Darwin publishes On the Origin of Species', 'year': 1859, 'detail': 'November 24, 1859 — theory of evolution by natural selection'},
+    {'event': 'Alexander Graham Bell patents the telephone', 'year': 1876, 'detail': 'March 7, 1876 — first practical voice communication device'},
+    {'event': 'Edison demonstrates the first practical incandescent light bulb', 'year': 1879, 'detail': 'October 21, 1879 — changes life after dark forever'},
+    {'event': 'Karl Benz patents the first true petrol-powered automobile', 'year': 1886, 'detail': 'January 29, 1886 — the Benz Patent-Motorwagen'},
+    {'event': 'First modern Olympic Games held in Athens, Greece', 'year': 1896, 'detail': 'April 6–15, 1896 — 14 nations compete'},
+    {'event': 'Wright Brothers achieve first powered flight at Kitty Hawk', 'year': 1903, 'detail': 'December 17, 1903 — 12 seconds, 120 feet'},
+    {'event': 'Einstein publishes the Special Theory of Relativity', 'year': 1905, 'detail': 'June 30, 1905 — E=mc² introduced'},
+    // ── 1910s–1940s ───────────────────────────────────────────────────────
+    {'event': 'RMS Titanic sinks on her maiden voyage', 'year': 1912, 'detail': 'April 15, 1912 — 1,517 lives lost'},
+    {'event': 'World War I begins following assassination of Archduke Franz Ferdinand', 'year': 1914, 'detail': 'June 28, 1914 — four years of global conflict'},
+    {'event': 'Russian Revolution begins: Tsar Nicholas II abdicates', 'year': 1917, 'detail': 'March 15, 1917 — end of the Romanov dynasty'},
+    {'event': 'Treaty of Versailles officially ends World War I', 'year': 1919, 'detail': 'June 28, 1919 — signed in the Hall of Mirrors'},
+    {'event': 'Fleming discovers penicillin in a contaminated petri dish', 'year': 1928, 'detail': 'September 28, 1928 — world\'s first antibiotic'},
+    {'event': 'Wall Street Crash triggers the Great Depression', 'year': 1929, 'detail': 'October 29, 1929 — Black Tuesday'},
+    {'event': 'Amelia Earhart becomes first woman to fly solo across the Atlantic', 'year': 1932, 'detail': 'May 20–21, 1932 — Harbour Grace to Londonderry'},
+    {'event': 'Germany invades Poland, starting World War II', 'year': 1939, 'detail': 'September 1, 1939 — two days later Britain and France declare war'},
+    {'event': 'D-Day: Allied forces storm the beaches of Normandy', 'year': 1944, 'detail': 'June 6, 1944 — largest seaborne invasion in history'},
+    {'event': 'Atomic bomb dropped on Hiroshima, Japan', 'year': 1945, 'detail': 'August 6, 1945 — \'Little Boy\' kills an estimated 80,000 immediately'},
+    // ── 1947–1970 ─────────────────────────────────────────────────────────
+    {'event': 'India gains independence from British rule', 'year': 1947, 'detail': 'August 15, 1947 — Nehru\'s \'Tryst with Destiny\' speech'},
+    {'event': 'State of Israel officially declared', 'year': 1948, 'detail': 'May 14, 1948 — proclaimed by David Ben-Gurion'},
+    {'event': 'Mao Zedong proclaims the People\'s Republic of China', 'year': 1949, 'detail': 'October 1, 1949 — Tiananmen Square ceremony'},
+    {'event': 'Korean War begins as North Korea invades South Korea', 'year': 1950, 'detail': 'June 25, 1950 — the "Forgotten War"'},
+    {'event': 'Watson and Crick publish the double helix structure of DNA', 'year': 1953, 'detail': 'April 25, 1953 — in Nature magazine'},
+    {'event': 'Roger Bannister runs the first sub-four-minute mile', 'year': 1954, 'detail': 'May 6, 1954 — 3:59.4 at Oxford'},
+    {'event': 'Rosa Parks refuses to give up her bus seat in Montgomery', 'year': 1955, 'detail': 'December 1, 1955 — sparks the Montgomery Bus Boycott'},
+    {'event': 'Sputnik launched as the first artificial satellite in Earth orbit', 'year': 1957, 'detail': 'October 4, 1957 — Soviet Union beats US into space'},
+    {'event': 'NASA established as the US civilian space agency', 'year': 1958, 'detail': 'October 1, 1958 — born out of the space race'},
+    {'event': 'Yuri Gagarin becomes the first human to travel in space', 'year': 1961, 'detail': 'April 12, 1961 — orbit completed in 108 minutes'},
+    {'event': 'Cuban Missile Crisis: the closest the world came to nuclear war', 'year': 1962, 'detail': 'October 16–28, 1962 — 13 days of standoff'},
+    {'event': 'President John F. Kennedy assassinated in Dallas, Texas', 'year': 1963, 'detail': 'November 22, 1963 — Lee Harvey Oswald charged'},
+    {'event': 'Civil Rights Act signed into law in the United States', 'year': 1964, 'detail': 'July 2, 1964 — signed by President Lyndon Johnson'},
+    {'event': 'Neil Armstrong walks on the Moon', 'year': 1969, 'detail': 'Apollo 11 mission, July 20, 1969'},
+    {'event': 'Apollo 13 safely returns to Earth after an oxygen tank explosion', 'year': 1970, 'detail': 'April 17, 1970 — "Houston, we have a problem"'},
+    // ── 1970s–1990 ────────────────────────────────────────────────────────
+    {'event': 'Intel releases the 4004, the world\'s first commercial microprocessor', 'year': 1971, 'detail': 'November 15, 1971 — 2,300 transistors, 740 kHz'},
+    {'event': 'Roe v. Wade legalises abortion in the United States', 'year': 1973, 'detail': 'January 22, 1973 — overturned by Dobbs ruling in 2022'},
+    {'event': 'President Nixon resigns over the Watergate scandal', 'year': 1974, 'detail': 'August 9, 1974 — only US president to resign'},
+    {'event': 'Microsoft founded by Bill Gates and Paul Allen', 'year': 1975, 'detail': 'April 4, 1975 — originally based in Albuquerque'},
+    {'event': 'Apple Computer Company founded by Steve Jobs and Steve Wozniak', 'year': 1976, 'detail': 'April 1, 1976 — incorporated in the Jobs family garage'},
+    {'event': 'Star Wars premieres and becomes a global cultural phenomenon', 'year': 1977, 'detail': 'May 25, 1977 — goes on to earn billions worldwide'},
+    {'event': 'First test-tube baby, Louise Brown, born in the UK', 'year': 1978, 'detail': 'July 25, 1978 — pioneer of in vitro fertilisation'},
+    {'event': 'Sony launches the Walkman, transforming personal music', 'year': 1979, 'detail': 'July 1, 1979 — music becomes truly portable'},
+    {'event': 'John Lennon shot outside his New York apartment', 'year': 1980, 'detail': 'December 8, 1980 — killed by Mark David Chapman'},
+    {'event': 'IBM launches its first personal computer', 'year': 1981, 'detail': 'August 12, 1981 — the IBM PC sets the standard'},
+    {'event': 'Compact disc commercially launched by Sony and Philips', 'year': 1982, 'detail': 'October 1, 1982 — replaces vinyl and cassette over time'},
+    {'event': 'Microsoft Word is released for the first time', 'year': 1983, 'detail': 'October 25, 1983 — for MS-DOS'},
+    {'event': 'Apple Macintosh launched with the iconic Super Bowl advertisement', 'year': 1984, 'detail': 'January 22, 1984 — the "1984" ad directed by Ridley Scott'},
+    {'event': 'Microsoft launches Windows 1.0', 'year': 1985, 'detail': 'November 20, 1985 — the beginning of Windows'},
+    {'event': 'Space Shuttle Challenger breaks apart 73 seconds after launch', 'year': 1986, 'detail': 'January 28, 1986 — all seven crew members killed'},
+    {'event': 'Black Monday: global stock markets lose 20% in a single day', 'year': 1987, 'detail': 'October 19, 1987 — worst single-day crash in history'},
+    {'event': 'Ben Johnson stripped of 100m Olympic gold medal for doping', 'year': 1988, 'detail': 'September 24, 1988 — Seoul Olympics scandal'},
+    {'event': 'The Berlin Wall falls', 'year': 1989, 'detail': 'November 9, 1989'},
+    {'event': 'Tim Berners-Lee proposes the World Wide Web', 'year': 1990, 'detail': 'March 12, 1990 — his CERN proposal called it "vague but exciting"'},
+    // ── 1991–2010 ─────────────────────────────────────────────────────────
+    {'event': 'The World Wide Web becomes publicly accessible', 'year': 1991, 'detail': 'August 6, 1991 — first website goes live'},
+    {'event': 'First SMS text message sent, reading "Merry Christmas"', 'year': 1992, 'detail': 'December 3, 1992 — sent by Neil Papworth'},
+    {'event': 'Mosaic launches as the first widely-used graphical web browser', 'year': 1993, 'detail': 'January 23, 1993 — makes the internet visual'},
+    {'event': 'Amazon is founded by Jeff Bezos', 'year': 1994, 'detail': 'Started as an online bookstore'},
+    {'event': 'Windows 95 launches with the iconic Start button', 'year': 1995, 'detail': 'August 24, 1995 — sold 7 million copies in five weeks'},
+    {'event': 'Dolly the sheep unveiled as the first mammal cloned from an adult cell', 'year': 1996, 'detail': 'February 22, 1997 — announced; cloned in July 1996'},
+    {'event': 'IBM\'s Deep Blue defeats world chess champion Garry Kasparov', 'year': 1997, 'detail': 'May 11, 1997 — first time a computer beat a world champion in a match'},
+    {'event': 'Google is founded', 'year': 1998, 'detail': 'Incorporated September 4, 1998'},
+    {'event': 'Napster launches and transforms music piracy online', 'year': 1999, 'detail': 'June 1, 1999 — shut down by court order in 2001'},
+    {'event': 'Y2K bug causes no disasters despite worldwide panic', 'year': 2000, 'detail': 'January 1, 2000 — billions spent on fixes paid off'},
+    {'event': 'Wikipedia launches publicly', 'year': 2001, 'detail': 'January 15, 2001'},
+    {'event': 'Euro banknotes and coins enter circulation across 12 EU nations', 'year': 2002, 'detail': 'January 1, 2002'},
+    {'event': 'Skype launches, enabling free internet voice and video calls', 'year': 2003, 'detail': 'August 29, 2003 — acquired by Microsoft in 2011'},
+    {'event': 'Facebook launches from a Harvard dorm room', 'year': 2004, 'detail': 'February 4, 2004'},
+    {'event': 'YouTube is founded', 'year': 2005, 'detail': 'First video uploaded April 23, 2005'},
+    {'event': 'Twitter is founded', 'year': 2006, 'detail': 'First tweet by Jack Dorsey, March 21, 2006'},
+    {'event': 'First iPhone is unveiled by Steve Jobs', 'year': 2007, 'detail': 'Macworld, January 9, 2007'},
+    {'event': 'Barack Obama elected as US President', 'year': 2008, 'detail': 'November 4, 2008'},
+    {'event': 'Lehman Brothers collapses, triggering the global financial crisis', 'year': 2008, 'detail': 'September 15, 2008 — largest bankruptcy in US history'},
+    {'event': 'Bitcoin is created by Satoshi Nakamoto', 'year': 2009, 'detail': 'Genesis block mined January 3, 2009'},
+    {'event': 'Instagram launches on the App Store', 'year': 2010, 'detail': 'October 6, 2010'},
+    {'event': 'Apple launches the iPad, creating the tablet computer market', 'year': 2010, 'detail': 'January 27, 2010 — unveiled by Steve Jobs'},
+    // ── 2011–2024 ─────────────────────────────────────────────────────────
+    {'event': 'Osama bin Laden killed by US Navy SEALs in Pakistan', 'year': 2011, 'detail': 'May 2, 2011 — Operation Neptune Spear'},
+    {'event': 'Steve Jobs dies aged 56 after battling pancreatic cancer', 'year': 2011, 'detail': 'October 5, 2011 — six weeks after stepping down as Apple CEO'},
+    {'event': 'Snapchat launches', 'year': 2011, 'detail': 'Originally called "Picaboo"'},
+    {'event': 'NASA\'s Curiosity rover lands on Mars using a sky-crane system', 'year': 2012, 'detail': 'August 6, 2012 — Gale Crater'},
+    {'event': 'Edward Snowden leaks classified NSA surveillance documents', 'year': 2013, 'detail': 'June 5, 2013 — triggers global privacy debate'},
+    {'event': 'Facebook acquires WhatsApp for \$19 billion', 'year': 2014, 'detail': 'February 19, 2014 — largest venture-backed acquisition at the time'},
+    {'event': 'SpaceX lands a rocket booster for the first time', 'year': 2015, 'detail': 'Cape Canaveral, December 21, 2015'},
+    {'event': 'Paris Agreement on climate change signed by 195 nations', 'year': 2015, 'detail': 'December 12, 2015 — COP21'},
+    {'event': 'UK votes to leave the European Union in the Brexit referendum', 'year': 2016, 'detail': 'June 23, 2016 — 52% vote Leave'},
+    {'event': 'Pokémon Go downloaded 100 million times in its first month', 'year': 2016, 'detail': 'July 2016 — augmented reality craze'},
+    {'event': '#MeToo movement goes viral, reshaping conversations on harassment', 'year': 2017, 'detail': 'October 2017 — hashtag used millions of times'},
+    {'event': 'TikTok launches internationally after merging with Musical.ly', 'year': 2018, 'detail': 'August 2018'},
+    {'event': 'First ever photograph of a black hole released by astronomers', 'year': 2019, 'detail': 'April 10, 2019 — Event Horizon Telescope team'},
+    {'event': 'Notre-Dame Cathedral fire devastates Paris, destroying the medieval spire', 'year': 2019, 'detail': 'April 15, 2019'},
+    {'event': 'COVID-19 declared a global pandemic', 'year': 2020, 'detail': 'WHO declaration, March 11, 2020'},
+    {'event': 'George Floyd\'s death sparks global Black Lives Matter protests', 'year': 2020, 'detail': 'May 25, 2020 — worldwide demonstrations follow'},
+    {'event': 'James Webb Space Telescope launches on Christmas Day', 'year': 2021, 'detail': 'December 25, 2021 — most powerful space telescope ever'},
+    {'event': 'Container ship Ever Given blocks the Suez Canal for six days', 'year': 2021, 'detail': 'March 23–29, 2021 — \$9B of trade disrupted daily'},
+    {'event': 'Russia launches a full-scale military invasion of Ukraine', 'year': 2022, 'detail': 'February 24, 2022'},
+    {'event': 'Elon Musk acquires Twitter and renames it X', 'year': 2022, 'detail': 'October 27, 2022'},
+    {'event': 'ChatGPT launches publicly', 'year': 2022, 'detail': 'OpenAI, November 30, 2022'},
+    {'event': 'India overtakes China as world\'s most populous country', 'year': 2023, 'detail': 'UN confirmed mid-2023'},
+    {'event': 'India\'s Chandrayaan-3 lands near the Moon\'s south pole — a world first', 'year': 2023, 'detail': 'August 23, 2023'},
+    {'event': 'Nvidia briefly becomes the world\'s most valuable publicly traded company', 'year': 2024, 'detail': 'June 2024 — driven by AI chip demand'},
+    {'event': 'Australia bans social media for under-16s', 'year': 2024, 'detail': 'World-first law, late 2024'},
   ];
 }
 
@@ -330,6 +753,7 @@ class _MainShellState extends ConsumerState<MainShell> {
   }
 
   Future<void> _loadData() async {
+    unawaited(ref.read(userProvider.notifier).syncAuthProfile(AuthService.currentUser));
     final user = ref.read(userProvider);
     ref.read(newsProvider.notifier).load(
       country: user.country,
@@ -356,7 +780,7 @@ class _MainShellState extends ConsumerState<MainShell> {
             top: false,
             child: Padding(
                 padding:
-                    const EdgeInsets.symmetric(horizontal: 8, vertical: 10),
+                    const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                 child: Row(
                     mainAxisAlignment: MainAxisAlignment.spaceAround,
                     children: [
@@ -413,19 +837,19 @@ class _NavItem extends StatelessWidget {
         behavior: HitTestBehavior.opaque,
         child: AnimatedContainer(
             duration: const Duration(milliseconds: 200),
-            padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 5),
             decoration: BoxDecoration(
                 color: on
                     ? AppColors.accent.withValues(alpha: 0.12)
                     : Colors.transparent,
-                borderRadius: BorderRadius.circular(14)),
+                borderRadius: BorderRadius.circular(12)),
             child: Column(mainAxisSize: MainAxisSize.min, children: [
               Icon(icon,
-                  size: 28, color: on ? AppColors.accent : context.hintColor),
-              const SizedBox(height: 4),
+                  size: 22, color: on ? AppColors.accent : context.hintColor),
+              const SizedBox(height: 3),
               Text(label,
                   style: GoogleFonts.poppins(
-                      fontSize: 11,
+                      fontSize: 10,
                       fontWeight: FontWeight.w700,
                       color: on ? AppColors.accent : context.hintColor)),
             ])));
@@ -607,19 +1031,28 @@ class _SignInScreenState extends ConsumerState<SignInScreen> {
   }
 
   String _friendly(String raw) {
-    if (raw.contains('wrong-password') || raw.contains('invalid-credential'))
+    if (raw.contains('wrong-password') || raw.contains('invalid-credential')) {
       return 'Incorrect email or password.';
-    if (raw.contains('user-not-found'))
+    }
+    if (raw.contains('user-not-found')) {
       return 'No account found with this email.';
-    if (raw.contains('email-already-in-use'))
+    }
+    if (raw.contains('email-already-in-use')) {
       return 'An account with this email already exists.';
-    if (raw.contains('weak-password'))
+    }
+    if (raw.contains('weak-password')) {
       return 'Password must be at least 6 characters.';
-    if (raw.contains('invalid-email'))
+    }
+    if (raw.contains('invalid-email')) {
       return 'Please enter a valid email address.';
-    if (raw.contains('network-request-failed'))
+    }
+    if (raw.contains('network-request-failed')) {
       return 'No internet connection.';
-    return 'Something went wrong. Please try again.';
+    }
+    if (raw.contains('cancelled') || raw.contains('canceled')) {
+      return 'Sign in cancelled.';
+    }
+    return 'Error: $raw';
   }
 
   @override
@@ -1152,11 +1585,12 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
                               context: context,
                               initialTime: TimeOfDay(
                                   hour: _notifHour, minute: _notifMinute));
-                          if (picked != null && mounted)
+                          if (picked != null && mounted) {
                             setState(() {
                               _notifHour = picked.hour;
                               _notifMinute = picked.minute;
                             });
+                          }
                         } else {
                           setState(() {
                             _notifHour = opt!['hour'] as int;
@@ -1389,7 +1823,7 @@ class HomeScreen extends ConsumerWidget {
                       const SizedBox(height: 14),
                       _DidYouKnowCard(),
                       const SizedBox(height: 14),
-                      const Center(child: _BannerAdWidget()),
+                      const Center(child: BriefedBannerAd()),
                       const SizedBox(height: 8),
                     ]))));
   }
@@ -1424,7 +1858,12 @@ class _QuizHeroCardState extends State<_QuizHeroCard> {
     _timer = Timer.periodic(const Duration(seconds: 1), (_) {
       if (mounted) setState(() => _remaining = _calcRemaining());
     });
-    if (widget.user.hasPlayedToday && !StorageService.hasBonusPlayedToday()) {
+    final isPro = widget.user.isPro &&
+        AuthService.currentUser != null &&
+        !AuthService.isGuest;
+    if (!isPro &&
+        widget.user.hasPlayedToday &&
+        !StorageService.hasBonusPlayedToday()) {
       unawaited(AdService.loadRewarded());
     }
   }
@@ -1453,6 +1892,16 @@ class _QuizHeroCardState extends State<_QuizHeroCard> {
       widget.onTap();
       return;
     }
+    if (widget.user.isPro &&
+        AuthService.currentUser != null &&
+        !AuthService.isGuest) {
+      Navigator.of(context).pushNamed('/quiz', arguments: {
+        'forceRefresh': true,
+        'bonusRound': true,
+        'replaySeed': DateTime.now().microsecondsSinceEpoch,
+      });
+      return;
+    }
     if (StorageService.hasBonusPlayedToday() || _loadingRewardAd) return;
 
     setState(() => _loadingRewardAd = true);
@@ -1468,6 +1917,7 @@ class _QuizHeroCardState extends State<_QuizHeroCard> {
     Navigator.of(context).pushNamed('/quiz', arguments: {
       'forceRefresh': true,
       'bonusRound': true,
+      'replaySeed': DateTime.now().microsecondsSinceEpoch,
     });
   }
 
@@ -1475,12 +1925,17 @@ class _QuizHeroCardState extends State<_QuizHeroCard> {
   Widget build(BuildContext context) {
     final played = widget.user.hasPlayedToday;
     final bonusUsed = played && StorageService.hasBonusPlayedToday();
-    final canWatchAd = played && !bonusUsed;
+    final isPro = widget.user.isPro &&
+        AuthService.currentUser != null &&
+        !AuthService.isGuest;
+    final canProReplay = played && isPro;
+    final canWatchAd = played && !isPro && !bonusUsed;
 
-    final gradientColors = !played
+    final gradientColors = !played || canProReplay
         ? [AppColors.accent, AppColors.accentDark]
         : [const Color(0xFF888888), const Color(0xFF555555)];
-    final shadowColor = !played ? AppColors.accent : Colors.grey;
+    final shadowColor =
+        !played || canProReplay ? AppColors.accent : Colors.grey;
 
     return GestureDetector(
         onTap: _onTap,
@@ -1505,7 +1960,11 @@ class _QuizHeroCardState extends State<_QuizHeroCard> {
                 const SizedBox(width: 8),
                 _badge('~2 mins'),
                 const SizedBox(width: 8),
-                _badge(played ? '✓ Done today' : 'NEW')
+                _badge(isPro && played
+                    ? 'PRO'
+                    : played
+                        ? '✓ Done today'
+                        : 'NEW')
               ]),
               const SizedBox(height: 12),
               Text('TODAY\'S TOPICS',
@@ -1537,7 +1996,9 @@ class _QuizHeroCardState extends State<_QuizHeroCard> {
               const SizedBox(height: 14),
               Text(
                   played
-                      ? "You've completed today's quiz!"
+                      ? isPro
+                          ? 'Play another fresh quiz'
+                          : "You've completed today's quiz!"
                       : "How well do you know what happened today?",
                   style: GoogleFonts.poppins(
                       fontSize: 20,
@@ -1549,11 +2010,13 @@ class _QuizHeroCardState extends State<_QuizHeroCard> {
               Text(
                   !played
                       ? '3 easy · 2 hard · Fresh quiz every morning'
-                      : canWatchAd
-                          ? _loadingRewardAd
-                              ? 'Preparing your bonus ad...'
-                              : 'Earn a bonus round by watching a short ad'
-                          : 'New quiz available in ${_nextQuizIn()}',
+                      : canProReplay
+                          ? 'Unlimited Pro replays with fresh questions'
+                          : canWatchAd
+                              ? _loadingRewardAd
+                                  ? 'Preparing your bonus ad...'
+                                  : 'Earn a bonus round by watching a short ad'
+                              : 'New quiz available in ${_nextQuizIn()}',
                   style: GoogleFonts.poppins(
                       fontSize: 12,
                       color: Colors.white.withValues(alpha: 0.7))),
@@ -1578,6 +2041,31 @@ class _QuizHeroCardState extends State<_QuizHeroCard> {
                               color: AppColors.accent, size: 20),
                           const SizedBox(width: 6),
                           Text("Start Today's Quiz",
+                              style: GoogleFonts.poppins(
+                                  fontSize: 15,
+                                  fontWeight: FontWeight.w900,
+                                  color: AppColors.accent)),
+                        ]))
+              else if (canProReplay)
+                Container(
+                    width: double.infinity,
+                    padding: const EdgeInsets.symmetric(vertical: 13),
+                    decoration: BoxDecoration(
+                        color: Colors.white,
+                        borderRadius: BorderRadius.circular(16),
+                        boxShadow: [
+                          BoxShadow(
+                              color: Colors.black.withValues(alpha: 0.12),
+                              blurRadius: 14,
+                              offset: const Offset(0, 4))
+                        ]),
+                    child: Row(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          const Icon(Icons.replay_rounded,
+                              color: AppColors.accent, size: 20),
+                          const SizedBox(width: 6),
+                          Text('Play Fresh Replay',
                               style: GoogleFonts.poppins(
                                   fontSize: 15,
                                   fontWeight: FontWeight.w900,
@@ -1713,6 +2201,12 @@ class _DidYouKnowCardState extends ConsumerState<_DidYouKnowCard> {
     BuildContext context,
   ) {
     final news = ref.watch(newsProvider);
+    if (news.isLoading) {
+      return const ClipRRect(
+        borderRadius: BorderRadius.all(Radius.circular(22)),
+        child: ShimmerBox(width: double.infinity, height: 220, borderRadius: 22),
+      );
+    }
     if (news.articles.isEmpty) return const SizedBox.shrink();
 
     // Pick up to 5 articles spread across the feed for variety
@@ -1957,37 +2451,53 @@ class _BriefingScreenState extends ConsumerState<BriefingScreen>
                     child: Icon(Icons.search_rounded,
                         color: context.hintColor, size: 18)),
               ])),
+          if (news.isOffline)
+            const _NewsBanner(
+              icon: Icons.wifi_off_rounded,
+              message: 'Connect to internet for daily news',
+            ),
+          if (!news.isOffline && news.error != null)
+            _NewsBanner(
+              icon: Icons.error_outline_rounded,
+              message: 'News error: ${news.error}',
+            ),
           SizedBox(
-              height: 50,
+              height: 52,
               child: ListView.builder(
                   controller: _tabScroll,
                   scrollDirection: Axis.horizontal,
-                  padding: const EdgeInsets.fromLTRB(16, 6, 16, 0),
+                  padding: const EdgeInsets.fromLTRB(16, 8, 16, 8),
                   itemCount: _filters.length,
                   itemBuilder: (context, i) {
                     final on = _tabCtrl.index == i;
+                    final label = _filters[i];
+                    final chipColor = (label == 'For you' || label == 'Headlines')
+                        ? AppColors.accent
+                        : AppColors.categoryColor(label.toLowerCase());
                     return GestureDetector(
                         onTap: () => _tabCtrl.animateTo(i),
                         child: AnimatedContainer(
                             duration: const Duration(milliseconds: 180),
-                            padding: const EdgeInsets.symmetric(horizontal: 16),
+                            margin: const EdgeInsets.only(right: 8),
+                            padding: const EdgeInsets.symmetric(
+                                horizontal: 16, vertical: 6),
                             decoration: BoxDecoration(
-                                border: Border(
-                                    bottom: BorderSide(
-                                        color: on
-                                            ? AppColors.accent
-                                            : Colors.transparent,
-                                        width: 2.5))),
-                            child: Center(
-                                child: Text(_filters[i],
-                                    style: GoogleFonts.poppins(
-                                        fontSize: 13,
-                                        fontWeight: on
-                                            ? FontWeight.w800
-                                            : FontWeight.w600,
-                                        color: on
-                                            ? AppColors.accent
-                                            : context.subColor)))));
+                                color: on
+                                    ? chipColor
+                                    : chipColor.withValues(alpha: 0.1),
+                                borderRadius: BorderRadius.circular(999),
+                                border: Border.all(
+                                    color: on
+                                        ? chipColor
+                                        : chipColor.withValues(alpha: 0.3),
+                                    width: 1.5)),
+                            child: Text(label,
+                                style: GoogleFonts.poppins(
+                                    fontSize: 13,
+                                    fontWeight: FontWeight.w700,
+                                    color: on
+                                        ? Colors.white
+                                        : chipColor))));
                   })),
           Divider(height: 1, color: context.borderColor),
           Expanded(
@@ -1998,8 +2508,12 @@ class _BriefingScreenState extends ConsumerState<BriefingScreen>
                       children: _filters
                           .map((f) => RefreshIndicator(
                                 color: AppColors.accent,
-                                onRefresh: () =>
-                                    ref.read(newsProvider.notifier).refresh(),
+                                onRefresh: () async {
+                                  await ref
+                                      .read(newsProvider.notifier)
+                                      .refresh();
+                                  _tabCtrl.animateTo(0);
+                                },
                                 child: _buildFeed(news.articles, f),
                               ))
                           .toList())),
@@ -2071,7 +2585,7 @@ class _BriefingScreenState extends ConsumerState<BriefingScreen>
             child: _QuizPromoStrip()),
         const Padding(
             padding: EdgeInsets.fromLTRB(16, 14, 16, 0),
-            child: _NativeAdCard()),
+            child: BriefedNativeAd()),
         ...['technology', 'world', 'business', 'sports', 'entertainment']
             .map((cat) {
           final catArticles = articles
@@ -2089,7 +2603,7 @@ class _BriefingScreenState extends ConsumerState<BriefingScreen>
               child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    const Center(child: _BannerAdWidget()),
+                    const Center(child: BriefedBannerAd()),
                     const SizedBox(height: 14),
                     _SectionHeader(title: label, category: cat),
                     const SizedBox(height: 10),
@@ -2195,7 +2709,7 @@ class _BriefingScreenState extends ConsumerState<BriefingScreen>
                         .toList()))),
       const Padding(
           padding: EdgeInsets.fromLTRB(16, 14, 16, 0),
-          child: Center(child: _BannerAdWidget())),
+          child: Center(child: BriefedBannerAd())),
       const SizedBox(height: 24),
     ]);
   }
@@ -2213,6 +2727,36 @@ class _BriefingScreenState extends ConsumerState<BriefingScreen>
             SizedBox(height: 6),
             ShimmerBox(width: double.infinity, height: 14, borderRadius: 7),
           ])));
+}
+
+class _NewsBanner extends StatelessWidget {
+  final IconData icon;
+  final String message;
+  const _NewsBanner({required this.icon, required this.message});
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: double.infinity,
+      color: const Color(0xFFD32F2F),
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+      child: Row(children: [
+        Icon(icon, size: 14, color: Colors.white),
+        const SizedBox(width: 8),
+        Expanded(
+          child: Text(
+            message,
+            maxLines: 2,
+            overflow: TextOverflow.ellipsis,
+            style: GoogleFonts.poppins(
+                fontSize: 12,
+                fontWeight: FontWeight.w600,
+                color: Colors.white),
+          ),
+        ),
+      ]),
+    );
+  }
 }
 
 class _SectionHeader extends StatelessWidget {
@@ -2290,7 +2834,7 @@ class _HeadlineLeadCard extends StatelessWidget {
         clipBehavior: Clip.antiAlias,
         child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
           Stack(children: [
-            _HeadlineImage(article: article, height: 154),
+            _HeadlineImage(article: article, height: 200),
             Positioned.fill(
               child: DecoratedBox(
                 decoration: BoxDecoration(
@@ -2503,8 +3047,9 @@ class _HeadlineImage extends StatelessWidget {
   Widget build(BuildContext context) {
     final catColor = AppColors.categoryColor(article.category);
     final hasImage = article.imageUrl != null && article.imageUrl!.isNotEmpty;
+    final resolvedWidth = width ?? double.infinity;
     Widget placeholder = Container(
-      width: width,
+      width: resolvedWidth,
       height: height,
       decoration: BoxDecoration(
         gradient: LinearGradient(
@@ -2525,7 +3070,7 @@ class _HeadlineImage extends StatelessWidget {
       child: hasImage
           ? Image.network(
               article.imageUrl!,
-              width: width,
+              width: resolvedWidth,
               height: height,
               fit: BoxFit.cover,
               errorBuilder: (_, __, ___) => placeholder,
@@ -3169,7 +3714,7 @@ class _RealOrFakeGameState extends State<RealOrFakeGame>
             ]),
           ]),
           const SizedBox(height: 10),
-          const Center(child: _BannerAdWidget()),
+          const Center(child: BriefedBannerAd()),
           const Spacer(),
           AnimatedBuilder(
               animation: _shakeAnim,
@@ -3188,14 +3733,14 @@ class _RealOrFakeGameState extends State<RealOrFakeGame>
                           ? (correct
                               ? AppColors.green.withValues(alpha: 0.1)
                               : AppColors.red.withValues(alpha: 0.1))
-                          : context.cardColor,
+                          : AppColors.blue.withValues(alpha: 0.06),
                       borderRadius: BorderRadius.circular(24),
                       border: Border.all(
                           color: answered
                               ? (correct
                                   ? AppColors.green.withValues(alpha: 0.4)
                                   : AppColors.red.withValues(alpha: 0.4))
-                              : context.border2Color,
+                              : AppColors.blue.withValues(alpha: 0.25),
                           width: answered ? 2 : 1),
                       boxShadow: [
                         BoxShadow(
@@ -3364,7 +3909,7 @@ class _RealOrFakeGameState extends State<RealOrFakeGame>
               style:
                   GoogleFonts.poppins(fontSize: 13, color: context.subColor)),
           const Spacer(),
-          const Center(child: _BannerAdWidget()),
+          const Center(child: BriefedBannerAd()),
           const SizedBox(height: 12),
           AccentButton(
               text: 'Play Again', onTap: _restart, icon: Icons.refresh_rounded),
@@ -3582,7 +4127,7 @@ class _OldestToLatestGameState extends State<OldestToLatestGame> {
                     GoogleFonts.poppins(fontSize: 12, color: context.subColor))
           ],
           const SizedBox(height: 12),
-          const Center(child: _BannerAdWidget()),
+          const Center(child: BriefedBannerAd()),
           const SizedBox(height: 12),
           Expanded(
               child: _submitted
@@ -3596,12 +4141,15 @@ class _OldestToLatestGameState extends State<OldestToLatestGame> {
                           _order.insert(newIdx, item);
                         });
                       },
-                      itemBuilder: (context, i) => _EventCard(
+                      itemBuilder: (context, i) => ReorderableDragStartListener(
                           key: ValueKey(_order[i]['event']),
                           index: i,
-                          event: _order[i]['event'] as String,
-                          showYear: false,
-                          color: AppColors.purple),
+                          child: _EventCard(
+                              key: ValueKey('card_${_order[i]['event']}'),
+                              index: i,
+                              event: _order[i]['event'] as String,
+                              showYear: false,
+                              color: AppColors.purple)),
                       proxyDecorator: (child, index, animation) =>
                           Material(color: Colors.transparent, child: child))),
           const SizedBox(height: 16),
@@ -3693,7 +4241,7 @@ class _OldestToLatestGameState extends State<OldestToLatestGame> {
               style:
                   GoogleFonts.poppins(fontSize: 13, color: context.subColor)),
           const Spacer(),
-          const Center(child: _BannerAdWidget()),
+          const Center(child: BriefedBannerAd()),
           const SizedBox(height: 12),
           AccentButton(
               text: 'Play Again', onTap: _restart, icon: Icons.refresh_rounded),
@@ -3733,14 +4281,18 @@ class _EventCard extends StatelessWidget {
         padding: const EdgeInsets.all(14),
         decoration: BoxDecoration(
             color: isCorrect == null
-                ? context.cardColor
+                ? (!showYear
+                    ? color.withValues(alpha: 0.06)
+                    : context.cardColor)
                 : (isCorrect!
                     ? AppColors.green.withValues(alpha: 0.08)
                     : AppColors.red.withValues(alpha: 0.08)),
             borderRadius: BorderRadius.circular(16),
             border: Border.all(
                 color: isCorrect == null
-                    ? context.border2Color
+                    ? (!showYear
+                        ? color.withValues(alpha: 0.25)
+                        : context.border2Color)
                     : (isCorrect!
                         ? AppColors.green.withValues(alpha: 0.4)
                         : AppColors.red.withValues(alpha: 0.4))),
@@ -3793,8 +4345,6 @@ class _EventCard extends StatelessWidget {
                           fontSize: 10, color: context.hintColor))
                 ],
               ])),
-          if (!showYear)
-            Icon(Icons.drag_handle_rounded, color: context.hintColor, size: 20),
           if (showYear && year != null && isCorrect != null)
             Container(
                 padding:
@@ -3833,10 +4383,16 @@ class _QuizScreenState extends ConsumerState<QuizScreen> {
   void initState() {
     super.initState();
     WidgetsBinding.instance.addPostFrameCallback((_) {
+      // Reset stale finished state so the build's navigation guard doesn't
+      // fire when this screen opens for a bonus round.
+      if (ref.read(quizProvider).status == QuizStatus.finished) {
+        ref.read(quizProvider.notifier).reset();
+      }
       final args = ModalRoute.of(context)?.settings.arguments as Map?;
       _start(
         forceRefresh: args?['forceRefresh'] == true,
         bonusRound: args?['bonusRound'] == true,
+        replaySeed: args?['replaySeed'] as int?,
       );
     });
   }
@@ -3854,12 +4410,14 @@ class _QuizScreenState extends ConsumerState<QuizScreen> {
   Future<void> _start({
     bool forceRefresh = false,
     bool bonusRound = false,
+    int? replaySeed,
   }) async {
     final news = ref.read(newsProvider);
     await ref.read(quizProvider.notifier).startQuiz(
           news.articles,
           forceRefresh: forceRefresh,
           bonusRound: bonusRound,
+          replaySeed: replaySeed,
         );
   }
 
@@ -3941,10 +4499,13 @@ class _QuizScreenState extends ConsumerState<QuizScreen> {
     _syncQuizAudio(quiz);
     if (quiz.status == QuizStatus.finished) {
       WidgetsBinding.instance.addPostFrameCallback((_) {
-        if (mounted)
-          AdService.showInterstitial(then: () {
-            if (mounted) Navigator.of(context).pushReplacementNamed('/result');
-          });
+        if (!mounted) return;
+        // Re-check: state may have been reset (e.g. bonus round starting)
+        // since this build ran.
+        if (ref.read(quizProvider).status != QuizStatus.finished) return;
+        AdService.showInterstitial(then: () {
+          if (mounted) Navigator.of(context).pushReplacementNamed('/result');
+        });
       });
     }
     return Scaffold(
@@ -4469,6 +5030,7 @@ class _ResultScreenState extends ConsumerState<ResultScreen>
     final quiz = ref.read(quizProvider);
     final result = quiz.buildResult();
     await ref.read(userProvider.notifier).afterQuiz(result);
+    ref.invalidate(dailyRankProvider);
     final score = quiz.score;
     final total = quiz.questions.length;
     unawaited(_playResultSound(score, total));
@@ -4518,6 +5080,7 @@ class _ResultScreenState extends ConsumerState<ResultScreen>
     final total = quiz.questions.length;
     final result = quiz.buildResult();
     final sc = _scoreColor(score, total);
+    final dailyRank = ref.watch(dailyRankProvider);
     final bgColor = context.isDark
         ? context.bgColor
         : score >= total * 0.8
@@ -4646,8 +5209,11 @@ class _ResultScreenState extends ConsumerState<ResultScreen>
                         Expanded(
                             child: StatCard(
                                 icon: Icons.emoji_events_rounded,
-                                value: user.globalRankLabel,
-                                label: 'Global',
+                                value: dailyRank.when(
+                                    data: (rank) => rank,
+                                    loading: () => '...',
+                                    error: (_, __) => user.globalRankLabel),
+                                label: 'Today',
                                 color: AppColors.purple)),
                       ]),
                       const SizedBox(height: 14),
@@ -4655,6 +5221,8 @@ class _ResultScreenState extends ConsumerState<ResultScreen>
                           controller: _screenshotCtrl,
                           child: _ShareCard(
                               score: score, total: total, result: result)),
+                      const SizedBox(height: 10),
+                      _AnswerReviewCard(quiz: quiz),
                       const SizedBox(height: 10),
                       AccentButton(
                           text: 'Share Your Result',
@@ -4714,6 +5282,180 @@ class _ResultScreenState extends ConsumerState<ResultScreen>
     final result = quiz.buildResult();
     await Share.share(
         'I scored ${result.score}/${result.totalQuestions} on Briefed! ${result.performanceEmoji} ${result.performanceLabel}\n#Briefed #StaySharp');
+  }
+}
+
+class _AnswerReviewCard extends StatelessWidget {
+  final QuizState quiz;
+  const _AnswerReviewCard({required this.quiz});
+
+  @override
+  Widget build(BuildContext context) {
+    return BriefedCard(
+        padding: const EdgeInsets.fromLTRB(14, 12, 14, 4),
+        child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+          Row(children: [
+            Container(
+                width: 34,
+                height: 34,
+                decoration: BoxDecoration(
+                    color: AppColors.blue.withValues(alpha: 0.12),
+                    borderRadius: BorderRadius.circular(10)),
+                child: const Icon(Icons.fact_check_rounded,
+                    color: AppColors.blue, size: 18)),
+            const SizedBox(width: 10),
+            Text('Review Answers',
+                style: GoogleFonts.poppins(
+                    fontSize: 14,
+                    fontWeight: FontWeight.w800,
+                    color: context.textColor)),
+          ]),
+          const SizedBox(height: 8),
+          ...quiz.questions.asMap().entries.map((entry) {
+            final index = entry.key;
+            final question = entry.value;
+            final selected =
+                index < quiz.answers.length ? quiz.answers[index] : null;
+            final isCorrect = selected == question.correctIndex;
+            final selectedLabel = selected != null &&
+                    selected >= 0 &&
+                    selected < question.options.length
+                ? question.options[selected]
+                : 'Timed out';
+            final correctLabel = question.options[question.correctIndex];
+            final color = isCorrect ? AppColors.green : AppColors.red;
+
+            return Theme(
+                data: Theme.of(context).copyWith(
+                    dividerColor: Colors.transparent,
+                    splashColor: Colors.transparent,
+                    highlightColor: Colors.transparent),
+                child: ExpansionTile(
+                    tilePadding: EdgeInsets.zero,
+                    childrenPadding: const EdgeInsets.only(bottom: 12),
+                    leading: Container(
+                        width: 28,
+                        height: 28,
+                        decoration: BoxDecoration(
+                            color: color.withValues(alpha: 0.12),
+                            borderRadius: BorderRadius.circular(9)),
+                        child: Icon(
+                            isCorrect
+                                ? Icons.check_rounded
+                                : Icons.close_rounded,
+                            color: color,
+                            size: 17)),
+                    title: Text('Q${index + 1}. ${question.question}',
+                        maxLines: 2,
+                        overflow: TextOverflow.ellipsis,
+                        style: GoogleFonts.poppins(
+                            fontSize: 12,
+                            fontWeight: FontWeight.w700,
+                            color: context.textColor)),
+                    subtitle: Text(
+                        isCorrect
+                            ? 'Correct: $correctLabel'
+                            : 'Your answer: $selectedLabel',
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: GoogleFonts.poppins(
+                            fontSize: 10,
+                            fontWeight: FontWeight.w600,
+                            color: color)),
+                    children: [
+                      _ReviewLine(
+                          label: 'Your answer',
+                          value: selectedLabel,
+                          color: isCorrect ? AppColors.green : AppColors.red),
+                      if (!isCorrect)
+                        _ReviewLine(
+                            label: 'Correct answer',
+                            value: correctLabel,
+                            color: AppColors.green),
+                      if (question.explanation.isNotEmpty)
+                        _ReviewParagraph(
+                            icon: Icons.lightbulb_rounded,
+                            title: 'Why',
+                            text: question.explanation),
+                      if (question.storySummary.isNotEmpty)
+                        _ReviewParagraph(
+                            icon: Icons.article_rounded,
+                            title: 'Story',
+                            text: question.storySummary),
+                    ]));
+          }),
+        ]));
+  }
+}
+
+class _ReviewLine extends StatelessWidget {
+  final String label;
+  final String value;
+  final Color color;
+  const _ReviewLine({
+    required this.label,
+    required this.value,
+    required this.color,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+        padding: const EdgeInsets.only(left: 38, right: 4, bottom: 8),
+        child: Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
+          SizedBox(
+              width: 86,
+              child: Text(label,
+                  style: GoogleFonts.poppins(
+                      fontSize: 10,
+                      fontWeight: FontWeight.w700,
+                      color: context.hintColor))),
+          Expanded(
+              child: Text(value,
+                  style: GoogleFonts.poppins(
+                      fontSize: 11,
+                      fontWeight: FontWeight.w700,
+                      color: color))),
+        ]));
+  }
+}
+
+class _ReviewParagraph extends StatelessWidget {
+  final IconData icon;
+  final String title;
+  final String text;
+  const _ReviewParagraph({
+    required this.icon,
+    required this.title,
+    required this.text,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+        padding: const EdgeInsets.only(left: 38, right: 4, bottom: 8),
+        child: Container(
+            width: double.infinity,
+            padding: const EdgeInsets.all(10),
+            decoration: BoxDecoration(
+                color: context.inputBg,
+                borderRadius: BorderRadius.circular(12)),
+            child:
+                Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+              Row(children: [
+                Icon(icon, size: 14, color: AppColors.accent),
+                const SizedBox(width: 6),
+                Text(title,
+                    style: GoogleFonts.poppins(
+                        fontSize: 10,
+                        fontWeight: FontWeight.w800,
+                        color: context.textColor)),
+              ]),
+              const SizedBox(height: 4),
+              Text(text,
+                  style: GoogleFonts.sourceSans3(
+                      fontSize: 12, color: context.subColor, height: 1.35)),
+            ])));
   }
 }
 
@@ -4850,7 +5592,7 @@ class HotTakeScreen extends ConsumerWidget {
                         icon: Icons.thumb_up_rounded,
                         color: AppColors.green,
                         isVoted: ht.userVote == 'yes',
-                        disabled: ht.userVote != null,
+                        disabled: ht.userVote != null || ht.isLoading,
                         onTap: () =>
                             ref.read(hotTakeProvider.notifier).vote('yes'))),
                 const SizedBox(width: 12),
@@ -4860,7 +5602,7 @@ class HotTakeScreen extends ConsumerWidget {
                         icon: Icons.thumb_down_rounded,
                         color: AppColors.red,
                         isVoted: ht.userVote == 'no',
-                        disabled: ht.userVote != null,
+                        disabled: ht.userVote != null || ht.isLoading,
                         onTap: () =>
                             ref.read(hotTakeProvider.notifier).vote('no'))),
               ]),
@@ -4874,7 +5616,10 @@ class HotTakeScreen extends ConsumerWidget {
                         const Icon(Icons.bar_chart_rounded,
                             color: AppColors.accent, size: 16),
                         const SizedBox(width: 8),
-                        Text('${_fmt(ht.total)} users voted',
+                        Text(
+                            ht.total == 0
+                                ? 'Be the first to vote!'
+                                : '${_fmt(ht.total)} votes',
                             style: GoogleFonts.poppins(
                                 fontSize: 9,
                                 fontWeight: FontWeight.w700,
@@ -5037,6 +5782,45 @@ Widget _buildAvatar(String? photoUrl, double size) {
   );
 }
 
+class _CategoryStat {
+  final int correct;
+  final int total;
+  final double legacyAccuracyTotal;
+  final int legacyQuizzes;
+
+  const _CategoryStat({
+    this.correct = 0,
+    this.total = 0,
+    this.legacyAccuracyTotal = 0,
+    this.legacyQuizzes = 0,
+  });
+
+  _CategoryStat add({required bool correct}) => _CategoryStat(
+        correct: this.correct + (correct ? 1 : 0),
+        total: total + 1,
+        legacyAccuracyTotal: legacyAccuracyTotal,
+        legacyQuizzes: legacyQuizzes,
+      );
+
+  _CategoryStat addLegacy(double accuracy) => _CategoryStat(
+        correct: correct,
+        total: total,
+        legacyAccuracyTotal: legacyAccuracyTotal + accuracy,
+        legacyQuizzes: legacyQuizzes + 1,
+      );
+
+  double get accuracy {
+    if (total > 0) return correct / total;
+    if (legacyQuizzes > 0) return legacyAccuracyTotal / legacyQuizzes;
+    return 0;
+  }
+
+  String get label {
+    if (total > 0) return '$correct/$total questions';
+    return '$legacyQuizzes quiz${legacyQuizzes == 1 ? '' : 'zes'}';
+  }
+}
+
 // PROFILE SCREEN — with leaderboard
 
 class ProfileScreen extends ConsumerWidget {
@@ -5074,18 +5858,25 @@ class ProfileScreen extends ConsumerWidget {
             .reduce((a, b) => a > b ? a : b);
     final weekDays = weekResults.map((r) => r.date).toSet().length;
 
-    // Category accuracy (from all results)
-    final catMap = <String, List<double>>{};
+    // Category accuracy (from saved per-question attempts, with fallback for
+    // older quiz history that only stored quiz-level categories).
+    final catMap = <String, _CategoryStat>{};
     for (final r in results) {
-      for (final cat in r.categories) {
-        catMap.putIfAbsent(cat, () => []).add(r.percentage);
+      if (r.attempts.isNotEmpty) {
+        for (final attempt in r.attempts) {
+          final stat =
+              catMap.putIfAbsent(attempt.category, () => const _CategoryStat());
+          catMap[attempt.category] = stat.add(correct: attempt.correct);
+        }
+      } else {
+        for (final cat in r.categories) {
+          final stat = catMap.putIfAbsent(cat, () => const _CategoryStat());
+          catMap[cat] = stat.addLegacy(r.percentage);
+        }
       }
     }
-    final catAccuracy = catMap.entries
-        .map((e) =>
-            MapEntry(e.key, e.value.reduce((a, b) => a + b) / e.value.length))
-        .toList()
-      ..sort((a, b) => b.value.compareTo(a.value));
+    final catAccuracy = catMap.entries.toList()
+      ..sort((a, b) => b.value.accuracy.compareTo(a.value.accuracy));
 
     // Sparkline: last 7 results oldest-first
     final sparkValues =
@@ -5349,7 +6140,7 @@ class ProfileScreen extends ConsumerWidget {
                                           fontSize: 12,
                                           color: context.hintColor)))),
                           data: (entries) {
-                            if (entries.isEmpty)
+                            if (entries.isEmpty) {
                               return BriefedCard(
                                   child: Center(
                                       child: Text(
@@ -5357,6 +6148,7 @@ class ProfileScreen extends ConsumerWidget {
                                           style: GoogleFonts.sourceSans3(
                                               fontSize: 12,
                                               color: context.hintColor))));
+                            }
                             return BriefedCard(
                                 padding: EdgeInsets.zero,
                                 child: Column(
@@ -5416,6 +6208,7 @@ class ProfileScreen extends ConsumerWidget {
                             child: Column(
                                 children: catAccuracy.take(5).map((e) {
                           final color = AppColors.categoryColor(e.key);
+                          final stat = e.value;
                           return Padding(
                               padding: const EdgeInsets.only(bottom: 12),
                               child: Column(
@@ -5430,19 +6223,25 @@ class ProfileScreen extends ConsumerWidget {
                                               fontWeight: FontWeight.w700,
                                               color: context.subColor)),
                                       const Spacer(),
-                                      Text('${(e.value * 100).round()}%',
+                                      Text('${(stat.accuracy * 100).round()}%',
                                           style: GoogleFonts.sourceSans3(
                                               fontSize: 13,
                                               fontWeight: FontWeight.w800,
                                               color: color)),
                                     ]),
+                                    const SizedBox(height: 2),
+                                    Text(stat.label,
+                                        style: GoogleFonts.sourceSans3(
+                                            fontSize: 10,
+                                            fontWeight: FontWeight.w600,
+                                            color: context.hintColor)),
                                     const SizedBox(height: 5),
                                     ClipRRect(
                                         borderRadius:
                                             BorderRadius.circular(999),
                                         child: TweenAnimationBuilder<double>(
-                                            tween:
-                                                Tween(begin: 0, end: e.value),
+                                            tween: Tween(
+                                                begin: 0, end: stat.accuracy),
                                             duration: const Duration(
                                                 milliseconds: 900),
                                             curve: Curves.easeOutCubic,
@@ -6261,9 +7060,10 @@ class SettingsScreen extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final themeMode = ref.watch(themeProvider);
     final user = ref.watch(userProvider);
-    final authUser = ref.watch(authStateProvider).valueOrNull;
+    final authUser = ref.watch(authStateProvider).valueOrNull ?? AuthService.currentUser;
     final isSignedIn = authUser != null && !authUser.isAnonymous;
     final authEmail = authUser?.email ?? authUser?.displayName;
+    final hasPro = user.isPro && isSignedIn;
     return Scaffold(
         backgroundColor: context.bgColor,
         appBar: AppBar(
@@ -6374,7 +7174,7 @@ class SettingsScreen extends ConsumerWidget {
                           color: AppColors.red,
                           title: 'Sign Out',
                           sub: authEmail ?? 'Signed in',
-                          onTap: () => _handleSignOut(context))
+                          onTap: () => _handleSignOut(context, ref))
                     else
                       _SettingsTile(
                           icon: Icons.login_rounded,
@@ -6384,10 +7184,13 @@ class SettingsScreen extends ConsumerWidget {
                           onTap: () => _showAuthSheet(context, ref)),
                   ])),
               const SizedBox(height: 20),
-              const _SectionLabel('SUBSCRIPTION'),
+              const _SectionLabel('PRO'),
               BriefedCard(
                   borderColor: AppColors.gold.withValues(alpha: 0.35),
-                  onTap: () => _showProSheet(context),
+                  onTap: () => hasPro
+                      ? _showProActiveDialog(context)
+                      : _showProSheet(context, ref, user,
+                          canActivatePro: isSignedIn),
                   child: Row(children: [
                     Container(
                         width: 40,
@@ -6402,12 +7205,15 @@ class SettingsScreen extends ConsumerWidget {
                         child: Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
-                          Text('Upgrade to Pro',
+                          Text(hasPro ? 'Briefed Pro' : 'Upgrade to Pro',
                               style: GoogleFonts.poppins(
                                   fontSize: 13,
                                   fontWeight: FontWeight.w700,
                                   color: AppColors.gold)),
-                          Text('₹149/month · Unlock everything',
+                          Text(
+                              hasPro
+                                  ? 'Active · Unlimited quiz replays'
+                                  : '${ProPurchaseService.fallbackPriceLabel} · Lifetime access',
                               style: GoogleFonts.poppins(
                                   fontSize: 10, color: context.hintColor)),
                         ])),
@@ -6466,8 +7272,9 @@ class SettingsScreen extends ConsumerWidget {
                               return GestureDetector(
                                   onTap: () => setS(() {
                                         if (on) {
-                                          if (selected.length > 1)
+                                          if (selected.length > 1) {
                                             selected.remove(id);
+                                          }
                                         } else {
                                           selected.add(id);
                                         }
@@ -6684,11 +7491,12 @@ class SettingsScreen extends ConsumerWidget {
                                       initialTime: TimeOfDay(
                                           hour: selectedHour,
                                           minute: selectedMinute));
-                                  if (picked != null)
+                                  if (picked != null) {
                                     setS(() {
                                       selectedHour = picked.hour;
                                       selectedMinute = picked.minute;
                                     });
+                                  }
                                 },
                                 child: AnimatedContainer(
                                     duration: const Duration(milliseconds: 180),
@@ -6800,8 +7608,9 @@ class SettingsScreen extends ConsumerWidget {
                   TextButton(
                       onPressed: () {
                         final name = ctrl.text.trim();
-                        if (name.isNotEmpty)
+                        if (name.isNotEmpty) {
                           ref.read(userProvider.notifier).updateName(name);
+                        }
                         Navigator.of(ctx).pop();
                       },
                       child: Text('Save',
@@ -6890,7 +7699,78 @@ class SettingsScreen extends ConsumerWidget {
                 ])));
   }
 
-  void _showProSheet(BuildContext context) {
+  void _showProActiveDialog(BuildContext context) {
+    showDialog<void>(
+      context: context,
+      builder: (ctx) => Dialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
+        backgroundColor: ctx.cardColor,
+        child: Padding(
+          padding: const EdgeInsets.fromLTRB(24, 28, 24, 24),
+          child: Column(mainAxisSize: MainAxisSize.min, children: [
+            Container(
+              width: 64,
+              height: 64,
+              decoration: BoxDecoration(
+                gradient: const LinearGradient(
+                    colors: [AppColors.gold, Color(0xFFFF9100)]),
+                borderRadius: BorderRadius.circular(20),
+                boxShadow: [
+                  BoxShadow(
+                      color: AppColors.gold.withValues(alpha: 0.35),
+                      blurRadius: 16,
+                      offset: const Offset(0, 6)),
+                ],
+              ),
+              child:
+                  const Icon(Icons.star_rounded, color: Colors.white, size: 34),
+            ),
+            const SizedBox(height: 18),
+            Text('You\'re a Pro!',
+                style: GoogleFonts.poppins(
+                    fontSize: 22,
+                    fontWeight: FontWeight.w900,
+                    color: ctx.textColor)),
+            const SizedBox(height: 8),
+            Text(
+              'Thanks for supporting Briefed.\nEnjoy unlimited replays, no ads,\nand all pro perks.',
+              textAlign: TextAlign.center,
+              style: GoogleFonts.poppins(
+                  fontSize: 13,
+                  height: 1.55,
+                  color: ctx.hintColor),
+            ),
+            const SizedBox(height: 22),
+            SizedBox(
+              width: double.infinity,
+              child: TextButton(
+                style: TextButton.styleFrom(
+                  backgroundColor: AppColors.gold.withValues(alpha: 0.12),
+                  shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(14)),
+                  padding: const EdgeInsets.symmetric(vertical: 14),
+                ),
+                onPressed: () => Navigator.of(ctx).pop(),
+                child: Text('Enjoy Briefed Pro',
+                    style: GoogleFonts.poppins(
+                        fontSize: 14,
+                        fontWeight: FontWeight.w800,
+                        color: AppColors.gold)),
+              ),
+            ),
+          ]),
+        ),
+      ),
+    );
+  }
+
+  void _showProSheet(
+    BuildContext context,
+    WidgetRef ref,
+    UserData user, {
+    required bool canActivatePro,
+  }) {
+    final hasPro = user.isPro && canActivatePro;
     showModalBottomSheet(
         context: context,
         isScrollControlled: true,
@@ -6923,7 +7803,7 @@ class SettingsScreen extends ConsumerWidget {
                       fontSize: 22,
                       fontWeight: FontWeight.w900,
                       color: ctx.textColor)),
-              Text('₹149 / month',
+              Text(hasPro ? 'Active' : ProPurchaseService.fallbackPriceLabel,
                   style: GoogleFonts.poppins(
                       fontSize: 14,
                       color: AppColors.gold,
@@ -6932,7 +7812,7 @@ class SettingsScreen extends ConsumerWidget {
               ...[
                 ('Unlimited quiz replays', Icons.replay_rounded),
                 (
-                  'Monthly Wrapped — your news personality',
+                  'Wrapped cards and deeper insights',
                   Icons.auto_awesome_rounded
                 ),
                 (
@@ -6940,7 +7820,7 @@ class SettingsScreen extends ConsumerWidget {
                   Icons.bar_chart_rounded
                 ),
                 ('Early access to new games', Icons.games_rounded),
-                ('Remove all ads (when added)', Icons.block_rounded),
+                ('Remove all ads', Icons.block_rounded),
               ].map((f) => Padding(
                   padding: const EdgeInsets.only(bottom: 12),
                   child: Row(children: [
@@ -6959,30 +7839,92 @@ class SettingsScreen extends ConsumerWidget {
                             color: ctx.textColor)),
                   ]))),
               const SizedBox(height: 8),
-              Container(
-                  width: double.infinity,
-                  padding: const EdgeInsets.symmetric(vertical: 16),
-                  decoration: BoxDecoration(
-                      gradient: const LinearGradient(
-                          colors: [AppColors.gold, Color(0xFFFF9100)]),
-                      borderRadius: BorderRadius.circular(16),
-                      boxShadow: [
-                        BoxShadow(
-                            color: AppColors.gold.withValues(alpha: 0.35),
-                            blurRadius: 20,
-                            offset: const Offset(0, 6))
-                      ]),
-                  child: Center(
-                      child: Text('Start Free Trial',
-                          style: GoogleFonts.poppins(
-                              fontSize: 15,
-                              fontWeight: FontWeight.w900,
-                              color: Colors.white)))),
+              GestureDetector(
+                  onTap: hasPro
+                      ? null
+                      : () async {
+                          if (!canActivatePro) {
+                            Navigator.of(ctx).pop();
+                            _showAuthSheet(context, ref);
+                            return;
+                          }
+                          await _startProPurchase(context, ref);
+                        },
+                  child: Container(
+                      width: double.infinity,
+                      padding: const EdgeInsets.symmetric(vertical: 16),
+                      decoration: BoxDecoration(
+                          gradient: const LinearGradient(
+                              colors: [AppColors.gold, Color(0xFFFF9100)]),
+                          borderRadius: BorderRadius.circular(16),
+                          boxShadow: [
+                            BoxShadow(
+                                color: AppColors.gold.withValues(alpha: 0.35),
+                                blurRadius: 20,
+                                offset: const Offset(0, 6))
+                          ]),
+                      child: Center(
+                          child: Text(
+                              hasPro
+                                  ? 'Pro Active'
+                                  : !canActivatePro
+                                      ? 'Sign in to Activate'
+                                      : 'Buy Pro for A\$2.99',
+                              style: GoogleFonts.poppins(
+                                  fontSize: 15,
+                                  fontWeight: FontWeight.w900,
+                                  color: Colors.white))))),
               const SizedBox(height: 8),
-              Text('7-day free trial · Cancel anytime',
+              Text(
+                  hasPro
+                      ? 'Unlimited replay is ready on the home quiz card'
+                      : canActivatePro
+                          ? 'One-time purchase through Google Play'
+                          : 'Pro is tied to a signed-in account',
                   style:
                       GoogleFonts.poppins(fontSize: 11, color: ctx.hintColor)),
+              if (canActivatePro && !hasPro) ...[
+                const SizedBox(height: 6),
+                GestureDetector(
+                    onTap: () => _restoreProPurchase(context),
+                    child: Text('Restore purchase',
+                        style: GoogleFonts.poppins(
+                            fontSize: 12,
+                            fontWeight: FontWeight.w700,
+                            color: AppColors.gold))),
+              ],
             ])));
+  }
+
+  Future<void> _startProPurchase(BuildContext context, WidgetRef ref) async {
+    final messenger = ScaffoldMessenger.of(context);
+    final nav = Navigator.of(context, rootNavigator: true);
+    showDialog<void>(
+        context: context,
+        barrierDismissible: false,
+        builder: (ctx) => const Center(child: CircularProgressIndicator()));
+
+    try {
+      final product = await ProPurchaseService.loadProProduct();
+      if (nav.canPop()) nav.pop();
+      await ProPurchaseService.buyPro(product);
+      messenger.showSnackBar(const SnackBar(
+          content: Text('Complete the purchase to activate Briefed Pro.')));
+    } catch (e) {
+      if (nav.canPop()) nav.pop();
+      messenger.showSnackBar(SnackBar(content: Text(e.toString())));
+    }
+  }
+
+  Future<void> _restoreProPurchase(BuildContext context) async {
+    final messenger = ScaffoldMessenger.of(context);
+    try {
+      await ProPurchaseService.restorePurchases();
+      messenger.showSnackBar(
+          const SnackBar(content: Text('Checking for previous purchases...')));
+    } catch (e) {
+      messenger.showSnackBar(SnackBar(content: Text(e.toString())));
+    }
   }
 
   void _showAuthSheet(BuildContext context, WidgetRef ref) {
@@ -6995,7 +7937,7 @@ class SettingsScreen extends ConsumerWidget {
         builder: (_) => _AuthSheet(ref: ref));
   }
 
-  void _handleSignOut(BuildContext context) {
+  void _handleSignOut(BuildContext context, WidgetRef ref) {
     // Capture Navigator before any async gap — the auth stream will rebuild
     // SettingsScreen during signOut(), making the original context stale.
     final nav = Navigator.of(context);
@@ -7020,6 +7962,9 @@ class SettingsScreen extends ConsumerWidget {
                       onPressed: () async {
                         Navigator.of(ctx).pop();
                         await AuthService.signOut();
+                        await StorageService.setIsPro(false);
+                        ref.read(userProvider.notifier).reload();
+                        AdService.configure(adsEnabled: true);
                         nav.pushNamedAndRemoveUntil('/signin', (_) => false);
                       },
                       child: Text('Sign Out',
@@ -7158,11 +8103,11 @@ class _AuthSheetState extends ConsumerState<_AuthSheet> {
             email: _emailCtrl.text,
             password: _passwordCtrl.text,
             name: _nameCtrl.text.trim());
-        ref.read(userProvider.notifier).syncAuthProfile(cred.user);
+        await ref.read(userProvider.notifier).syncAuthProfile(cred.user);
       } else {
         final cred = await AuthService.signInWithEmail(
             email: _emailCtrl.text, password: _passwordCtrl.text);
-        ref.read(userProvider.notifier).syncAuthProfile(cred.user);
+        await ref.read(userProvider.notifier).syncAuthProfile(cred.user);
       }
       if (mounted) Navigator.of(context).pop();
     } catch (e) {
@@ -7180,7 +8125,7 @@ class _AuthSheetState extends ConsumerState<_AuthSheet> {
     });
     try {
       final cred = await AuthService.signInWithGoogle();
-      ref.read(userProvider.notifier).syncAuthProfile(cred.user);
+      await ref.read(userProvider.notifier).syncAuthProfile(cred.user);
       if (mounted) Navigator.of(context).pop();
     } catch (e) {
       setState(() {
@@ -7192,18 +8137,24 @@ class _AuthSheetState extends ConsumerState<_AuthSheet> {
 
   String _friendly(Object e) {
     final s = e.toString();
-    if (s.contains('user-not-found'))
+    if (s.contains('user-not-found')) {
       return 'No account found with this email.';
-    if (s.contains('wrong-password') || s.contains('invalid-credential'))
+    }
+    if (s.contains('wrong-password') || s.contains('invalid-credential')) {
       return 'Incorrect password.';
-    if (s.contains('email-already-in-use'))
+    }
+    if (s.contains('email-already-in-use')) {
       return 'An account with this email already exists.';
-    if (s.contains('weak-password'))
+    }
+    if (s.contains('weak-password')) {
       return 'Password must be at least 6 characters.';
-    if (s.contains('invalid-email'))
+    }
+    if (s.contains('invalid-email')) {
       return 'Please enter a valid email address.';
+    }
     if (s.contains('network-request-failed')) return 'No internet connection.';
-    return 'Something went wrong. Please try again.';
+    if (s.contains('cancelled') || s.contains('canceled')) return 'Sign in cancelled.';
+    return 'Error: $s';
   }
 
   @override
@@ -7385,10 +8336,13 @@ class _GoogleLogo extends StatelessWidget {
   const _GoogleLogo({this.size = 24});
 
   @override
-  Widget build(BuildContext context) => SizedBox(
+  Widget build(BuildContext context) {
+    return SizedBox(
       width: size,
       height: size,
-      child: CustomPaint(painter: _GoogleGPainter()));
+      child: CustomPaint(painter: _GoogleGPainter()),
+    );
+  }
 }
 
 class _GoogleGPainter extends CustomPainter {
@@ -7399,28 +8353,53 @@ class _GoogleGPainter extends CustomPainter {
 
   @override
   void paint(Canvas canvas, Size s) {
-    final cx = s.width / 2, cy = s.height / 2;
-    final r = s.width * 0.40;
-    final thick = s.width * 0.20;
+    final cx = s.width / 2;
+    final cy = s.height / 2;
+    // Stroke radius and width matching Google brand proportions
+    final r = s.width * 0.42;
+    final sw = s.width * 0.18;
+    final half = sw / 2;
 
-    final paint = Paint()
+    final arcPaint = Paint()
       ..style = PaintingStyle.stroke
-      ..strokeWidth = thick
+      ..strokeWidth = sw
       ..strokeCap = StrokeCap.butt;
+
     final rect = Rect.fromCircle(center: Offset(cx, cy), radius: r);
 
-    paint.color = _blue;
-    canvas.drawArc(rect, -0.42, 0.86, false, paint);
-    paint.color = _green;
-    canvas.drawArc(rect, 0.44, 1.48, false, paint);
-    paint.color = _yellow;
-    canvas.drawArc(rect, 1.92, 1.08, false, paint);
-    paint.color = _red;
-    canvas.drawArc(rect, 3.00, 2.54, false, paint);
+    // Google G arc colour sequence (0 rad = 3-o'clock, clockwise positive).
+    // Gap occupies roughly -27° to +27° (right side) = -0.471 to +0.471 rad.
+    // Start just past the gap and paint clockwise:
+    //   Blue   : -27° → 90°  (upper-right quadrant)
+    //   Red    :  90° → 207° (upper-left + left)
+    //   Yellow : 207° → 317° (lower-left + bottom)
+    //   Green  : 317° → 333° (lower-right, short)
+    // then gap closes back to -27°.
+    const startRad = 0.471; // 27°
+    const blue1Sweep = (pi / 2 + startRad);        // -27° → 90°
+    const redSweep = (117.0 * pi / 180);           // 90° → 207°
+    const yellowSweep = (110.0 * pi / 180);        // 207° → 317°
+    const greenSweep = (16.0 * pi / 180);          // 317° → 333°
 
-    final halfBar = thick / 2;
+    arcPaint.color = _blue;
+    canvas.drawArc(rect, -startRad, blue1Sweep, false, arcPaint);
+
+    arcPaint.color = _red;
+    canvas.drawArc(rect, pi / 2, redSweep, false, arcPaint);
+
+    arcPaint.color = _yellow;
+    canvas.drawArc(rect, pi / 2 + redSweep, yellowSweep, false, arcPaint);
+
+    arcPaint.color = _green;
+    canvas.drawArc(rect, pi / 2 + redSweep + yellowSweep, greenSweep, false, arcPaint);
+
+    // Blue horizontal bar — from circle centre to right edge, vertically centred
+    final barLeft = cx;
+    final barRight = cx + r + half;
+    final barTop = cy - half;
+    final barBottom = cy + half;
     canvas.drawRect(
-      Rect.fromLTRB(cx, cy - halfBar, cx + r + halfBar, cy + halfBar),
+      Rect.fromLTRB(barLeft, barTop, barRight, barBottom),
       Paint()
         ..color = _blue
         ..style = PaintingStyle.fill,
@@ -7429,124 +8408,4 @@ class _GoogleGPainter extends CustomPainter {
 
   @override
   bool shouldRepaint(_GoogleGPainter _) => false;
-}
-
-// ─────────────────────────────────────────────────────────────────────────────
-// AD WIDGETS
-// ─────────────────────────────────────────────────────────────────────────────
-
-// Adaptive banner — loads after first frame so it can read screen width
-class _BannerAdWidget extends StatefulWidget {
-  const _BannerAdWidget();
-  @override
-  State<_BannerAdWidget> createState() => _BannerAdWidgetState();
-}
-
-class _BannerAdWidgetState extends State<_BannerAdWidget> {
-  BannerAd? _ad;
-  bool _loaded = false;
-
-  @override
-  void initState() {
-    super.initState();
-    WidgetsBinding.instance.addPostFrameCallback((_) => _load());
-  }
-
-  Future<void> _load() async {
-    if (!mounted) return;
-    final width = MediaQuery.of(context).size.width.truncate();
-    final size =
-        await AdSize.getCurrentOrientationAnchoredAdaptiveBannerAdSize(width);
-    if (!mounted) return;
-    _ad = BannerAd(
-      adUnitId: AdIds.banner,
-      size: size ?? AdSize.banner,
-      request: const AdRequest(),
-      listener: BannerAdListener(
-        onAdLoaded: (_) {
-          if (mounted) setState(() => _loaded = true);
-        },
-        onAdFailedToLoad: (ad, _) => ad.dispose(),
-      ),
-    )..load();
-  }
-
-  @override
-  void dispose() {
-    _ad?.dispose();
-    super.dispose();
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    if (!_loaded || _ad == null) return const SizedBox.shrink();
-    return SizedBox(
-      width: _ad!.size.width.toDouble(),
-      height: _ad!.size.height.toDouble(),
-      child: AdWidget(ad: _ad!),
-    );
-  }
-}
-
-// Small native ad template — used in the Briefing feed
-class _NativeAdCard extends StatefulWidget {
-  const _NativeAdCard();
-  @override
-  State<_NativeAdCard> createState() => _NativeAdCardState();
-}
-
-class _NativeAdCardState extends State<_NativeAdCard> {
-  NativeAd? _ad;
-  bool _loaded = false;
-
-  @override
-  void initState() {
-    super.initState();
-    _ad = NativeAd(
-      adUnitId: AdIds.native,
-      listener: NativeAdListener(
-        onAdLoaded: (ad) {
-          if (!mounted) {
-            ad.dispose();
-            return;
-          }
-          setState(() => _loaded = true);
-        },
-        onAdFailedToLoad: (ad, _) => ad.dispose(),
-      ),
-      request: const AdRequest(),
-      nativeTemplateStyle: NativeTemplateStyle(
-        templateType: TemplateType.small,
-        cornerRadius: 20,
-        callToActionTextStyle: NativeTemplateTextStyle(
-          textColor: Colors.white,
-          backgroundColor: AppColors.accent,
-          style: NativeTemplateFontStyle.bold,
-          size: 14,
-        ),
-        primaryTextStyle: NativeTemplateTextStyle(
-          textColor: Colors.black87,
-          style: NativeTemplateFontStyle.bold,
-          size: 14,
-        ),
-        secondaryTextStyle: NativeTemplateTextStyle(
-          textColor: Colors.grey,
-          style: NativeTemplateFontStyle.normal,
-          size: 12,
-        ),
-      ),
-    )..load();
-  }
-
-  @override
-  void dispose() {
-    _ad?.dispose();
-    super.dispose();
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    if (!_loaded || _ad == null) return const SizedBox.shrink();
-    return SizedBox(height: 90, child: AdWidget(ad: _ad!));
-  }
 }

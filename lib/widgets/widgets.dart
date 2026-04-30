@@ -27,20 +27,20 @@ class AccentButton extends StatelessWidget {
     return GestureDetector(
       onTap: onTap,
       child: Container(
-        width:   double.infinity,
+        width: double.infinity,
         padding: padding ?? const EdgeInsets.symmetric(vertical: 16),
         decoration: BoxDecoration(
           gradient: const LinearGradient(
             colors: [Color(0xFFFF4500), Color(0xFFCC3700)],
-            begin:  Alignment.topLeft,
-            end:    Alignment.bottomRight,
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
           ),
           borderRadius: BorderRadius.circular(16),
           boxShadow: [
             BoxShadow(
-              color:       const Color(0xFFFF4500).withOpacity(0.35),
-              blurRadius:  20,
-              offset:      const Offset(0, 6),
+              color: const Color(0xFFFF4500).withValues(alpha: 0.35),
+              blurRadius: 20,
+              offset: const Offset(0, 6),
             ),
           ],
         ),
@@ -54,9 +54,9 @@ class AccentButton extends StatelessWidget {
             Text(
               text,
               style: GoogleFonts.poppins(
-                fontSize:   fontSize ?? 15,
+                fontSize: fontSize ?? 15,
                 fontWeight: FontWeight.w800,
-                color:      Colors.white,
+                color: Colors.white,
               ),
             ),
           ],
@@ -87,12 +87,12 @@ class OutlineButton extends StatelessWidget {
     return GestureDetector(
       onTap: onTap,
       child: Container(
-        width:   double.infinity,
+        width: double.infinity,
         padding: const EdgeInsets.symmetric(vertical: 14),
         decoration: BoxDecoration(
-          color:        Colors.transparent,
+          color: Colors.transparent,
           borderRadius: BorderRadius.circular(16),
-          border:       Border.all(color: context.border2Color),
+          border: Border.all(color: context.border2Color),
         ),
         child: Row(
           mainAxisAlignment: MainAxisAlignment.center,
@@ -104,9 +104,9 @@ class OutlineButton extends StatelessWidget {
             Text(
               text,
               style: GoogleFonts.poppins(
-                fontSize:   14,
+                fontSize: 14,
                 fontWeight: FontWeight.w600,
-                color:      context.subColor,
+                color: context.subColor,
               ),
             ),
           ],
@@ -123,8 +123,8 @@ class OutlineButton extends StatelessWidget {
 class BriefedCard extends StatelessWidget {
   final Widget child;
   final EdgeInsets? padding;
-  final Color?  borderColor;
-  final double  borderRadius;
+  final Color? borderColor;
+  final double borderRadius;
   final VoidCallback? onTap;
 
   const BriefedCard({
@@ -141,19 +141,20 @@ class BriefedCard extends StatelessWidget {
     return GestureDetector(
       onTap: onTap,
       child: Container(
-        padding:    padding ?? const EdgeInsets.all(16),
+        padding: padding ?? const EdgeInsets.all(16),
         decoration: BoxDecoration(
-          color:        context.cardColor,
+          color: context.cardColor,
           borderRadius: BorderRadius.circular(borderRadius),
-          border:       Border.all(
+          border: Border.all(
             color: borderColor ?? context.borderColor,
             width: 1,
           ),
           boxShadow: [
             BoxShadow(
-              color:      Colors.black.withOpacity(context.isDark ? 0.3 : 0.05),
+              color:
+                  Colors.black.withValues(alpha: context.isDark ? 0.3 : 0.05),
               blurRadius: 12,
-              offset:     const Offset(0, 2),
+              offset: const Offset(0, 2),
             ),
           ],
         ),
@@ -169,29 +170,29 @@ class BriefedCard extends StatelessWidget {
 
 class CategoryTag extends StatelessWidget {
   final String category;
-  final bool   small;
-  final bool   showIcon;
+  final bool small;
+  final bool showIcon;
 
   const CategoryTag({
     super.key,
     required this.category,
-    this.small    = false,
+    this.small = false,
     this.showIcon = true,
   });
 
   @override
   Widget build(BuildContext context) {
     final color = AppColors.categoryColor(category);
-    final bg    = AppColors.categoryBg(category);
-    final icon  = _iconFor(category);
+    final bg = AppColors.categoryBg(category);
+    final icon = _iconFor(category);
 
     return Container(
       padding: EdgeInsets.symmetric(
-        horizontal: small ? 8  : 12,
-        vertical:   small ? 3  : 5,
+        horizontal: small ? 8 : 12,
+        vertical: small ? 3 : 5,
       ),
       decoration: BoxDecoration(
-        color:        bg,
+        color: bg,
         borderRadius: BorderRadius.circular(999),
       ),
       child: Row(
@@ -204,9 +205,9 @@ class CategoryTag extends StatelessWidget {
           Text(
             category,
             style: GoogleFonts.poppins(
-              fontSize:   small ? 9 : 11,
+              fontSize: small ? 9 : 11,
               fontWeight: FontWeight.w700,
-              color:      color,
+              color: color,
             ),
           ),
         ],
@@ -216,14 +217,21 @@ class CategoryTag extends StatelessWidget {
 
   IconData _iconFor(String cat) {
     switch (cat.toLowerCase()) {
-      case 'world':         return Icons.language_rounded;
+      case 'world':
+        return Icons.language_rounded;
       case 'technology':
-      case 'tech':          return Icons.memory_rounded;
-      case 'business':      return Icons.trending_up_rounded;
-      case 'science':       return Icons.science_rounded;
-      case 'sports':        return Icons.sports_soccer_rounded;
-      case 'entertainment': return Icons.star_rounded;
-      default:              return Icons.language_rounded;
+      case 'tech':
+        return Icons.memory_rounded;
+      case 'business':
+        return Icons.trending_up_rounded;
+      case 'science':
+        return Icons.science_rounded;
+      case 'sports':
+        return Icons.sports_soccer_rounded;
+      case 'entertainment':
+        return Icons.star_rounded;
+      default:
+        return Icons.language_rounded;
     }
   }
 }
@@ -234,9 +242,9 @@ class CategoryTag extends StatelessWidget {
 
 class StatCard extends StatelessWidget {
   final IconData icon;
-  final String   value;
-  final String   label;
-  final Color    color;
+  final String value;
+  final String label;
+  final Color color;
 
   const StatCard({
     super.key,
@@ -254,9 +262,10 @@ class StatCard extends StatelessWidget {
         mainAxisSize: MainAxisSize.min,
         children: [
           Container(
-            width:  32, height: 32,
+            width: 32,
+            height: 32,
             decoration: BoxDecoration(
-              color:        color.withOpacity(0.15),
+              color: color.withValues(alpha: 0.15),
               borderRadius: BorderRadius.circular(10),
             ),
             child: Icon(icon, size: 15, color: color),
@@ -265,20 +274,20 @@ class StatCard extends StatelessWidget {
           Text(
             value,
             style: GoogleFonts.poppins(
-              fontSize:   17,
+              fontSize: 17,
               fontWeight: FontWeight.w900,
               letterSpacing: -0.5,
-              color:      context.textColor,
+              color: context.textColor,
             ),
           ),
           const SizedBox(height: 2),
           Text(
             label.toUpperCase(),
             style: GoogleFonts.poppins(
-              fontSize:   8,
+              fontSize: 8,
               fontWeight: FontWeight.w700,
               letterSpacing: 1,
-              color:      context.hintColor,
+              color: context.hintColor,
             ),
           ),
         ],
@@ -317,27 +326,30 @@ class TimerRing extends StatelessWidget {
     }
 
     return SizedBox(
-      width: 40, height: 40,
+      width: 40,
+      height: 40,
       child: Stack(
         children: [
           SizedBox(
-            width: 40, height: 40,
+            width: 40,
+            height: 40,
             child: CircularProgressIndicator(
-              value:            answered ? 1 : timeLeft / totalTime,
-              strokeWidth:      2.5,
-              backgroundColor:  context.inputBg,
-              valueColor:       AlwaysStoppedAnimation<Color>(ringColor),
+              value: answered ? 1 : timeLeft / totalTime,
+              strokeWidth: 2.5,
+              backgroundColor: context.inputBg,
+              valueColor: AlwaysStoppedAnimation<Color>(ringColor),
             ),
           ),
           Center(
             child: answered
-                ? const Icon(Icons.check_rounded, color: AppColors.green, size: 16)
+                ? const Icon(Icons.check_rounded,
+                    color: AppColors.green, size: 16)
                 : Text(
                     '$timeLeft',
                     style: GoogleFonts.poppins(
-                      fontSize:   12,
+                      fontSize: 12,
                       fontWeight: FontWeight.w800,
-                      color:      context.textColor,
+                      color: context.textColor,
                     ),
                   ),
           ),
@@ -370,13 +382,13 @@ class ShimmerBox extends StatefulWidget {
 class _ShimmerBoxState extends State<ShimmerBox>
     with SingleTickerProviderStateMixin {
   late AnimationController _ctrl;
-  late Animation<double>   _anim;
+  late Animation<double> _anim;
 
   @override
   void initState() {
     super.initState();
     _ctrl = AnimationController(
-      vsync:    this,
+      vsync: this,
       duration: const Duration(milliseconds: 1200),
     )..repeat();
     _anim = Tween<double>(begin: -1, end: 2).animate(
@@ -396,14 +408,14 @@ class _ShimmerBoxState extends State<ShimmerBox>
       animation: _anim,
       builder: (context, _) {
         return Container(
-          width:  widget.width,
+          width: widget.width,
           height: widget.height,
           decoration: BoxDecoration(
             borderRadius: BorderRadius.circular(widget.borderRadius),
             gradient: LinearGradient(
-              begin:  Alignment.centerLeft,
-              end:    Alignment.centerRight,
-              stops:  [
+              begin: Alignment.centerLeft,
+              end: Alignment.centerRight,
+              stops: [
                 (_anim.value - 1).clamp(0.0, 1.0),
                 _anim.value.clamp(0.0, 1.0),
                 (_anim.value + 1).clamp(0.0, 1.0),
@@ -432,11 +444,11 @@ class _ShimmerBoxState extends State<ShimmerBox>
 // ─────────────────────────────────────────────────────────────────────────────
 
 class OptionButton extends StatelessWidget {
-  final String  text;
-  final int     index;
-  final bool    isSelected;
-  final bool    isCorrect;
-  final bool    isRevealed;
+  final String text;
+  final int index;
+  final bool isSelected;
+  final bool isCorrect;
+  final bool isRevealed;
   final VoidCallback onTap;
 
   const OptionButton({
@@ -456,42 +468,44 @@ class OptionButton extends StatelessWidget {
 
     if (isRevealed) {
       if (isCorrect) {
-        bg        = AppColors.green.withOpacity(0.10);
-        border    = AppColors.green.withOpacity(0.40);
+        bg = AppColors.green.withValues(alpha: 0.10);
+        border = AppColors.green.withValues(alpha: 0.40);
         textColor = AppColors.green;
         indicator = Container(
-          width: 34, height: 34,
+          width: 34,
+          height: 34,
           decoration: BoxDecoration(
-            color:        AppColors.green.withOpacity(0.2),
+            color: AppColors.green.withValues(alpha: 0.2),
             borderRadius: BorderRadius.circular(10),
-            border:       Border.all(color: AppColors.green.withOpacity(0.4)),
+            border: Border.all(color: AppColors.green.withValues(alpha: 0.4)),
           ),
           child: const Icon(Icons.check_circle_rounded,
               color: AppColors.green, size: 18),
         );
       } else if (isSelected) {
-        bg        = AppColors.red.withOpacity(0.10);
-        border    = AppColors.red.withOpacity(0.40);
+        bg = AppColors.red.withValues(alpha: 0.10);
+        border = AppColors.red.withValues(alpha: 0.40);
         textColor = AppColors.red;
         indicator = Container(
-          width: 34, height: 34,
+          width: 34,
+          height: 34,
           decoration: BoxDecoration(
-            color:        AppColors.red.withOpacity(0.2),
+            color: AppColors.red.withValues(alpha: 0.2),
             borderRadius: BorderRadius.circular(10),
-            border:       Border.all(color: AppColors.red.withOpacity(0.4)),
+            border: Border.all(color: AppColors.red.withValues(alpha: 0.4)),
           ),
-          child: const Icon(Icons.cancel_rounded,
-              color: AppColors.red, size: 18),
+          child:
+              const Icon(Icons.cancel_rounded, color: AppColors.red, size: 18),
         );
       } else {
-        bg        = context.cardColor;
-        border    = context.borderColor;
+        bg = context.cardColor;
+        border = context.borderColor;
         textColor = context.hintColor;
         indicator = _letterBox(context, dimmed: true);
       }
     } else {
-      bg        = context.cardColor;
-      border    = context.borderColor;
+      bg = context.cardColor;
+      border = context.borderColor;
       textColor = context.subColor;
       indicator = _letterBox(context);
     }
@@ -500,19 +514,19 @@ class OptionButton extends StatelessWidget {
       onTap: isRevealed ? null : onTap,
       child: AnimatedContainer(
         duration: const Duration(milliseconds: 220),
-        padding:  const EdgeInsets.symmetric(horizontal: 16, vertical: 13),
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 13),
         decoration: BoxDecoration(
-          color:        bg,
+          color: bg,
           borderRadius: BorderRadius.circular(18),
-          border:       Border.all(color: border),
+          border: Border.all(color: border),
           boxShadow: isRevealed
               ? []
               : [
                   BoxShadow(
-                    color:      Colors.black.withOpacity(
-                        context.isDark ? 0.25 : 0.04),
+                    color: Colors.black
+                        .withValues(alpha: context.isDark ? 0.25 : 0.04),
                     blurRadius: 8,
-                    offset:     const Offset(0, 2),
+                    offset: const Offset(0, 2),
                   ),
                 ],
         ),
@@ -524,9 +538,9 @@ class OptionButton extends StatelessWidget {
               child: Text(
                 text,
                 style: GoogleFonts.poppins(
-                  fontSize:   14,
+                  fontSize: 14,
                   fontWeight: FontWeight.w600,
-                  color:      textColor,
+                  color: textColor,
                 ),
               ),
             ),
@@ -539,19 +553,20 @@ class OptionButton extends StatelessWidget {
   Widget _letterBox(BuildContext context, {bool dimmed = false}) {
     final labels = ['A', 'B', 'C', 'D'];
     return Container(
-      width: 34, height: 34,
+      width: 34,
+      height: 34,
       decoration: BoxDecoration(
-        color:        context.inputBg,
+        color: context.inputBg,
         borderRadius: BorderRadius.circular(10),
-        border:       Border.all(color: context.borderColor),
+        border: Border.all(color: context.borderColor),
       ),
       child: Center(
         child: Text(
           labels[index],
           style: GoogleFonts.poppins(
-            fontSize:   12,
+            fontSize: 12,
             fontWeight: FontWeight.w800,
-            color:      dimmed ? context.hintColor : context.hintColor,
+            color: dimmed ? context.hintColor : context.hintColor,
           ),
         ),
       ),
@@ -568,7 +583,7 @@ class StoryRow extends StatelessWidget {
   final String sourceName;
   final String category;
   final String timeAgo;
-  final bool   isLast;
+  final bool isLast;
   final VoidCallback? onTap;
 
   const StoryRow({
@@ -591,8 +606,7 @@ class StoryRow extends StatelessWidget {
         decoration: BoxDecoration(
           border: isLast
               ? null
-              : Border(
-                  bottom: BorderSide(color: context.borderColor)),
+              : Border(bottom: BorderSide(color: context.borderColor)),
         ),
         child: Row(
           crossAxisAlignment: CrossAxisAlignment.start,
@@ -605,18 +619,21 @@ class StoryRow extends StatelessWidget {
                   Row(
                     children: [
                       Container(
-                        width: 18, height: 18,
+                        width: 18,
+                        height: 18,
                         decoration: BoxDecoration(
-                          color:        AppColors.categoryBg(category),
+                          color: AppColors.categoryBg(category),
                           borderRadius: BorderRadius.circular(5),
                         ),
                         child: Center(
                           child: Text(
-                            sourceName.substring(0, sourceName.length.clamp(0, 2)).toUpperCase(),
+                            sourceName
+                                .substring(0, sourceName.length.clamp(0, 2))
+                                .toUpperCase(),
                             style: GoogleFonts.poppins(
-                              fontSize:   7,
+                              fontSize: 7,
                               fontWeight: FontWeight.w900,
-                              color:      catColor,
+                              color: catColor,
                             ),
                           ),
                         ),
@@ -625,19 +642,21 @@ class StoryRow extends StatelessWidget {
                       Text(
                         sourceName,
                         style: GoogleFonts.poppins(
-                          fontSize:   11,
+                          fontSize: 11,
                           fontWeight: FontWeight.w600,
-                          color:      context.hintColor,
+                          color: context.hintColor,
                         ),
                       ),
                       const SizedBox(width: 4),
-                      Text('·', style: TextStyle(color: context.hintColor, fontSize: 10)),
+                      Text('·',
+                          style: TextStyle(
+                              color: context.hintColor, fontSize: 10)),
                       const SizedBox(width: 4),
                       Text(
                         timeAgo,
                         style: GoogleFonts.poppins(
-                          fontSize:   11,
-                          color:      context.hintColor,
+                          fontSize: 11,
+                          color: context.hintColor,
                         ),
                       ),
                     ],
@@ -646,11 +665,11 @@ class StoryRow extends StatelessWidget {
                   Text(
                     title,
                     style: GoogleFonts.poppins(
-                      fontSize:      15,
-                      fontWeight:    FontWeight.w600,
-                      color:         context.textColor,
+                      fontSize: 15,
+                      fontWeight: FontWeight.w600,
+                      color: context.textColor,
                       letterSpacing: 0.1,
-                      height:        1.55,
+                      height: 1.55,
                     ),
                     maxLines: 3,
                     overflow: TextOverflow.ellipsis,

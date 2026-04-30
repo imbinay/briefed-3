@@ -19,6 +19,7 @@ class AppConstants {
   // ── APP CONFIG ────────────────────────────────────────────────────────────
   static const String appName = 'Briefed';
   static const String appTagline = 'Stay Briefed. Stay Sharp.';
+  static const String defaultAnonymousName = 'Briefed Explorer';
   static const String defaultCountry = 'au'; // Australia fallback
   static const String defaultLanguage = 'en';
   static const int questionsPerQuiz = 5;
@@ -45,6 +46,7 @@ class AppConstants {
   static const String keyCachedQuestionsDate = 'cached_questions_date';
   static const String keyQuizHistory = 'quiz_history';
   static const String keyUserPhotoUrl = 'user_photo_url';
+  static const String keyIsPro = 'is_pro';
 
   // ── CATEGORIES ────────────────────────────────────────────────────────────
   static const List<Map<String, String>> allCategories = [
@@ -52,112 +54,155 @@ class AppConstants {
     {'id': 'tech', 'label': 'Technology', 'newsId': 'technology'},
     {'id': 'business', 'label': 'Business', 'newsId': 'business'},
     {'id': 'sports', 'label': 'Sports', 'newsId': 'sports'},
-    {'id': 'entertainment', 'label': 'Entertainment', 'newsId': 'entertainment'},
+    {
+      'id': 'entertainment',
+      'label': 'Entertainment',
+      'newsId': 'entertainment'
+    },
   ];
 
   // ── MOCK QUESTIONS (fallback if API fails) ────────────────────────────────
   static const List<Map<String, dynamic>> mockQuestions = [
     {
-      'question': 'Which country became the first to pass a law banning social media for children under 16?',
-      'options': ['France', 'Australia', 'Sweden', 'Germany'],
+      'question':
+          'Which state\'s majority-Black congressional district was struck down by the US Supreme Court?',
+      'options': ['Georgia', 'Louisiana', 'Alabama', 'Mississippi'],
       'correct_index': 1,
       'difficulty': 'easy',
-      'category': 'World',
-      'explanation': 'Australia passed landmark legislation making it illegal for children under 16 to have social media accounts, the strictest such law globally.',
-      'story_summary': 'Australia became the first country to ban social media for under-16s. Tech companies face fines up to \$50M for non-compliance. The law is the strictest of its kind globally.',
-      'source': 'BBC News',
+      'category': 'Politics',
+      'explanation':
+          'The Supreme Court ruling focused on Louisiana\'s congressional map and a district created to give Black voters a stronger chance to elect a preferred candidate.',
+      'story_summary':
+          'The decision became one of the leading US political stories of the day. It matters because congressional maps can shape representation and party control in close elections.',
+      'source': 'Associated Press',
     },
     {
-      'question': 'Which AI model recently scored in the 90th percentile on the US bar exam?',
-      'options': ['Gemini Ultra', 'GPT-4o', 'Claude 3', 'Llama 3'],
-      'correct_index': 1,
+      'question':
+          'Which US defence secretary was scheduled to testify before a Senate committee?',
+      'options': ['Pete Hegseth', 'Lloyd Austin', 'Mark Esper', 'Robert Gates'],
+      'correct_index': 0,
       'difficulty': 'easy',
+      'category': 'Politics',
+      'explanation':
+          'AP listed Defense Secretary Pete Hegseth\'s Senate committee testimony among its top stories for April 30, 2026.',
+      'story_summary':
+          'Cabinet testimony can become a major accountability moment for an administration. Senators use these hearings to question policy, spending, and agency leadership.',
+      'source': 'Associated Press',
+    },
+    {
+      'question':
+          'Which region was recovering from widespread blackouts in AP\'s April 29 top stories?',
+      'options': [
+        'Spain and Portugal',
+        'Japan and South Korea',
+        'Canada and Alaska',
+        'Brazil and Argentina'
+      ],
+      'correct_index': 0,
+      'difficulty': 'easy',
+      'category': 'World',
+      'explanation':
+          'Spain and Portugal were highlighted as recovering from blackouts, making the Iberian power disruption a prominent international story.',
+      'story_summary':
+          'Large power failures can ripple through transport, hospitals, communications, and businesses. Recovery stories often focus on both restoring service and finding the cause.',
+      'source': 'Associated Press',
+    },
+    {
+      'question':
+          'Why was the White House Correspondents\' Dinner shooting still in the news?',
+      'options': [
+        'Court filings described the suspect\'s actions before the attack',
+        'The dinner was moved permanently out of Washington',
+        'The suspect was elected to public office',
+        'The event was converted into a sports fundraiser'
+      ],
+      'correct_index': 0,
+      'difficulty': 'hard',
+      'category': 'World',
+      'explanation':
+          'AP reported that court filings said the suspect took a picture of himself before the attack, adding detail to the investigation.',
+      'story_summary':
+          'Follow-up reporting after major security incidents often centers on motive, planning, and missed warning signs. Those details can influence future protective measures.',
+      'source': 'Associated Press',
+    },
+    {
+      'question':
+          'What made Microsoft\'s Copilot rollout to Accenture notable in tech news?',
+      'options': [
+        'It was described as a very large enterprise deployment',
+        'It removed Copilot from Microsoft 365',
+        'It replaced Accenture\'s consulting business with hardware sales',
+        'It made Copilot available only to government workers'
+      ],
+      'correct_index': 0,
+      'difficulty': 'hard',
       'category': 'Technology',
-      'explanation': 'OpenAI\'s GPT-4o demonstrated remarkable legal reasoning, achieving scores placing it among top-tier US legal professionals.',
-      'story_summary': 'GPT-4o demonstrated remarkable legal reasoning. The model showed particular strength in contract law. Legal experts are divided on the implications.',
-      'source': 'The Verge',
-    },
-    {
-      'question': 'India\'s stock market recently surpassed which market capitalisation milestone?',
-      'options': ['\$3 trillion', '\$4 trillion', '\$5 trillion', '\$6 trillion'],
-      'correct_index': 1,
-      'difficulty': 'easy',
-      'category': 'Business',
-      'explanation': 'India crossed \$4 trillion in market cap, overtaking Hong Kong to become the world\'s fourth largest stock market.',
-      'story_summary': 'India crossed \$4 trillion in market cap. This made India the world\'s fourth largest stock market. Foreign investors poured over \$20 billion in this year.',
+      'explanation':
+          'Reuters was cited in tech coverage saying Microsoft was rolling out Microsoft 365 Copilot across Accenture\'s roughly 743,000 employees.',
+      'story_summary':
+          'Large workplace AI deployments are watched closely because they test whether generative AI can move from pilots into everyday enterprise use. The scale gives Microsoft a major case study.',
       'source': 'Reuters',
-    },
-    {
-      'question': 'Which country won the most gold medals at the 2024 Paris Olympics?',
-      'options': ['China', 'France', 'Great Britain', 'United States'],
-      'correct_index': 3,
-      'difficulty': 'hard',
-      'category': 'Sports',
-      'explanation': 'The United States topped the gold medal tally at Paris 2024, continuing their dominance in the Summer Olympics.',
-      'story_summary': 'The United States led the gold medal count at the Paris 2024 Olympics. France performed strongly as the host nation. China finished second overall.',
-      'source': 'BBC Sport',
-    },
-    {
-      'question': 'How many nations have now signed NASA\'s Artemis Accords for space cooperation?',
-      'options': ['28 nations', '35 nations', '42 nations', '50 nations'],
-      'correct_index': 2,
-      'difficulty': 'hard',
-      'category': 'World',
-      'explanation': 'NASA\'s Artemis Accords now has 42 signatory countries, expanding international cooperation for lunar exploration and peaceful civil space activities.',
-      'story_summary': 'NASA\'s Artemis Accords reached 42 signatory nations. The accords establish norms for responsible space behaviour. China and Russia have not signed.',
-      'source': 'NASA',
     },
   ];
 
   // ── MOCK NEWS ARTICLES ────────────────────────────────────────────────────
   static const List<Map<String, dynamic>> mockArticles = [
     {
-      'title': 'Australia bans social media for children under 16 — fines up to \$50M',
-      'description': 'Australia has become the first country to pass legislation banning social media platforms from allowing users under 16 to create accounts. Tech companies face fines up to \$50 million for non-compliance.',
-      'source_name': 'BBC News',
+      'title':
+          'Supreme Court strikes down Louisiana majority-Black congressional district',
+      'description':
+          'The US Supreme Court ruling over Louisiana\'s congressional map became one of AP\'s top stories for April 30, 2026.',
+      'source_name': 'Associated Press',
+      'category': 'politics',
+      'pubDate': '2026-04-30',
+      'link': 'https://apnews.com',
+    },
+    {
+      'title': 'Defense Secretary Hegseth to testify before Senate committee',
+      'description':
+          'AP highlighted Defense Secretary Pete Hegseth\'s planned Senate committee testimony among the day\'s major US political stories.',
+      'source_name': 'Associated Press',
+      'category': 'politics',
+      'pubDate': '2026-04-30',
+      'link': 'https://apnews.com',
+    },
+    {
+      'title': 'Spain and Portugal recover from widespread blackouts',
+      'description':
+          'AP\'s April 29 top stories included Spain and Portugal recovering after major blackouts affected the region.',
+      'source_name': 'Associated Press',
       'category': 'world',
-      'pubDate': '2025-04-16',
-      'link': 'https://bbc.com',
+      'pubDate': '2026-04-29',
+      'link': 'https://apnews.com',
     },
     {
-      'title': 'OpenAI\'s GPT-4o scores 90th percentile on the bar exam',
-      'description': 'OpenAI\'s latest model demonstrated remarkable legal reasoning, passing the bar exam at a level that places it among the top tier of US legal professionals.',
-      'source_name': 'The Verge',
-      'category': 'technology',
-      'pubDate': '2025-04-16',
-      'link': 'https://theverge.com',
+      'title':
+          'Court filings add detail in White House Correspondents\' Dinner shooting case',
+      'description':
+          'AP reported that filings said the shooting suspect took a picture of himself before the attack.',
+      'source_name': 'Associated Press',
+      'category': 'world',
+      'pubDate': '2026-04-30',
+      'link': 'https://apnews.com',
     },
     {
-      'title': 'India overtakes Hong Kong as world\'s fourth largest stock market',
-      'description': 'India\'s equity market crossed \$4 trillion in market capitalisation, surpassing Hong Kong and making India the fourth largest stock market globally.',
+      'title':
+          'Microsoft rolls out Copilot to more than 740,000 Accenture workers',
+      'description':
+          'Reuters was cited in tech coverage describing the Accenture rollout as a major enterprise AI deployment.',
       'source_name': 'Reuters',
-      'category': 'business',
-      'pubDate': '2025-04-16',
+      'category': 'technology',
+      'pubDate': '2026-04-29',
       'link': 'https://reuters.com',
     },
     {
-      'title': 'Australia wins back-to-back Women\'s World Cup with historic victory',
-      'description': 'The Matildas claimed a stunning second consecutive FIFA Women\'s World Cup title, defeating Spain 2-1 in front of a record crowd in Sydney.',
-      'source_name': 'ABC Sport',
-      'category': 'sports',
-      'pubDate': '2025-04-16',
-      'link': 'https://abc.net.au',
-    },
-    {
-      'title': 'Apple acquires voice-cloning AI startup for estimated \$400 million',
-      'description': 'Apple has acquired a startup specialising in ultra-fast voice cloning technology that can replicate a person\'s voice from just 3 seconds of audio.',
-      'source_name': 'Bloomberg',
-      'category': 'technology',
-      'pubDate': '2025-04-16',
-      'link': 'https://bloomberg.com',
-    },
-    {
-      'title': '42 nations now signed NASA\'s Artemis Accords for space cooperation',
-      'description': 'NASA\'s Artemis Accords for peaceful civil space exploration now has 42 signatory countries, expanding international cooperation for lunar exploration.',
-      'source_name': 'NASA',
+      'title': 'King Charles III to finish US tour',
+      'description':
+          'AP listed King Charles III finishing his US tour among its top stories for April 30, 2026.',
+      'source_name': 'Associated Press',
       'category': 'world',
-      'pubDate': '2025-04-16',
-      'link': 'https://nasa.gov',
+      'pubDate': '2026-04-30',
+      'link': 'https://apnews.com',
     },
   ];
 }

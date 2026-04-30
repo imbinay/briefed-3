@@ -14,11 +14,27 @@
       },
       "oauth_client": [
         {
+          "client_id": "864230815532-49q99k7k557166fskdvud8ffu6icahj6.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.binaygautam.briefed",
+            "certificate_hash": "c1c7ea3393d3c09254be84ff2b73a6c5c1ba8d20"
+          }
+        },
+        {
           "client_id": "864230815532-se1e1dc2e8v2i6gqlocb8f63ocl2n207.apps.googleusercontent.com",
           "client_type": 1,
           "android_info": {
             "package_name": "com.binaygautam.briefed",
             "certificate_hash": "def7115d7e23cf6a47b538d2869387b04693fd24"
+          }
+        },
+        {
+          "client_id": "864230815532-vdcl7h86a4ql2h0bb4cl508j53p5tgh1.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.binaygautam.briefed",
+            "certificate_hash": "e07e1c4b622464e3a0eee811828eeb5191778407"
           }
         },
         {

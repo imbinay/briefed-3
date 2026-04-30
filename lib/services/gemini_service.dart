@@ -29,10 +29,14 @@ Output ONLY valid JSON. No markdown. No explanation. Start with { and end with }
 
 Rules:
 - Exactly 5 questions total
+- Prioritise the most newsworthy, widely reported stories in the supplied headlines
 - Questions 1-3: easy (answerable from headline)
 - Questions 4-5: hard (need deeper understanding)
 - Each question: exactly 4 options, all plausible
+- Keep the correct option unambiguous and supported by the supplied headline
 - No questions about exact dates or death tolls
+- Avoid trivia that will feel stale quickly, unless the headline itself is about a durable outcome
+- Use concise, high-signal explanations that teach the context behind the answer
 - Neutral tone
 
 JSON format:
@@ -47,6 +51,7 @@ JSON format:
     required List<NewsArticle> articles,
     bool forceRefresh = false,
     bool bonusRound = false,
+    int? replaySeed,
   }) async {
     // 1. Return cache if fresh
     if (!forceRefresh && !bonusRound) {
@@ -61,15 +66,21 @@ JSON format:
       dev.log('[Quiz] Cache cleared', name: 'Briefed');
     }
 
-    final sourceArticles = bonusRound ? _bonusArticles(articles) : articles;
-    if (sourceArticles.isEmpty) return mockQuestions(bonusRound: bonusRound);
+    final sourceArticles = bonusRound
+        ? _bonusArticles(articles, replaySeed: replaySeed)
+        : articles;
+    if (sourceArticles.isEmpty) {
+      return mockQuestions(bonusRound: bonusRound, replaySeed: replaySeed);
+    }
 
     // Build the headlines string — only top 5 to keep tokens low
     final headlines =
         sourceArticles.take(5).map((a) => '- ${a.title}').join('\n');
 
+    final variantHint =
+        replaySeed == null ? '' : ' Replay variant: $replaySeed.';
     final userMsg = bonusRound
-        ? 'Generate a different 5-question BONUS quiz from these headlines. Avoid repeating the daily quiz wording or angles:\n$headlines\n\nReturn only JSON.'
+        ? 'Generate a different 5-question BONUS quiz from these headlines.$variantHint Avoid repeating the daily quiz wording, answer positions, or angles:\n$headlines\n\nReturn only JSON.'
         : 'Generate 5 quiz questions from these headlines:\n$headlines\n\nReturn only JSON.';
 
     // 2. Try Groq first
@@ -113,14 +124,23 @@ JSON format:
     }
 
     // 4. Neither key is set
-    return mockQuestions(bonusRound: bonusRound);
+    return mockQuestions(bonusRound: bonusRound, replaySeed: replaySeed);
   }
 
-  static List<NewsArticle> _bonusArticles(List<NewsArticle> articles) {
-    if (articles.length > AppConstants.questionsPerQuiz) {
-      return articles.skip(AppConstants.questionsPerQuiz).toList();
+  static List<NewsArticle> _bonusArticles(
+    List<NewsArticle> articles, {
+    int? replaySeed,
+  }) {
+    if (articles.isEmpty) return articles;
+    final offset = replaySeed ?? AppConstants.questionsPerQuiz;
+    final rotated = [
+      ...articles.skip(offset % articles.length),
+      ...articles.take(offset % articles.length),
+    ];
+    if (rotated.length > AppConstants.questionsPerQuiz) {
+      return rotated.take(AppConstants.questionsPerQuiz).toList();
     }
-    return articles.reversed.toList();
+    return rotated.reversed.toList();
   }
 
   // ─────────────────────────────────────────────────────────────────────────
@@ -286,9 +306,15 @@ JSON format:
   // MOCK FALLBACK
   // ─────────────────────────────────────────────────────────────────────────
 
-  static List<Question> mockQuestions({bool bonusRound = false}) {
+  static List<Question> mockQuestions(
+      {bool bonusRound = false, int? replaySeed}) {
     final questions =
         AppConstants.mockQuestions.map((e) => Question.fromJson(e)).toList();
-    return bonusRound ? questions.reversed.toList() : questions;
+    if (!bonusRound || questions.isEmpty) return questions;
+    final offset = replaySeed ?? 1;
+    return [
+      ...questions.skip(offset % questions.length),
+      ...questions.take(offset % questions.length),
+    ];
   }
 }

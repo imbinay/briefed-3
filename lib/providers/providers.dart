@@ -4,6 +4,8 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:in_app_purchase/in_app_purchase.dart' if (dart.library.js_interop) '../core/iap_stub.dart';
+import 'package:flutter/foundation.dart' show kIsWeb;
 import '../core/constants.dart';
 import '../models/models.dart';
 import '../services/storage_service.dart';
@@ -11,6 +13,7 @@ import '../services/news_service.dart';
 import '../services/gemini_service.dart';
 import '../services/auth_service.dart';
 import '../services/notification_service.dart';
+import '../services/ad_service.dart';
 
 // ─────────────────────────────────────────────────────────────────────────────
 // THEME PROVIDER
@@ -85,7 +88,7 @@ class UserNotifier extends StateNotifier<UserData> {
     state = state.copyWith(photoUrl: photoUrl);
   }
 
-  void syncAuthProfile(User? user) {
+  Future<void> syncAuthProfile(User? user) async {
     if (user == null || user.isAnonymous) return;
     final name = user.displayName?.trim().isNotEmpty == true
         ? user.displayName!.trim()
@@ -96,11 +99,22 @@ class UserNotifier extends StateNotifier<UserData> {
       name: name.isNotEmpty ? name : state.name,
       photoUrl: user.photoURL ?? '',
     );
+    try {
+      final remote = await AuthService.currentUserData();
+      if (remote == null) return;
+      final remoteIsPro = remote['isPro'] == true;
+      await StorageService.setIsPro(remoteIsPro);
+      state = state.copyWith(isPro: remoteIsPro);
+      AdService.configure(adsEnabled: !remoteIsPro);
+    } catch (e) {
+      dev.log('[User] profile sync failed: $e', name: 'Briefed');
+    }
   }
 
   Future<void> resetForGuest() async {
     await StorageService.resetUserData();
     state = StorageService.loadUserData();
+    AdService.configure(adsEnabled: true);
   }
 
   void updateCategories(List<String> cats) {
@@ -122,10 +136,29 @@ class UserNotifier extends StateNotifier<UserData> {
     state = state.copyWith(notificationHour: hour, notificationMinute: minute);
   }
 
+  Future<void> setPro(bool value) async {
+    await StorageService.setIsPro(value);
+    await AuthService.setProStatus(value);
+    state = state.copyWith(isPro: value);
+    AdService.configure(adsEnabled: !value);
+  }
+
+  Future<void> activateProFromPurchase(PurchaseDetails purchase) async {
+    if (kIsWeb) return; // Prevent execution on web
+    final token = purchase.verificationData.serverVerificationData;
+    await StorageService.setIsPro(true);
+    await AuthService.setProStatus(
+      true,
+      productId: purchase.productID,
+      purchaseToken: token.isEmpty ? null : token,
+      source: purchase.verificationData.source,
+    );
+    state = state.copyWith(isPro: true);
+    AdService.configure(adsEnabled: false);
+  }
+
   Future<void> afterQuiz(QuizResult result) async {
-    // Schedule "quiz ready" notification for all users (including guests)
-    unawaited(NotificationService.scheduleQuizReady());
-    if (AuthService.isGuest) return; // guests play but don't persist progress
+    if (!state.isPro && !kIsWeb) unawaited(NotificationService.scheduleQuizReady());
 
     final newStreak = await StorageService.updateStreakAfterQuiz();
     final newScore = state.knowledgeScore + result.pointsEarned;
@@ -147,7 +180,9 @@ class UserNotifier extends StateNotifier<UserData> {
       recentResults: history,
     );
 
-    await AuthService.syncQuizResult(userData: state, result: result);
+    if (!AuthService.isGuest) {
+      await AuthService.syncQuizResult(userData: state, result: result);
+    }
   }
 
   void reload() {
@@ -166,22 +201,26 @@ final userProvider = StateNotifierProvider<UserNotifier, UserData>(
 class NewsState {
   final List<NewsArticle> articles;
   final bool isLoading;
+  final bool isOffline;
   final String? error;
 
   const NewsState({
     this.articles = const [],
     this.isLoading = false,
+    this.isOffline = false,
     this.error,
   });
 
   NewsState copyWith({
     List<NewsArticle>? articles,
     bool? isLoading,
+    bool? isOffline,
     String? error,
   }) =>
       NewsState(
         articles: articles ?? this.articles,
         isLoading: isLoading ?? this.isLoading,
+        isOffline: isOffline ?? this.isOffline,
         error: error,
       );
 }
@@ -193,8 +232,7 @@ class NewsNotifier extends StateNotifier<NewsState> {
   static List<NewsArticle> get _mock =>
       AppConstants.mockArticles.map((e) => NewsArticle.fromJson(e)).toList();
 
-  // Start with mock so the UI is never blank on launch
-  NewsNotifier() : super(NewsState(articles: _mock));
+  NewsNotifier() : super(NewsState(articles: _mock, isLoading: true));
 
   Future<void> load({
     required String country,
@@ -230,6 +268,12 @@ class NewsNotifier extends StateNotifier<NewsState> {
       }).toList();
       state = NewsState(articles: deduped, isLoading: false);
     } catch (e) {
+      if (e.toString().contains('SocketException') || e.toString().contains('Failed host lookup')) {
+        dev.log('[News] No internet connection', name: 'Briefed');
+        if (!mounted) return;
+        state = NewsState(articles: _mock, isLoading: false, isOffline: true);
+        return;
+      }
       dev.log('[News] fetch failed: $e', name: 'Briefed');
       if (!mounted) return;
       state = NewsState(articles: _mock, isLoading: false, error: e.toString());
@@ -304,6 +348,18 @@ class QuizState {
   QuizResult buildResult() {
     final elapsed =
         (DateTime.now().millisecondsSinceEpoch - startTimestamp) ~/ 1000;
+    final attempts = questions.asMap().entries.map((entry) {
+      final index = entry.key;
+      final question = entry.value;
+      final selected = index < answers.length ? answers[index] : null;
+      return QuestionAttempt(
+        category: question.category,
+        difficulty: question.difficulty,
+        correct: selected == question.correctIndex,
+        selectedIndex: selected ?? -1,
+        correctIndex: question.correctIndex,
+      );
+    }).toList();
     return QuizResult(
       date: DateTime.now().toIso8601String().substring(0, 10),
       score: score,
@@ -311,6 +367,7 @@ class QuizState {
       pointsEarned: pointsEarned,
       timeTakenSeconds: elapsed,
       categories: questions.map((q) => q.category).toSet().toList(),
+      attempts: attempts,
     );
   }
 
@@ -343,6 +400,7 @@ class QuizNotifier extends StateNotifier<QuizState> {
     List<NewsArticle> articles, {
     bool forceRefresh = false,
     bool bonusRound = false,
+    int? replaySeed,
   }) async {
     state = state.copyWith(status: QuizStatus.loading);
     try {
@@ -350,6 +408,7 @@ class QuizNotifier extends StateNotifier<QuizState> {
         articles: articles,
         forceRefresh: forceRefresh,
         bonusRound: bonusRound,
+        replaySeed: replaySeed,
       );
       state = QuizState(
         questions: questions,
@@ -442,27 +501,39 @@ final quizProvider = StateNotifierProvider<QuizNotifier, QuizState>(
 // Hot Take provider
 class HotTakeState {
   final String question;
+  final int questionIndex;
   final int yesVotes;
   final int noVotes;
   final String? userVote;
+  final bool isLoading;
 
-  HotTakeState({
+  const HotTakeState({
     required this.question,
-    this.yesVotes = 5812,
-    this.noVotes = 4231,
+    required this.questionIndex,
+    this.yesVotes = 0,
+    this.noVotes = 0,
     this.userVote,
+    this.isLoading = true,
   });
 
   int get total => yesVotes + noVotes;
-  int get yesPercent => total == 0 ? 0 : (yesVotes / total * 100).round();
-  int get noPercent => total == 0 ? 0 : (noVotes / total * 100).round();
+  int get yesPercent => total == 0 ? 50 : (yesVotes / total * 100).round();
+  int get noPercent => total == 0 ? 50 : 100 - yesPercent;
 
-  HotTakeState copyWith({String? userVote, int? yesVotes, int? noVotes}) =>
+  HotTakeState copyWith({
+    String? userVote,
+    int? yesVotes,
+    int? noVotes,
+    bool? isLoading,
+    bool clearVote = false,
+  }) =>
       HotTakeState(
         question: question,
+        questionIndex: questionIndex,
         yesVotes: yesVotes ?? this.yesVotes,
         noVotes: noVotes ?? this.noVotes,
-        userVote: userVote ?? this.userVote,
+        userVote: clearVote ? null : (userVote ?? this.userVote),
+        isLoading: isLoading ?? this.isLoading,
       );
 }
 
@@ -488,23 +559,139 @@ class HotTakeNotifier extends StateNotifier<HotTakeState> {
     'Is a 4-day work week the future of employment?',
     'Should voting be mandatory in democracies?',
     'Will virtual reality eventually replace physical travel?',
+    'Should AI-generated art be eligible for copyright protection?',
+    'Will cash become completely obsolete within 20 years?',
+    'Should junk food advertising be banned during children\'s TV?',
+    'Is space tourism a waste of resources when Earth has bigger problems?',
+    'Should all countries adopt a universal basic income?',
+    'Will humans ever achieve true artificial general intelligence?',
+    'Should smartphones be banned in all schools worldwide?',
+    'Is climate change the single biggest threat facing humanity today?',
+    'Should wealthy countries open their borders to climate refugees?',
+    'Will China surpass the US as the world\'s dominant superpower?',
+    'Should athletes be allowed to use performance-enhancing drugs if they\'re safe?',
+    'Is the 24-hour news cycle making society more anxious?',
+    'Should tech companies pay users for their personal data?',
+    'Will renewable energy fully replace fossil fuels by 2050?',
+    'Should organ donation be opt-out rather than opt-in?',
+    'Is cancel culture ultimately good or bad for society?',
+    'Should the voting age be lowered to 16 globally?',
+    'Will lab-grown meat completely replace farmed animals within 30 years?',
+    'Should deepfake videos be treated as a criminal offence?',
+    'Is social media the main driver of political polarisation?',
+    'Should governments control the development of powerful AI systems?',
+    'Will online learning replace traditional universities within a generation?',
+    'Should extreme wealth — over \$1 billion — simply be illegal?',
+    'Is colonising other planets a moral imperative for humanity\'s survival?',
+    'Should airlines pay a higher tax to offset their carbon emissions?',
+    'Will human lifespans routinely exceed 150 years by 2100?',
+    'Should all drugs be decriminalised and treated as a health issue?',
+    'Is privacy more important than national security in the digital age?',
+    'Should robots and AI systems be taxed to fund retraining for displaced workers?',
+    'Will a human-level AI companion become the norm within 15 years?',
+    'Should fast fashion be heavily taxed to discourage overconsumption?',
+    'Is the global education system failing today\'s students?',
+    'Should social media companies be required to verify users\' real identities?',
+    'Will gene-edited \'designer babies\' become commonplace within 30 years?',
+    'Should the Olympic Games be permanently hosted in one location?',
+    'Is the internet doing more to unite or divide the world?',
   ];
 
-  static String _dailyQuestion() {
+  static int _dailyIndex() {
     final dayOfYear =
         DateTime.now().difference(DateTime(DateTime.now().year)).inDays;
-    return _questions[dayOfYear % _questions.length];
+    return dayOfYear % _questions.length;
   }
 
-  HotTakeNotifier() : super(HotTakeState(question: _dailyQuestion()));
+  HotTakeNotifier()
+      : super(HotTakeState(
+          question: _questions[_dailyIndex()],
+          questionIndex: _dailyIndex(),
+        )) {
+    _load();
+  }
 
-  void vote(String vote) {
-    if (state.userVote != null) return;
+  Future<void> _load() async {
+    final docId = 'q_${state.questionIndex}';
+    try {
+      final snap = await FirebaseFirestore.instance
+          .collection('hot_takes')
+          .doc(docId)
+          .get();
+      int yes = 0, no = 0;
+      if (snap.exists) {
+        yes = (snap.data()!['yes'] as int?) ?? 0;
+        no = (snap.data()!['no'] as int?) ?? 0;
+      }
+
+      String? existingVote;
+      final user = FirebaseAuth.instance.currentUser;
+      if (user != null && !user.isAnonymous) {
+        final userSnap = await FirebaseFirestore.instance
+            .collection('users')
+            .doc(user.uid)
+            .get();
+        if (userSnap.exists) {
+          final votes =
+              userSnap.data()!['hotTakeVotes'] as Map<String, dynamic>?;
+          existingVote = votes?[docId] as String?;
+        }
+      }
+
+      if (mounted) {
+        state = state.copyWith(
+          yesVotes: yes,
+          noVotes: no,
+          userVote: existingVote,
+          isLoading: false,
+        );
+      }
+    } catch (e) {
+      dev.log('[HotTake] load failed: $e', name: 'Briefed');
+      if (mounted) state = state.copyWith(isLoading: false);
+    }
+  }
+
+  Future<void> vote(String vote) async {
+    if (state.userVote != null || state.isLoading) return;
+    final docId = 'q_${state.questionIndex}';
+
+    // Optimistic update
     state = state.copyWith(
       userVote: vote,
       yesVotes: vote == 'yes' ? state.yesVotes + 1 : state.yesVotes,
       noVotes: vote == 'no' ? state.noVotes + 1 : state.noVotes,
     );
+
+    try {
+      await FirebaseFirestore.instance
+          .collection('hot_takes')
+          .doc(docId)
+          .set({
+        'question': state.question,
+        vote: FieldValue.increment(1),
+        'updatedAt': FieldValue.serverTimestamp(),
+      }, SetOptions(merge: true));
+
+      final user = FirebaseAuth.instance.currentUser;
+      if (user != null && !user.isAnonymous) {
+        await FirebaseFirestore.instance
+            .collection('users')
+            .doc(user.uid)
+            .set({
+          'hotTakeVotes': {docId: vote},
+        }, SetOptions(merge: true));
+      }
+    } catch (e) {
+      dev.log('[HotTake] vote failed: $e', name: 'Briefed');
+      if (mounted) {
+        state = state.copyWith(
+          clearVote: true,
+          yesVotes: vote == 'yes' ? state.yesVotes - 1 : state.yesVotes,
+          noVotes: vote == 'no' ? state.noVotes - 1 : state.noVotes,
+        );
+      }
+    }
   }
 }
 
@@ -561,47 +748,69 @@ final leaderboardProvider =
     );
   }
 
-  // Try to query the full leaderboard. May fail if Firestore rules restrict
-  // collection-level reads — in that case we fall back to showing only the
-  // current user's data. To enable full leaderboard, update your Firestore
-  // rules to: allow read: if request.auth != null;
   try {
     final snap = await db
-        .collection('users')
+        .collection('leaderboard')
         .orderBy('knowledgeScore', descending: true)
-        .limit(10)
+        .limit(30)
         .get();
 
-    final entries = snap.docs.map((doc) {
-      final data = doc.data();
-      final rawName = (data['displayName'] as String?) ?? '';
-      return LeaderboardEntry(
-        uid: doc.id,
-        name: rawName.trim().isEmpty ? 'Anonymous' : rawName,
-        photoUrl: doc.id == currentUid
-            ? ((data['photoUrl'] as String?) ?? authUser.photoURL ?? '')
-            : ((data['photoUrl'] as String?) ?? ''),
-        score: (data['knowledgeScore'] as int?) ?? 0,
-        streak: (data['streak'] as int?) ?? 0,
-        isYou: doc.id == currentUid,
-      );
-    }).toList();
+    final entries = snap.docs
+        .map((doc) {
+          final data = doc.data();
+          final rawName = (data['displayName'] as String?) ?? '';
+          return LeaderboardEntry(
+            uid: doc.id,
+            name: rawName.trim(),
+            photoUrl: doc.id == currentUid
+                ? ((data['photoUrl'] as String?) ?? authUser.photoURL ?? '')
+                : ((data['photoUrl'] as String?) ?? ''),
+            score: (data['knowledgeScore'] as int?) ?? 0,
+            streak: (data['streak'] as int?) ?? 0,
+            isYou: doc.id == currentUid,
+          );
+        })
+        // ONLY show users with names, and remove those with the default placeholder
+        .where((e) =>
+            e.name.isNotEmpty && e.name != AppConstants.defaultAnonymousName)
+        .take(10)
+        .toList();
 
-    final alreadyIn = entries.any((e) => e.uid == currentUid);
-    if (!alreadyIn && myEntry != null) {
-      entries.add(LeaderboardEntry(
-        uid: myEntry.uid,
-        name: myEntry.name,
-        photoUrl: myEntry.photoUrl,
-        score: myEntry.score,
-        streak: myEntry.streak,
-        isYou: true,
+    // If I'm not in the top 10, add a separator and me at the bottom
+    final amInTop10 = entries.any((e) => e.uid == currentUid);
+    if (!amInTop10 && myEntry != null) {
+      entries.add(const LeaderboardEntry(
+        uid: 'sep',
+        name: '',
+        score: 0,
+        streak: 0,
         isSeparator: true,
       ));
+      entries.add(myEntry);
     }
     return entries;
-  } catch (_) {
-    // Permission denied or no index — show just own data
+  } catch (e) {
+    dev.log('[Leaderboard] Error: $e', name: 'Briefed');
     return myEntry != null ? [myEntry] : [];
   }
+});
+
+final dailyRankProvider = FutureProvider.autoDispose<String>((ref) async {
+  final authUser = ref.watch(authStateProvider).valueOrNull;
+  if (authUser == null || authUser.isAnonymous) return 'Sign in';
+
+  final today = DateTime.now().toIso8601String().substring(0, 10);
+  final snap = await FirebaseFirestore.instance
+      .collection('quizzes')
+      .doc(today)
+      .collection('scores')
+      .orderBy('pointsEarned', descending: true)
+      .limit(500)
+      .get();
+
+  if (snap.docs.isEmpty) return 'Today';
+  final index = snap.docs.indexWhere((doc) => doc.id == authUser.uid);
+  if (index == -1) return 'Today';
+
+  return '#${index + 1} of ${snap.docs.length}';
 });
