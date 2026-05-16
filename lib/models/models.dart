@@ -225,6 +225,16 @@ class NewsArticle {
     );
   }
 
+  Map<String, dynamic> toJson() => {
+        'title': title,
+        'description': description,
+        'source_name': sourceName,
+        'category': category,
+        'pubDate': pubDate,
+        'link': link,
+        if (imageUrl != null) 'image_url': imageUrl,
+      };
+
   String get sourceInitials {
     final words = sourceName.split(' ');
     if (words.length >= 2) return '${words[0][0]}${words[1][0]}'.toUpperCase();

@@ -1,0 +1,47 @@
+{
+  "project_info": {
+    "project_number": "864230815532",
+    "project_id": "briefed-app-76f01",
+    "storage_bucket": "briefed-app-76f01.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:864230815532:android:efd170c3756484ed8d5e89",
+        "android_client_info": {
+          "package_name": "com.binaygautam.briefed"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "864230815532-se1e1dc2e8v2i6gqlocb8f63ocl2n207.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.binaygautam.briefed",
+            "certificate_hash": "def7115d7e23cf6a47b538d2869387b04693fd24"
+          }
+        },
+        {
+          "client_id": "864230815532-60en19nqo840pjg9j1cij8aek6svqjug.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyDlWbraiEXOGhRkv4vuFN15EG7jP_xqrx4"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "864230815532-60en19nqo840pjg9j1cij8aek6svqjug.apps.googleusercontent.com",
+              "client_type": 3
+            }
+          ]
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

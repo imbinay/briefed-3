@@ -8,6 +8,7 @@ class AppConstants {
   static const String groqApiKey = String.fromEnvironment('GROQ_API_KEY');
   static const String geminiApiKey = String.fromEnvironment('GEMINI_API_KEY');
   static const String newsApiKey = String.fromEnvironment('NEWSDATA_API_KEY');
+  static const String currentsApiKey = String.fromEnvironment('CURRENTS_API_KEY');
 
   // ── API ENDPOINTS ─────────────────────────────────────────────────────────
   static const String groqEndpoint =
@@ -15,6 +16,8 @@ class AppConstants {
   static const String geminiEndpoint =
       'https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent';
   static const String newsEndpoint = 'https://newsdata.io/api/1/news';
+  static const String currentsEndpoint =
+      'https://api.currentsapi.services/v1/latest-news';
 
   // ── APP CONFIG ────────────────────────────────────────────────────────────
   static const String appName = 'Briefed';
@@ -23,7 +26,7 @@ class AppConstants {
   static const String defaultCountry = 'au'; // Australia fallback
   static const String defaultLanguage = 'en';
   static const int questionsPerQuiz = 5;
-  static const int timerSeconds = 15;
+  static const int timerSeconds = 20;
 
   // ── SCORING ───────────────────────────────────────────────────────────────
   static const int pointsEasy = 10;
@@ -44,9 +47,76 @@ class AppConstants {
   static const String keyUserCountry = 'user_country';
   static const String keyCachedQuestions = 'cached_questions';
   static const String keyCachedQuestionsDate = 'cached_questions_date';
+  static const String keyCachedNews = 'cached_news';
+  static const int newsCacheTtlMinutes = 120; // 2 hours
   static const String keyQuizHistory = 'quiz_history';
   static const String keyUserPhotoUrl = 'user_photo_url';
   static const String keyIsPro = 'is_pro';
+
+  // ── COUNTRIES ─────────────────────────────────────────────────────────────
+  static const List<Map<String, String>> allCountries = [
+    {'code': 'world', 'name': 'World',         'flag': '🌍'},
+    {'code': 'au', 'name': 'Australia',      'flag': '🇦🇺'},
+    {'code': 'us', 'name': 'United States',  'flag': '🇺🇸'},
+    {'code': 'gb', 'name': 'United Kingdom', 'flag': '🇬🇧'},
+    {'code': 'ca', 'name': 'Canada',         'flag': '🇨🇦'},
+    {'code': 'nz', 'name': 'New Zealand',    'flag': '🇳🇿'},
+    {'code': 'in', 'name': 'India',          'flag': '🇮🇳'},
+    {'code': 'sg', 'name': 'Singapore',      'flag': '🇸🇬'},
+    {'code': 'za', 'name': 'South Africa',   'flag': '🇿🇦'},
+    {'code': 'ie', 'name': 'Ireland',        'flag': '🇮🇪'},
+    {'code': 'ng', 'name': 'Nigeria',        'flag': '🇳🇬'},
+    {'code': 'ke', 'name': 'Kenya',          'flag': '🇰🇪'},
+    {'code': 'gh', 'name': 'Ghana',          'flag': '🇬🇭'},
+    {'code': 'ph', 'name': 'Philippines',    'flag': '🇵🇭'},
+    {'code': 'pk', 'name': 'Pakistan',       'flag': '🇵🇰'},
+    {'code': 'de', 'name': 'Germany',        'flag': '🇩🇪'},
+    {'code': 'fr', 'name': 'France',         'flag': '🇫🇷'},
+    {'code': 'it', 'name': 'Italy',          'flag': '🇮🇹'},
+    {'code': 'es', 'name': 'Spain',          'flag': '🇪🇸'},
+    {'code': 'nl', 'name': 'Netherlands',    'flag': '🇳🇱'},
+    {'code': 'se', 'name': 'Sweden',         'flag': '🇸🇪'},
+    {'code': 'no', 'name': 'Norway',         'flag': '🇳🇴'},
+    {'code': 'dk', 'name': 'Denmark',        'flag': '🇩🇰'},
+    {'code': 'ch', 'name': 'Switzerland',    'flag': '🇨🇭'},
+    {'code': 'pt', 'name': 'Portugal',       'flag': '🇵🇹'},
+    {'code': 'pl', 'name': 'Poland',         'flag': '🇵🇱'},
+    {'code': 'be', 'name': 'Belgium',        'flag': '🇧🇪'},
+    {'code': 'at', 'name': 'Austria',        'flag': '🇦🇹'},
+    {'code': 'gr', 'name': 'Greece',         'flag': '🇬🇷'},
+    {'code': 'cz', 'name': 'Czech Republic', 'flag': '🇨🇿'},
+    {'code': 'ro', 'name': 'Romania',        'flag': '🇷🇴'},
+    {'code': 'ua', 'name': 'Ukraine',        'flag': '🇺🇦'},
+    {'code': 'ru', 'name': 'Russia',         'flag': '🇷🇺'},
+    {'code': 'jp', 'name': 'Japan',          'flag': '🇯🇵'},
+    {'code': 'kr', 'name': 'South Korea',    'flag': '🇰🇷'},
+    {'code': 'cn', 'name': 'China',          'flag': '🇨🇳'},
+    {'code': 'tw', 'name': 'Taiwan',         'flag': '🇹🇼'},
+    {'code': 'hk', 'name': 'Hong Kong',      'flag': '🇭🇰'},
+    {'code': 'my', 'name': 'Malaysia',       'flag': '🇲🇾'},
+    {'code': 'id', 'name': 'Indonesia',      'flag': '🇮🇩'},
+    {'code': 'th', 'name': 'Thailand',       'flag': '🇹🇭'},
+    {'code': 'vn', 'name': 'Vietnam',        'flag': '🇻🇳'},
+    {'code': 'bd', 'name': 'Bangladesh',     'flag': '🇧🇩'},
+    {'code': 'lk', 'name': 'Sri Lanka',      'flag': '🇱🇰'},
+    {'code': 'np', 'name': 'Nepal',          'flag': '🇳🇵'},
+    {'code': 'ae', 'name': 'UAE',            'flag': '🇦🇪'},
+    {'code': 'sa', 'name': 'Saudi Arabia',   'flag': '🇸🇦'},
+    {'code': 'eg', 'name': 'Egypt',          'flag': '🇪🇬'},
+    {'code': 'il', 'name': 'Israel',         'flag': '🇮🇱'},
+    {'code': 'tr', 'name': 'Turkey',         'flag': '🇹🇷'},
+    {'code': 'ir', 'name': 'Iran',           'flag': '🇮🇷'},
+    {'code': 'ma', 'name': 'Morocco',        'flag': '🇲🇦'},
+    {'code': 'et', 'name': 'Ethiopia',       'flag': '🇪🇹'},
+    {'code': 'tz', 'name': 'Tanzania',       'flag': '🇹🇿'},
+    {'code': 'zw', 'name': 'Zimbabwe',       'flag': '🇿🇼'},
+    {'code': 'br', 'name': 'Brazil',         'flag': '🇧🇷'},
+    {'code': 'mx', 'name': 'Mexico',         'flag': '🇲🇽'},
+    {'code': 'ar', 'name': 'Argentina',      'flag': '🇦🇷'},
+    {'code': 'co', 'name': 'Colombia',       'flag': '🇨🇴'},
+    {'code': 'cl', 'name': 'Chile',          'flag': '🇨🇱'},
+    {'code': 'pe', 'name': 'Peru',           'flag': '🇵🇪'},
+  ];
 
   // ── CATEGORIES ────────────────────────────────────────────────────────────
   static const List<Map<String, String>> allCategories = [

@@ -53,7 +53,7 @@ class AccentButton extends StatelessWidget {
             ],
             Text(
               text,
-              style: GoogleFonts.poppins(
+              style: GoogleFonts.dmSans(
                 fontSize: fontSize ?? 15,
                 fontWeight: FontWeight.w800,
                 color: Colors.white,
@@ -103,7 +103,7 @@ class OutlineButton extends StatelessWidget {
             ],
             Text(
               text,
-              style: GoogleFonts.poppins(
+              style: GoogleFonts.dmSans(
                 fontSize: 14,
                 fontWeight: FontWeight.w600,
                 color: context.subColor,
@@ -204,7 +204,7 @@ class CategoryTag extends StatelessWidget {
           ],
           Text(
             category,
-            style: GoogleFonts.poppins(
+            style: GoogleFonts.dmSans(
               fontSize: small ? 9 : 11,
               fontWeight: FontWeight.w700,
               color: color,
@@ -273,7 +273,7 @@ class StatCard extends StatelessWidget {
           const SizedBox(height: 8),
           Text(
             value,
-            style: GoogleFonts.poppins(
+            style: GoogleFonts.dmSans(
               fontSize: 17,
               fontWeight: FontWeight.w900,
               letterSpacing: -0.5,
@@ -283,7 +283,7 @@ class StatCard extends StatelessWidget {
           const SizedBox(height: 2),
           Text(
             label.toUpperCase(),
-            style: GoogleFonts.poppins(
+            style: GoogleFonts.dmSans(
               fontSize: 8,
               fontWeight: FontWeight.w700,
               letterSpacing: 1,
@@ -346,7 +346,7 @@ class TimerRing extends StatelessWidget {
                     color: AppColors.green, size: 16)
                 : Text(
                     '$timeLeft',
-                    style: GoogleFonts.poppins(
+                    style: GoogleFonts.dmSans(
                       fontSize: 12,
                       fontWeight: FontWeight.w800,
                       color: context.textColor,
@@ -537,7 +537,7 @@ class OptionButton extends StatelessWidget {
             Expanded(
               child: Text(
                 text,
-                style: GoogleFonts.poppins(
+                style: GoogleFonts.dmSans(
                   fontSize: 14,
                   fontWeight: FontWeight.w600,
                   color: textColor,
@@ -563,7 +563,7 @@ class OptionButton extends StatelessWidget {
       child: Center(
         child: Text(
           labels[index],
-          style: GoogleFonts.poppins(
+          style: GoogleFonts.dmSans(
             fontSize: 12,
             fontWeight: FontWeight.w800,
             color: dimmed ? context.hintColor : context.hintColor,
@@ -630,7 +630,7 @@ class StoryRow extends StatelessWidget {
                             sourceName
                                 .substring(0, sourceName.length.clamp(0, 2))
                                 .toUpperCase(),
-                            style: GoogleFonts.poppins(
+                            style: GoogleFonts.dmSans(
                               fontSize: 7,
                               fontWeight: FontWeight.w900,
                               color: catColor,
@@ -639,12 +639,16 @@ class StoryRow extends StatelessWidget {
                         ),
                       ),
                       const SizedBox(width: 6),
-                      Text(
-                        sourceName,
-                        style: GoogleFonts.poppins(
-                          fontSize: 11,
-                          fontWeight: FontWeight.w600,
-                          color: context.hintColor,
+                      Flexible(
+                        child: Text(
+                          'Source: $sourceName',
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: GoogleFonts.dmSans(
+                            fontSize: 11,
+                            fontWeight: FontWeight.w600,
+                            color: context.hintColor,
+                          ),
                         ),
                       ),
                       const SizedBox(width: 4),
@@ -654,7 +658,7 @@ class StoryRow extends StatelessWidget {
                       const SizedBox(width: 4),
                       Text(
                         timeAgo,
-                        style: GoogleFonts.poppins(
+                        style: GoogleFonts.dmSans(
                           fontSize: 11,
                           color: context.hintColor,
                         ),
@@ -664,12 +668,11 @@ class StoryRow extends StatelessWidget {
                   const SizedBox(height: 7),
                   Text(
                     title,
-                    style: GoogleFonts.poppins(
+                    style: GoogleFonts.dmSans(
                       fontSize: 15,
                       fontWeight: FontWeight.w600,
                       color: context.textColor,
-                      letterSpacing: 0.1,
-                      height: 1.55,
+                      height: 1.45,
                     ),
                     maxLines: 3,
                     overflow: TextOverflow.ellipsis,
@@ -738,7 +741,7 @@ class UserAvatar extends StatelessWidget {
       child: Center(
         child: Text(
           _initials,
-          style: GoogleFonts.poppins(
+          style: GoogleFonts.dmSans(
             fontSize: size * 0.36,
             fontWeight: FontWeight.w800,
             color: Colors.white,

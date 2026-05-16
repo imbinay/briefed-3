@@ -10,6 +10,7 @@ import '../core/constants.dart';
 import '../models/models.dart';
 import '../services/storage_service.dart';
 import '../services/news_service.dart';
+import '../services/currents_service.dart';
 import '../services/gemini_service.dart';
 import '../services/auth_service.dart';
 import '../services/notification_service.dart';
@@ -120,6 +121,11 @@ class UserNotifier extends StateNotifier<UserData> {
   void updateCategories(List<String> cats) {
     StorageService.setSelectedCategories(cats);
     state = state.copyWith(selectedCategories: cats);
+  }
+
+  void updateCountry(String code) {
+    StorageService.setUserCountry(code);
+    state = state.copyWith(country: code);
   }
 
   void updateNotificationHour(int hour) {
@@ -237,10 +243,25 @@ class NewsNotifier extends StateNotifier<NewsState> {
   Future<void> load({
     required String country,
     required List<String> categories,
+    bool forceRefresh = false,
   }) async {
     _lastCountry = country;
     _lastCategories = categories;
     if (!mounted) return;
+
+    if (!forceRefresh) {
+      final cached = StorageService.getCachedArticles(
+        country: country,
+        categories: categories,
+      );
+      if (cached != null && cached.isNotEmpty) {
+        dev.log('[News] Returning ${cached.length} cached articles',
+            name: 'Briefed');
+        state = NewsState(articles: cached, isLoading: false);
+        return;
+      }
+    }
+
     state = NewsState(articles: state.articles, isLoading: true);
     unawaited(_fetchReal(country: country, categories: categories));
   }
@@ -250,25 +271,40 @@ class NewsNotifier extends StateNotifier<NewsState> {
     required List<String> categories,
   }) async {
     try {
-      final articles = await NewsService.fetchHeadlines(
-        country: country,
-        categories: categories,
-      ).timeout(const Duration(seconds: 20));
+      // Both APIs run in parallel; Currents failure is non-fatal.
+      final results = await Future.wait([
+        NewsService.fetchHeadlines(country: country, categories: categories)
+            .timeout(const Duration(seconds: 20)),
+        () async {
+          try {
+            return await CurrentsService.fetchHeadlines(
+              country: country,
+              categories: categories,
+            ).timeout(const Duration(seconds: 20));
+          } catch (e) {
+            dev.log('[News] Currents skipped: $e', name: 'Briefed');
+            return <NewsArticle>[];
+          }
+        }(),
+      ]);
+
       if (!mounted) return;
-      final raw = articles.isNotEmpty ? articles : _mock;
-      final seenLinks = <String>{};
-      final seenTitles = <String>{};
-      final deduped = raw.where((a) {
-        final linkKey = a.link.isNotEmpty ? a.link : '';
-        final titleKey = a.title.toLowerCase().trim();
-        if (titleKey.isEmpty) return false;
-        if (linkKey.isNotEmpty && !seenLinks.add(linkKey)) return false;
-        if (!seenTitles.add(titleKey)) return false;
-        return true;
-      }).toList();
+      final combined = [...results[0], ...results[1]];
+      final raw = combined.isNotEmpty ? combined : _mock;
+      final deduped = _dedupArticles(raw);
+      dev.log('[News] Combined ${raw.length} → ${deduped.length} after dedup',
+          name: 'Briefed');
+      if (combined.isNotEmpty) {
+        await StorageService.cacheArticles(
+          articles: deduped,
+          country: country,
+          categories: categories,
+        );
+      }
       state = NewsState(articles: deduped, isLoading: false);
     } catch (e) {
-      if (e.toString().contains('SocketException') || e.toString().contains('Failed host lookup')) {
+      if (e.toString().contains('SocketException') ||
+          e.toString().contains('Failed host lookup')) {
         dev.log('[News] No internet connection', name: 'Briefed');
         if (!mounted) return;
         state = NewsState(articles: _mock, isLoading: false, isOffline: true);
@@ -280,8 +316,64 @@ class NewsNotifier extends StateNotifier<NewsState> {
     }
   }
 
+  // Deduplicates across both APIs: exact URL match + title keyword overlap.
+  static List<NewsArticle> _dedupArticles(List<NewsArticle> articles) {
+    final seenUrls = <String>{};
+    final kept = <NewsArticle>[];
+    for (final article in articles) {
+      final title = article.title.trim();
+      if (title.isEmpty) { continue; }
+      final urlKey = _normalizeUrl(article.link);
+      if (urlKey.isNotEmpty && !seenUrls.add(urlKey)) { continue; }
+      bool isDupe = false;
+      for (final prev in kept) {
+        if (_titlesOverlap(title, prev.title)) {
+          isDupe = true;
+          break;
+        }
+      }
+      if (!isDupe) { kept.add(article); }
+    }
+    return kept;
+  }
+
+  static String _normalizeUrl(String url) {
+    try {
+      final uri = Uri.parse(url.toLowerCase().trim());
+      return '${uri.host}${uri.path}'.replaceAll(RegExp(r'/$'), '');
+    } catch (_) {
+      return url.toLowerCase().trim();
+    }
+  }
+
+  static bool _titlesOverlap(String a, String b) {
+    final wa = _titleKeywords(a);
+    final wb = _titleKeywords(b);
+    if (wa.length < 3 || wb.length < 3) {
+      return a.toLowerCase().trim() == b.toLowerCase().trim();
+    }
+    final overlap = wa.intersection(wb).length;
+    final smaller = wa.length < wb.length ? wa.length : wb.length;
+    return overlap / smaller >= 0.65;
+  }
+
+  static Set<String> _titleKeywords(String title) {
+    const stop = {
+      'the', 'a', 'an', 'in', 'on', 'at', 'to', 'for', 'of', 'and',
+      'or', 'but', 'is', 'are', 'was', 'were', 'be', 'been', 'has',
+      'have', 'had', 'with', 'by', 'from', 'as', 'its', 'it', 'this',
+      'that', 'after', 'over', 'up', 'new', 'says', 'said',
+    };
+    return title
+        .toLowerCase()
+        .replaceAll(RegExp(r'[^a-z0-9 ]'), ' ')
+        .split(' ')
+        .where((w) => w.length > 2 && !stop.contains(w))
+        .toSet();
+  }
+
   Future<void> refresh() =>
-      load(country: _lastCountry, categories: _lastCategories);
+      load(country: _lastCountry, categories: _lastCategories, forceRefresh: true);
 
   List<NewsArticle> get topStories => state.articles.take(4).toList();
 
@@ -401,6 +493,7 @@ class QuizNotifier extends StateNotifier<QuizState> {
     bool forceRefresh = false,
     bool bonusRound = false,
     int? replaySeed,
+    String? categoryFilter,
   }) async {
     state = state.copyWith(status: QuizStatus.loading);
     try {
@@ -409,6 +502,7 @@ class QuizNotifier extends StateNotifier<QuizState> {
         forceRefresh: forceRefresh,
         bonusRound: bonusRound,
         replaySeed: replaySeed,
+        categoryFilter: categoryFilter,
       );
       state = QuizState(
         questions: questions,

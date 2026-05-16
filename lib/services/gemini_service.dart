@@ -21,26 +21,40 @@ class GeminiException implements Exception {
 }
 
 class GeminiService {
-  // ── Lean prompt — ~60% fewer tokens than the previous version ────────────
+  // ── Prompt — includes descriptions for context-rich, analytical questions ─
   static const String _prompt = '''
-You generate multiple choice quiz questions from news headlines for a mobile app.
+You are an expert news quiz writer for a mobile app. Your job is to turn a list of news articles into 5 outstanding quiz questions.
 
 Output ONLY valid JSON. No markdown. No explanation. Start with { and end with }.
 
-Rules:
-- Exactly 5 questions total
-- Prioritise the most newsworthy, widely reported stories in the supplied headlines
-- Questions 1-3: easy (answerable from headline)
-- Questions 4-5: hard (need deeper understanding)
-- Each question: exactly 4 options, all plausible
-- Keep the correct option unambiguous and supported by the supplied headline
-- No questions about exact dates or death tolls
-- Avoid trivia that will feel stale quickly, unless the headline itself is about a durable outcome
-- Use concise, high-signal explanations that teach the context behind the answer
-- Neutral tone
+STEP 1 — SELECT: From the articles provided, choose the 5 most globally significant, thought-provoking stories. Skip minor local events, celebrity gossip, or stories with too little context.
 
-JSON format:
-{"questions":[{"question":"...","options":["A","B","C","D"],"correct_index":0,"difficulty":"easy","category":"World","explanation":"1-2 sentences.","story_summary":"2-3 sentences about the story.","source":"Source name"}]}
+STEP 2 — WRITE one question per selected story following these rules:
+
+Question quality:
+- A great question makes the reader pause and think — it should feel like a genuine test of understanding, not a memory test
+- Frame questions as scenarios or implications: "Why did X happen?", "What does this signal about Y?", "Which group stands to gain most from Z?"
+- NEVER ask a question whose answer appears word-for-word in the headline or context
+- NEVER ask about exact dates, death tolls, or facts that age poorly
+- Vary the angle: causes, consequences, who benefits, what precedent it sets, what the alternatives were
+
+Wrong options:
+- Must be genuinely plausible — things a smart person could reasonably guess
+- Use common misconceptions, adjacent real-world facts, or plausible-but-wrong outcomes
+- Never use obviously absurd options
+
+Answer quality:
+- Correct answer must be clearly supported by the context snippet — not a guess
+- Mark difficulty "easy" if the answer is in the context; "hard" if it requires inference
+
+Explanation:
+- 2 sentences — reveal WHY it matters beyond the headline: the systemic cause, historical parallel, or future implication
+- Never restate the question or just confirm the answer
+
+STEP 3 — Spread questions across different stories. Do not write 2 questions about the same article.
+
+JSON format (one object per question):
+{"questions":[{"question":"...","options":["A","B","C","D"],"correct_index":0,"difficulty":"easy","category":"World","explanation":"2 sentences on the bigger picture.","story_summary":"2-3 sentences of full context.","source":"Source name"}]}
 ''';
 
   // ─────────────────────────────────────────────────────────────────────────
@@ -52,36 +66,74 @@ JSON format:
     bool forceRefresh = false,
     bool bonusRound = false,
     int? replaySeed,
+    String? categoryFilter,
   }) async {
-    // 1. Return cache if fresh
-    if (!forceRefresh && !bonusRound) {
-      final cached = StorageService.getCachedQuestions();
-      if (cached != null && cached.length == AppConstants.questionsPerQuiz) {
-        dev.log('[Quiz] Returning ${cached.length} cached questions',
-            name: 'Briefed');
-        return cached;
-      }
-    } else if (forceRefresh && !bonusRound) {
-      await StorageService.clearQuestionCache();
-      dev.log('[Quiz] Cache cleared', name: 'Briefed');
-    }
+    final isCategoryQuiz = categoryFilter != null;
 
-    final sourceArticles = bonusRound
-        ? _bonusArticles(articles, replaySeed: replaySeed)
-        : articles;
+    // 1. Return cache if fresh (only for daily quiz)
+    // TEMP: cache bypass disabled
+    // if (!forceRefresh && !bonusRound && !isCategoryQuiz) {
+    //   final cached = StorageService.getCachedQuestions();
+    //   if (cached != null && cached.length == AppConstants.questionsPerQuiz) {
+    //     dev.log('[Quiz] Returning ${cached.length} cached questions',
+    //         name: 'Briefed');
+    //     return cached;
+    //   }
+    // } else if (forceRefresh && !bonusRound && !isCategoryQuiz) {
+    //   await StorageService.clearQuestionCache();
+    //   dev.log('[Quiz] Cache cleared', name: 'Briefed');
+    // }
+    print("=== BYPASSING CACHE - GENERATING FRESH ===");
+    print("=== articles count: ${articles.length} ===");
+
+    List<NewsArticle> sourceArticles;
+    if (isCategoryQuiz) {
+      final filtered = articles
+          .where((a) =>
+              a.category.toLowerCase() == categoryFilter.toLowerCase())
+          .toList();
+      sourceArticles = _quizArticles(filtered.isNotEmpty ? filtered : articles);
+      dev.log(
+          '[Quiz] Category quiz "$categoryFilter" — ${filtered.length} matching articles',
+          name: 'Briefed');
+    } else if (bonusRound) {
+      sourceArticles = _bonusArticles(articles, replaySeed: replaySeed);
+    } else {
+      sourceArticles = _quizArticles(articles);
+    }
     if (sourceArticles.isEmpty) {
       return mockQuestions(bonusRound: bonusRound, replaySeed: replaySeed);
     }
 
-    // Build the headlines string — only top 5 to keep tokens low
-    final headlines =
-        sourceArticles.take(5).map((a) => '- ${a.title}').join('\n');
+    // Send up to 15 top-ranked articles so the AI can select the best 5 stories.
+    // Articles with no description are deprioritised by the scorer.
+    final headlines = sourceArticles.take(15).toList().asMap().entries.map((e) {
+      final i = e.key + 1;
+      final a = e.value;
+      final category = a.category.trim().isEmpty ? 'News' : a.category.trim();
+      final source = a.sourceName.trim().isEmpty ? 'News' : a.sourceName.trim();
+      final desc = a.description.trim();
+      final snippet = desc.isNotEmpty
+          ? '\n  Context: ${desc.length > 280 ? '${desc.substring(0, 280)}…' : desc}'
+          : '';
+      return '$i. [$category] ${a.title} (Source: $source)$snippet';
+    }).join('\n\n');
 
     final variantHint =
         replaySeed == null ? '' : ' Replay variant: $replaySeed.';
-    final userMsg = bonusRound
-        ? 'Generate a different 5-question BONUS quiz from these headlines.$variantHint Avoid repeating the daily quiz wording, answer positions, or angles:\n$headlines\n\nReturn only JSON.'
-        : 'Generate 5 quiz questions from these headlines:\n$headlines\n\nReturn only JSON.';
+    final count = sourceArticles.take(15).length;
+    final String userMsg;
+    if (isCategoryQuiz) {
+      final label = categoryFilter[0].toUpperCase() + categoryFilter.substring(1);
+      userMsg =
+          'Here are $count $label news articles. Select the 5 most interesting and write one question per story:\n\n$headlines\n\nReturn only JSON.';
+    } else if (bonusRound) {
+      userMsg =
+          'Here are $count news articles.$variantHint Select 5 different stories from the daily quiz and write a BONUS question for each — different angles, different answer positions:\n\n$headlines\n\nReturn only JSON.';
+    } else {
+      userMsg =
+          'Here are $count news articles. Select the 5 most globally significant stories and write one question per story:\n\n$headlines\n\nReturn only JSON.';
+    }
 
     // 2. Try Groq first
     const groqKey = AppConstants.groqApiKey;
@@ -90,7 +142,7 @@ JSON format:
       try {
         final qs = await _callGroq(userMsg);
         if (qs.length == AppConstants.questionsPerQuiz) {
-          if (!bonusRound) await StorageService.cacheQuestions(qs);
+          if (!bonusRound && !isCategoryQuiz) await StorageService.cacheQuestions(qs);
           dev.log('[Quiz] Groq success — ${qs.length} questions',
               name: 'Briefed');
           return qs;
@@ -109,7 +161,7 @@ JSON format:
       try {
         final qs = await _callGemini(userMsg);
         if (qs.length == AppConstants.questionsPerQuiz) {
-          if (!bonusRound) await StorageService.cacheQuestions(qs);
+          if (!bonusRound && !isCategoryQuiz) await StorageService.cacheQuestions(qs);
           dev.log('[Quiz] Gemini success — ${qs.length} questions',
               name: 'Briefed');
           return qs;
@@ -132,15 +184,145 @@ JSON format:
     int? replaySeed,
   }) {
     if (articles.isEmpty) return articles;
+    final ranked = _quizArticles(articles);
+    if (ranked.isEmpty) return ranked;
     final offset = replaySeed ?? AppConstants.questionsPerQuiz;
     final rotated = [
-      ...articles.skip(offset % articles.length),
-      ...articles.take(offset % articles.length),
+      ...ranked.skip(offset % ranked.length),
+      ...ranked.take(offset % ranked.length),
     ];
     if (rotated.length > AppConstants.questionsPerQuiz) {
       return rotated.take(AppConstants.questionsPerQuiz).toList();
     }
     return rotated.reversed.toList();
+  }
+
+  static List<NewsArticle> _quizArticles(List<NewsArticle> articles) {
+    final seen = <String>{};
+    final deduped = <NewsArticle>[];
+    for (final article in articles) {
+      final title = article.title.trim();
+      if (title.isEmpty) continue;
+      final key = article.link.trim().isNotEmpty
+          ? article.link.trim().toLowerCase()
+          : title.toLowerCase();
+      if (seen.add(key)) deduped.add(article);
+    }
+
+    final indexed = deduped.asMap().entries.toList()
+      ..sort((a, b) {
+        final scoreDiff =
+            _quizArticleScore(b.value) - _quizArticleScore(a.value);
+        if (scoreDiff != 0) return scoreDiff;
+        return a.key.compareTo(b.key);
+      });
+    return indexed.map((e) => e.value).toList();
+  }
+
+  static int _quizArticleScore(NewsArticle article) {
+    final title = article.title.toLowerCase();
+    final source = article.sourceName.toLowerCase();
+    final category = article.category.toLowerCase();
+    var score = 0;
+
+    // Articles with a description give the AI real context to write good questions.
+    if (article.description.trim().length > 60) { score += 10; }
+    else if (article.description.trim().isNotEmpty) { score += 4; }
+
+    if (category.contains('world')) score += 12;
+    if (category.contains('science')) score += 10;
+    if (category.contains('business') || category.contains('technology')) {
+      score += 8;
+    }
+    if (category.contains('sports') || category.contains('entertainment')) {
+      score += 2;
+    }
+
+    const trustedGlobalSources = [
+      'associated press',
+      'ap news',
+      'reuters',
+      'bbc',
+      'the guardian',
+      'cnn',
+      'abc news',
+      'cbs news',
+      'nbc news',
+      'npr',
+      'al jazeera',
+      'financial times',
+      'bloomberg',
+      'the wall street journal',
+      'new york times',
+      'washington post',
+    ];
+    for (final trusted in trustedGlobalSources) {
+      if (source.contains(trusted)) {
+        score += 12;
+        break;
+      }
+    }
+
+    const globalSignals = [
+      'president',
+      'prime minister',
+      'election',
+      'government',
+      'supreme court',
+      'congress',
+      'parliament',
+      'war',
+      'ceasefire',
+      'ukraine',
+      'russia',
+      'china',
+      'india',
+      'israel',
+      'gaza',
+      'iran',
+      'united nations',
+      'nato',
+      'climate',
+      'tariff',
+      'trade',
+      'economy',
+      'inflation',
+      'interest rate',
+      'market',
+      'stock',
+      'ai',
+      'artificial intelligence',
+      'openai',
+      'google',
+      'microsoft',
+      'apple',
+      'meta',
+      'tesla',
+      'nvidia',
+      'space',
+      'nasa',
+      'world cup',
+      'olympics',
+    ];
+    for (final signal in globalSignals) {
+      if (title.contains(signal)) score += 5;
+    }
+
+    const localSignals = [
+      'local',
+      'council',
+      'suburb',
+      'county',
+      'school board',
+      'traffic',
+      'road closure',
+      'weather warning',
+    ];
+    for (final signal in localSignals) {
+      if (title.contains(signal)) score -= 6;
+    }
+
+    return score;
   }
 
   // ─────────────────────────────────────────────────────────────────────────
@@ -151,8 +333,8 @@ JSON format:
   static Future<List<Question>> _callGroq(String userMsg) async {
     final body = jsonEncode({
       'model': 'llama-3.3-70b-versatile',
-      'temperature': 0.7,
-      'max_tokens': 1500,
+      'temperature': 0.6,
+      'max_tokens': 2500,
       'messages': [
         {'role': 'system', 'content': _prompt},
         {'role': 'user', 'content': userMsg},
@@ -212,8 +394,8 @@ JSON format:
         }
       ],
       'generationConfig': {
-        'temperature': 0.7,
-        'maxOutputTokens': 1500,
+        'temperature': 0.6,
+        'maxOutputTokens': 2500,
       },
     });
 

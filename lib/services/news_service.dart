@@ -20,18 +20,22 @@ class NewsService {
     }
 
     final cat = categories.map(_newsDataCategory).join(',');
-    final uri = Uri.parse(AppConstants.newsEndpoint).replace(
-      queryParameters: {
-        'apikey': apiKey,
-        'country': country,
-        'language': AppConstants.defaultLanguage,
-        'category': cat,
-        'size': size.clamp(1, 10).toString(),
-      },
-    );
+    final isWorld = country == 'world';
+    final params = <String, String>{
+      'apikey': apiKey,
+      'language': AppConstants.defaultLanguage,
+      'category': cat,
+      'size': size.clamp(1, 10).toString(),
+    };
+    if (!isWorld) params['country'] = country;
+    // For global / world queries, restrict to top-tier domains for quality.
+    if (isWorld) params['prioritydomain'] = 'top';
+
+    final uri = Uri.parse(AppConstants.newsEndpoint)
+        .replace(queryParameters: params);
 
     dev.log(
-      '[News] GET $country | categories=$cat | size=${size.clamp(1, 10)}',
+      '[News] GET ${isWorld ? "world(global)" : country} | categories=$cat | size=${size.clamp(1, 10)}',
       name: 'Briefed',
     );
 

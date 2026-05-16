@@ -57,6 +57,7 @@ class StorageService {
     await prefs.remove(AppConstants.keyIsPro);
     await prefs.remove('bonus_played_date');
     await clearQuestionCache();
+    await clearArticleCache();
   }
 
   static List<String> getSelectedCategories() {
@@ -181,6 +182,52 @@ class StorageService {
       jsonEncode(trimmed.map((e) => e.toJson()).toList()),
     );
   }
+
+  // ── CACHED NEWS ARTICLES ─────────────────────────────────────────────────
+  // Keyed by country + sorted categories. TTL = 2 hours.
+
+  static List<NewsArticle>? getCachedArticles({
+    required String country,
+    required List<String> categories,
+  }) {
+    final stored = prefs.getString(AppConstants.keyCachedNews);
+    if (stored == null) return null;
+    try {
+      final blob = jsonDecode(stored) as Map<String, dynamic>;
+      if (blob['country'] != country) return null;
+      final catKey = (List<String>.from(blob['categories'] as List? ?? []))
+        ..sort();
+      final requested = [...categories]..sort();
+      if (catKey.join(',') != requested.join(',')) return null;
+      final ts = blob['ts'] as int? ?? 0;
+      final age = DateTime.now().millisecondsSinceEpoch - ts;
+      if (age > AppConstants.newsCacheTtlMinutes * 60 * 1000) return null;
+      final list = blob['articles'] as List? ?? [];
+      return list
+          .map((e) => NewsArticle.fromJson(e as Map<String, dynamic>))
+          .where((a) => a.title.isNotEmpty)
+          .toList();
+    } catch (_) {
+      return null;
+    }
+  }
+
+  static Future<void> cacheArticles({
+    required List<NewsArticle> articles,
+    required String country,
+    required List<String> categories,
+  }) async {
+    final blob = jsonEncode({
+      'country': country,
+      'categories': [...categories]..sort(),
+      'ts': DateTime.now().millisecondsSinceEpoch,
+      'articles': articles.map((a) => a.toJson()).toList(),
+    });
+    await prefs.setString(AppConstants.keyCachedNews, blob);
+  }
+
+  static Future<void> clearArticleCache() =>
+      prefs.remove(AppConstants.keyCachedNews);
 
   // ── CACHED QUESTIONS ──────────────────────────────────────────────────────
   // Bump this string any time you want to invalidate all existing caches.

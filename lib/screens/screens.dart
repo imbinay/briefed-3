@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:share_plus/share_plus.dart';
@@ -22,6 +23,9 @@ import '../services/storage_service.dart';
 import '../services/gemini_service.dart';
 import '../services/pro_purchase_service.dart';
 import '../widgets/widgets.dart';
+import '../features/news/models/ranked_article.dart';
+import '../features/news/models/news_category.dart';
+import '../features/news/providers/news_pipeline_provider.dart';
 
 // STATIC GAME DATA
 
@@ -29,561 +33,752 @@ class _RealOrFakeData {
   static const List<Map<String, dynamic>> headlines = [
     // ── REAL ──────────────────────────────────────────────────────────────
     {
-      'headline': 'Australia bans social media for children under 16, fines up to \$50M',
+      'headline':
+          'Australia bans social media for children under 16, fines up to \$50M',
       'isReal': true,
-      'explanation': 'Australia passed this landmark law in late 2024, the first country globally to do so.'
+      'explanation':
+          'Australia passed this landmark law in late 2024, the first country globally to do so.'
     },
     {
       'headline': 'Twitter rebrands to X after Elon Musk acquisition',
       'isReal': true,
-      'explanation': 'Elon Musk completed his \$44B Twitter acquisition and rebranded it to X in 2023.'
+      'explanation':
+          'Elon Musk completed his \$44B Twitter acquisition and rebranded it to X in 2023.'
     },
     {
       'headline': 'ChatGPT reaches 100 million users in just two months',
       'isReal': true,
-      'explanation': 'ChatGPT became the fastest-growing consumer app in history when it launched in late 2022.'
+      'explanation':
+          'ChatGPT became the fastest-growing consumer app in history when it launched in late 2022.'
     },
     {
       'headline': 'India overtakes China as world\'s most populous country',
       'isReal': true,
-      'explanation': 'India surpassed China in 2023 according to UN population estimates.'
+      'explanation':
+          'India surpassed China in 2023 according to UN population estimates.'
     },
     {
       'headline': 'Scientists release first ever image of a black hole',
       'isReal': true,
-      'explanation': 'The Event Horizon Telescope released the first black hole image in April 2019.'
+      'explanation':
+          'The Event Horizon Telescope released the first black hole image in April 2019.'
     },
     {
-      'headline': 'NASA\'s Artemis I successfully completes uncrewed Moon mission',
+      'headline':
+          'NASA\'s Artemis I successfully completes uncrewed Moon mission',
       'isReal': true,
-      'explanation': 'Artemis I launched in November 2022 and completed a 25-day mission around the Moon.'
+      'explanation':
+          'Artemis I launched in November 2022 and completed a 25-day mission around the Moon.'
     },
     {
-      'headline': 'OpenAI\'s GPT-4 passes the bar exam scoring in top 10 percent',
+      'headline':
+          'OpenAI\'s GPT-4 passes the bar exam scoring in top 10 percent',
       'isReal': true,
-      'explanation': 'GPT-4 scored in approximately the 90th percentile on the Uniform Bar Examination.'
+      'explanation':
+          'GPT-4 scored in approximately the 90th percentile on the Uniform Bar Examination.'
     },
     {
       'headline': 'Japan\'s population declines for 13th consecutive year',
       'isReal': true,
-      'explanation': 'Japan has faced population decline since 2011 due to low birth rates and limited immigration.'
+      'explanation':
+          'Japan has faced population decline since 2011 due to low birth rates and limited immigration.'
     },
     {
       'headline': 'Netflix loses subscribers for first time in over a decade',
       'isReal': true,
-      'explanation': 'Netflix reported losing 200,000 subscribers in Q1 2022, its first loss since 2011.'
+      'explanation':
+          'Netflix reported losing 200,000 subscribers in Q1 2022, its first loss since 2011.'
     },
     {
       'headline': 'WHO declares COVID-19 a global pandemic',
       'isReal': true,
-      'explanation': 'The World Health Organisation officially declared COVID-19 a pandemic on March 11, 2020.'
+      'explanation':
+          'The World Health Organisation officially declared COVID-19 a pandemic on March 11, 2020.'
     },
     {
-      'headline': 'Apple becomes first company to reach \$3 trillion market cap',
+      'headline':
+          'Apple becomes first company to reach \$3 trillion market cap',
       'isReal': true,
-      'explanation': 'Apple briefly crossed \$3 trillion in January 2022, the first company to do so.'
+      'explanation':
+          'Apple briefly crossed \$3 trillion in January 2022, the first company to do so.'
     },
     {
       'headline': 'Spotify launches in 80 new markets in a single day',
       'isReal': true,
-      'explanation': 'Spotify expanded to 80 new markets in February 2021 including parts of Africa and Asia.'
+      'explanation':
+          'Spotify expanded to 80 new markets in February 2021 including parts of Africa and Asia.'
     },
     {
-      'headline': 'Elon Musk surpasses Jeff Bezos to become world\'s richest person',
+      'headline':
+          'Elon Musk surpasses Jeff Bezos to become world\'s richest person',
       'isReal': true,
-      'explanation': 'Musk overtook Bezos in January 2021 after Tesla\'s share price surged.'
+      'explanation':
+          'Musk overtook Bezos in January 2021 after Tesla\'s share price surged.'
     },
     {
       'headline': 'Facebook rebrands its parent company to Meta',
       'isReal': true,
-      'explanation': 'Mark Zuckerberg announced the rebrand to Meta in October 2021 to reflect the metaverse focus.'
+      'explanation':
+          'Mark Zuckerberg announced the rebrand to Meta in October 2021 to reflect the metaverse focus.'
     },
     {
       'headline': 'GameStop shares surge over 1,700% in a matter of weeks',
       'isReal': true,
-      'explanation': 'Reddit traders on WallStreetBets drove a massive short squeeze in January 2021.'
+      'explanation':
+          'Reddit traders on WallStreetBets drove a massive short squeeze in January 2021.'
     },
     {
-      'headline': 'Container ship Ever Given runs aground, blocking the Suez Canal for six days',
+      'headline':
+          'Container ship Ever Given runs aground, blocking the Suez Canal for six days',
       'isReal': true,
-      'explanation': 'The Ever Given grounded in March 2021, blocking one of the world\'s busiest trade routes.'
+      'explanation':
+          'The Ever Given grounded in March 2021, blocking one of the world\'s busiest trade routes.'
     },
     {
-      'headline': 'Squid Game becomes Netflix\'s most-watched series of all time',
+      'headline':
+          'Squid Game becomes Netflix\'s most-watched series of all time',
       'isReal': true,
-      'explanation': 'The Korean thriller was watched in 111 million households within its first 28 days in 2021.'
+      'explanation':
+          'The Korean thriller was watched in 111 million households within its first 28 days in 2021.'
     },
     {
       'headline': 'James Webb Space Telescope launches on Christmas Day',
       'isReal': true,
-      'explanation': 'Webb launched on December 25, 2021, from French Guiana and became the most powerful telescope ever built.'
+      'explanation':
+          'Webb launched on December 25, 2021, from French Guiana and became the most powerful telescope ever built.'
     },
     {
-      'headline': 'Microsoft acquires Activision Blizzard for a record \$69 billion',
+      'headline':
+          'Microsoft acquires Activision Blizzard for a record \$69 billion',
       'isReal': true,
-      'explanation': 'Microsoft completed the acquisition in October 2023 after a lengthy regulatory battle.'
+      'explanation':
+          'Microsoft completed the acquisition in October 2023 after a lengthy regulatory battle.'
     },
     {
       'headline': 'Russia launches a full-scale military invasion of Ukraine',
       'isReal': true,
-      'explanation': 'Russia began its invasion of Ukraine on February 24, 2022, triggering Europe\'s largest conflict since WWII.'
+      'explanation':
+          'Russia began its invasion of Ukraine on February 24, 2022, triggering Europe\'s largest conflict since WWII.'
     },
     {
       'headline': 'Queen Elizabeth II dies after a 70-year reign, aged 96',
       'isReal': true,
-      'explanation': 'Queen Elizabeth II died at Balmoral Castle on September 8, 2022.'
+      'explanation':
+          'Queen Elizabeth II died at Balmoral Castle on September 8, 2022.'
     },
     {
-      'headline': 'FTX crypto exchange collapses; CEO Sam Bankman-Fried is arrested',
+      'headline':
+          'FTX crypto exchange collapses; CEO Sam Bankman-Fried is arrested',
       'isReal': true,
-      'explanation': 'FTX filed for bankruptcy in November 2022 and Bankman-Fried was later convicted of fraud.'
+      'explanation':
+          'FTX filed for bankruptcy in November 2022 and Bankman-Fried was later convicted of fraud.'
     },
     {
-      'headline': 'Argentina wins the FIFA World Cup; Messi lifts the trophy for the first time',
+      'headline':
+          'Argentina wins the FIFA World Cup; Messi lifts the trophy for the first time',
       'isReal': true,
-      'explanation': 'Argentina beat France on penalties in the 2022 World Cup final in Qatar.'
+      'explanation':
+          'Argentina beat France on penalties in the 2022 World Cup final in Qatar.'
     },
     {
-      'headline': 'NASA\'s DART mission successfully changes an asteroid\'s orbit',
+      'headline':
+          'NASA\'s DART mission successfully changes an asteroid\'s orbit',
       'isReal': true,
-      'explanation': 'DART deliberately crashed into the asteroid Dimorphos in September 2022, altering its path.'
+      'explanation':
+          'DART deliberately crashed into the asteroid Dimorphos in September 2022, altering its path.'
     },
     {
-      'headline': 'Rishi Sunak becomes the UK\'s first British Asian prime minister',
+      'headline':
+          'Rishi Sunak becomes the UK\'s first British Asian prime minister',
       'isReal': true,
-      'explanation': 'Sunak took office in October 2022, becoming the UK\'s youngest PM in modern times.'
+      'explanation':
+          'Sunak took office in October 2022, becoming the UK\'s youngest PM in modern times.'
     },
     {
       'headline': 'iPhone 15 replaces the Lightning port with USB-C',
       'isReal': true,
-      'explanation': 'Apple switched to USB-C on all iPhone 15 models in 2023 following EU regulations.'
+      'explanation':
+          'Apple switched to USB-C on all iPhone 15 models in 2023 following EU regulations.'
     },
     {
-      'headline': 'OpenAI CEO Sam Altman is fired, then reinstated within five days',
+      'headline':
+          'OpenAI CEO Sam Altman is fired, then reinstated within five days',
       'isReal': true,
-      'explanation': 'The OpenAI board ousted Altman in November 2023 before pressure from staff and investors forced his return.'
+      'explanation':
+          'The OpenAI board ousted Altman in November 2023 before pressure from staff and investors forced his return.'
     },
     {
-      'headline': 'Meta launches Threads, gaining over 100 million users in under a week',
+      'headline':
+          'Meta launches Threads, gaining over 100 million users in under a week',
       'isReal': true,
-      'explanation': 'Threads launched in July 2023 and became the fastest app to reach 100 million sign-ups.'
+      'explanation':
+          'Threads launched in July 2023 and became the fastest app to reach 100 million sign-ups.'
     },
     {
-      'headline': 'India\'s Chandrayaan-3 becomes first spacecraft to land near the Moon\'s south pole',
+      'headline':
+          'India\'s Chandrayaan-3 becomes first spacecraft to land near the Moon\'s south pole',
       'isReal': true,
-      'explanation': 'Chandrayaan-3 successfully landed in August 2023, a world first for the lunar south pole.'
+      'explanation':
+          'Chandrayaan-3 successfully landed in August 2023, a world first for the lunar south pole.'
     },
     {
       'headline': 'King Charles III is crowned at Westminster Abbey',
       'isReal': true,
-      'explanation': 'Charles was coronated on May 6, 2023, the first British coronation in 70 years.'
+      'explanation':
+          'Charles was coronated on May 6, 2023, the first British coronation in 70 years.'
     },
     {
       'headline': 'Lionel Messi wins a record-breaking eighth Ballon d\'Or',
       'isReal': true,
-      'explanation': 'Messi claimed his eighth Ballon d\'Or in October 2023, extending his own record.'
+      'explanation':
+          'Messi claimed his eighth Ballon d\'Or in October 2023, extending his own record.'
     },
     {
-      'headline': 'Apple unveils the Vision Pro mixed-reality headset at \$3,499',
+      'headline':
+          'Apple unveils the Vision Pro mixed-reality headset at \$3,499',
       'isReal': true,
-      'explanation': 'Apple revealed the Vision Pro at WWDC in June 2023; it went on sale in February 2024.'
+      'explanation':
+          'Apple revealed the Vision Pro at WWDC in June 2023; it went on sale in February 2024.'
     },
     {
-      'headline': 'YouTube begins blocking ad-blocker extensions for users worldwide',
+      'headline':
+          'YouTube begins blocking ad-blocker extensions for users worldwide',
       'isReal': true,
-      'explanation': 'YouTube rolled out a global crackdown on ad blockers in late 2023.'
+      'explanation':
+          'YouTube rolled out a global crackdown on ad blockers in late 2023.'
     },
     {
       'headline': 'Reddit goes public via IPO, valued at around \$6.4 billion',
       'isReal': true,
-      'explanation': 'Reddit listed on the New York Stock Exchange in March 2024.'
+      'explanation':
+          'Reddit listed on the New York Stock Exchange in March 2024.'
     },
     {
-      'headline': 'Nvidia briefly becomes the world\'s most valuable publicly traded company',
+      'headline':
+          'Nvidia briefly becomes the world\'s most valuable publicly traded company',
       'isReal': true,
-      'explanation': 'Nvidia overtook Microsoft in June 2024 driven by insatiable demand for AI chips.'
+      'explanation':
+          'Nvidia overtook Microsoft in June 2024 driven by insatiable demand for AI chips.'
     },
     {
       'headline': 'TikTok faces a potential federal ban in the United States',
       'isReal': true,
-      'explanation': 'A US law requiring ByteDance to divest TikTok was signed in April 2024 over national security concerns.'
+      'explanation':
+          'A US law requiring ByteDance to divest TikTok was signed in April 2024 over national security concerns.'
     },
     {
-      'headline': 'EU fines Apple nearly \$2 billion for anti-competitive App Store practices',
+      'headline':
+          'EU fines Apple nearly \$2 billion for anti-competitive App Store practices',
       'isReal': true,
-      'explanation': 'The European Commission fined Apple €1.84 billion in March 2024 over music streaming rules.'
+      'explanation':
+          'The European Commission fined Apple €1.84 billion in March 2024 over music streaming rules.'
     },
     {
-      'headline': 'SpaceX\'s Starship rocket completes its first fully successful test flight',
+      'headline':
+          'SpaceX\'s Starship rocket completes its first fully successful test flight',
       'isReal': true,
-      'explanation': 'Starship\'s sixth test flight in October 2024 saw both the booster and ship successfully recovered.'
+      'explanation':
+          'Starship\'s sixth test flight in October 2024 saw both the booster and ship successfully recovered.'
     },
     {
-      'headline': 'Boeing 737 Max grounded worldwide after two fatal crashes kill 346 people',
+      'headline':
+          'Boeing 737 Max grounded worldwide after two fatal crashes kill 346 people',
       'isReal': true,
-      'explanation': 'The Lion Air and Ethiopian Airlines crashes in 2018–19 led to a 20-month global grounding.'
+      'explanation':
+          'The Lion Air and Ethiopian Airlines crashes in 2018–19 led to a 20-month global grounding.'
     },
     {
-      'headline': 'Notre-Dame Cathedral in Paris catches fire, destroying its medieval spire',
+      'headline':
+          'Notre-Dame Cathedral in Paris catches fire, destroying its medieval spire',
       'isReal': true,
-      'explanation': 'The April 2019 fire caused catastrophic damage; restoration work continues.'
+      'explanation':
+          'The April 2019 fire caused catastrophic damage; restoration work continues.'
     },
     {
-      'headline': 'Greta Thunberg is named Time magazine\'s Person of the Year, aged 16',
+      'headline':
+          'Greta Thunberg is named Time magazine\'s Person of the Year, aged 16',
       'isReal': true,
-      'explanation': 'Time chose the Swedish climate activist as Person of the Year in December 2019.'
+      'explanation':
+          'Time chose the Swedish climate activist as Person of the Year in December 2019.'
     },
     {
       'headline': 'Facebook acquires WhatsApp for \$19 billion',
       'isReal': true,
-      'explanation': 'Facebook completed the WhatsApp acquisition in October 2014 for \$19 billion.'
+      'explanation':
+          'Facebook completed the WhatsApp acquisition in October 2014 for \$19 billion.'
     },
     {
-      'headline': 'Edward Snowden leaks classified NSA mass-surveillance documents',
+      'headline':
+          'Edward Snowden leaks classified NSA mass-surveillance documents',
       'isReal': true,
-      'explanation': 'Snowden revealed PRISM and other surveillance programmes to journalists in June 2013.'
+      'explanation':
+          'Snowden revealed PRISM and other surveillance programmes to journalists in June 2013.'
     },
     {
-      'headline': 'NASA\'s Curiosity rover lands on Mars using a sky-crane system',
+      'headline':
+          'NASA\'s Curiosity rover lands on Mars using a sky-crane system',
       'isReal': true,
-      'explanation': 'Curiosity touched down in Gale Crater in August 2012 using a novel sky-crane landing.'
+      'explanation':
+          'Curiosity touched down in Gale Crater in August 2012 using a novel sky-crane landing.'
     },
     {
       'headline': 'Osama bin Laden is killed by US Navy SEALs in Pakistan',
       'isReal': true,
-      'explanation': 'Operation Neptune Spear on May 2, 2011 ended the decade-long hunt for the al-Qaeda leader.'
+      'explanation':
+          'Operation Neptune Spear on May 2, 2011 ended the decade-long hunt for the al-Qaeda leader.'
     },
     {
       'headline': 'Steve Jobs dies aged 56 after battling pancreatic cancer',
       'isReal': true,
-      'explanation': 'Jobs passed away on October 5, 2011, six weeks after stepping down as Apple CEO.'
+      'explanation':
+          'Jobs passed away on October 5, 2011, six weeks after stepping down as Apple CEO.'
     },
     {
-      'headline': 'Google DeepMind\'s AlphaGo defeats world Go champion Lee Sedol 4-1',
+      'headline':
+          'Google DeepMind\'s AlphaGo defeats world Go champion Lee Sedol 4-1',
       'isReal': true,
-      'explanation': 'AlphaGo\'s 2016 victory was seen as a landmark moment in artificial intelligence.'
+      'explanation':
+          'AlphaGo\'s 2016 victory was seen as a landmark moment in artificial intelligence.'
     },
     {
-      'headline': 'Pokémon Go is downloaded 100 million times within its first month',
+      'headline':
+          'Pokémon Go is downloaded 100 million times within its first month',
       'isReal': true,
-      'explanation': 'The augmented-reality game became a global phenomenon after launching in July 2016.'
+      'explanation':
+          'The augmented-reality game became a global phenomenon after launching in July 2016.'
     },
     {
-      'headline': 'UK votes to leave the European Union in the Brexit referendum',
+      'headline':
+          'UK votes to leave the European Union in the Brexit referendum',
       'isReal': true,
-      'explanation': 'The June 2016 vote resulted in 52% of Britons choosing to leave the EU.'
+      'explanation':
+          'The June 2016 vote resulted in 52% of Britons choosing to leave the EU.'
     },
     {
-      'headline': 'Scientists confirm the first direct detection of gravitational waves',
+      'headline':
+          'Scientists confirm the first direct detection of gravitational waves',
       'isReal': true,
-      'explanation': 'LIGO announced the detection in February 2016, confirming a prediction Einstein made 100 years earlier.'
+      'explanation':
+          'LIGO announced the detection in February 2016, confirming a prediction Einstein made 100 years earlier.'
     },
     {
       'headline': 'Paris Agreement on climate change is signed by 195 nations',
       'isReal': true,
-      'explanation': 'The landmark agreement was adopted at COP21 in December 2015.'
+      'explanation':
+          'The landmark agreement was adopted at COP21 in December 2015.'
     },
     {
-      'headline': 'Lehman Brothers collapses, filing the largest bankruptcy in US history',
+      'headline':
+          'Lehman Brothers collapses, filing the largest bankruptcy in US history',
       'isReal': true,
-      'explanation': 'Lehman\'s September 2008 failure triggered a global financial crisis.'
+      'explanation':
+          'Lehman\'s September 2008 failure triggered a global financial crisis.'
     },
     {
-      'headline': 'Space Shuttle Challenger breaks apart 73 seconds after launch',
+      'headline':
+          'Space Shuttle Challenger breaks apart 73 seconds after launch',
       'isReal': true,
-      'explanation': 'The January 28, 1986 disaster killed all seven crew members due to a failed O-ring seal.'
+      'explanation':
+          'The January 28, 1986 disaster killed all seven crew members due to a failed O-ring seal.'
     },
     {
-      'headline': 'IBM\'s Deep Blue defeats world chess champion Garry Kasparov',
+      'headline':
+          'IBM\'s Deep Blue defeats world chess champion Garry Kasparov',
       'isReal': true,
-      'explanation': 'Deep Blue won a six-game match against Kasparov in May 1997, a milestone for AI.'
+      'explanation':
+          'Deep Blue won a six-game match against Kasparov in May 1997, a milestone for AI.'
     },
     {
-      'headline': 'Dolly the sheep is revealed as the first mammal cloned from an adult cell',
+      'headline':
+          'Dolly the sheep is revealed as the first mammal cloned from an adult cell',
       'isReal': true,
-      'explanation': 'Scientists at the Roslin Institute in Scotland cloned Dolly in 1996 and announced it in 1997.'
+      'explanation':
+          'Scientists at the Roslin Institute in Scotland cloned Dolly in 1996 and announced it in 1997.'
     },
     {
-      'headline': 'Y2K bug causes no major disasters despite widespread global panic',
+      'headline':
+          'Y2K bug causes no major disasters despite widespread global panic',
       'isReal': true,
-      'explanation': 'Billions spent on fixes meant the millennium date change on January 1, 2000 passed without incident.'
+      'explanation':
+          'Billions spent on fixes meant the millennium date change on January 1, 2000 passed without incident.'
     },
     {
-      'headline': 'Euro banknotes and coins enter circulation across 12 EU nations',
+      'headline':
+          'Euro banknotes and coins enter circulation across 12 EU nations',
       'isReal': true,
-      'explanation': 'The euro became physical currency on January 1, 2002 in Austria, France, Germany and nine others.'
+      'explanation':
+          'The euro became physical currency on January 1, 2002 in Austria, France, Germany and nine others.'
     },
     {
-      'headline': 'Skype launches, making free video calls over the internet widely accessible',
+      'headline':
+          'Skype launches, making free video calls over the internet widely accessible',
       'isReal': true,
-      'explanation': 'Skype launched in August 2003 and rapidly changed how people communicated long-distance.'
+      'explanation':
+          'Skype launched in August 2003 and rapidly changed how people communicated long-distance.'
     },
     {
       'headline': 'WHO renames monkeypox to \'mpox\' amid stigma concerns',
       'isReal': true,
-      'explanation': 'The WHO officially adopted the new name mpox in November 2022.'
+      'explanation':
+          'The WHO officially adopted the new name mpox in November 2022.'
     },
     {
-      'headline': 'US Supreme Court overturns Roe v. Wade, ending federal abortion rights',
+      'headline':
+          'US Supreme Court overturns Roe v. Wade, ending federal abortion rights',
       'isReal': true,
-      'explanation': 'The Dobbs v. Jackson ruling in June 2022 left abortion law to individual states.'
+      'explanation':
+          'The Dobbs v. Jackson ruling in June 2022 left abortion law to individual states.'
     },
     {
-      'headline': 'Netflix confirms it will introduce ads for cheaper subscription tier',
+      'headline':
+          'Netflix confirms it will introduce ads for cheaper subscription tier',
       'isReal': true,
-      'explanation': 'Netflix launched its ad-supported plan in November 2022 to counter subscriber losses.'
+      'explanation':
+          'Netflix launched its ad-supported plan in November 2022 to counter subscriber losses.'
     },
     {
-      'headline': 'Stephen Hawking dies peacefully at his home in Cambridge, aged 76',
+      'headline':
+          'Stephen Hawking dies peacefully at his home in Cambridge, aged 76',
       'isReal': true,
-      'explanation': 'The theoretical physicist and author of A Brief History of Time died on March 14, 2018.'
+      'explanation':
+          'The theoretical physicist and author of A Brief History of Time died on March 14, 2018.'
     },
     {
-      'headline': 'WhatsApp rolls out end-to-end encryption for all one billion users by default',
+      'headline':
+          'WhatsApp rolls out end-to-end encryption for all one billion users by default',
       'isReal': true,
-      'explanation': 'WhatsApp enabled full end-to-end encryption for every message in April 2016.'
+      'explanation':
+          'WhatsApp enabled full end-to-end encryption for every message in April 2016.'
     },
     {
-      'headline': 'Apple launches the iPad, creating the modern tablet computer market',
+      'headline':
+          'Apple launches the iPad, creating the modern tablet computer market',
       'isReal': true,
-      'explanation': 'Steve Jobs unveiled the first iPad in January 2010; it sold 300,000 units on its first day.'
+      'explanation':
+          'Steve Jobs unveiled the first iPad in January 2010; it sold 300,000 units on its first day.'
     },
     {
-      'headline': 'Google Maps launches with free street-level navigation for the public',
+      'headline':
+          'Google Maps launches with free street-level navigation for the public',
       'isReal': true,
-      'explanation': 'Google Maps launched in February 2005 and transformed how people navigate.'
+      'explanation':
+          'Google Maps launched in February 2005 and transformed how people navigate.'
     },
 
     // ── FAKE ──────────────────────────────────────────────────────────────
     {
-      'headline': 'France bans all smartphones in public parks to boost social interaction',
+      'headline':
+          'France bans all smartphones in public parks to boost social interaction',
       'isReal': false,
-      'explanation': 'France banned phones in schools, but no such law exists for public parks.'
+      'explanation':
+          'France banned phones in schools, but no such law exists for public parks.'
     },
     {
       'headline': 'Google announces plans to acquire Reddit for \$8 billion',
       'isReal': false,
-      'explanation': 'Reddit went public via IPO in 2024. Google has not acquired it.'
+      'explanation':
+          'Reddit went public via IPO in 2024. Google has not acquired it.'
     },
     {
-      'headline': 'Amazon opens world\'s first fully underwater warehouse in Norway',
+      'headline':
+          'Amazon opens world\'s first fully underwater warehouse in Norway',
       'isReal': false,
       'explanation': 'Entirely fictional. Amazon has no underwater facilities.'
     },
     {
-      'headline': 'Tesla launches solar-powered commercial airline service by 2026',
+      'headline':
+          'Tesla launches solar-powered commercial airline service by 2026',
       'isReal': false,
-      'explanation': 'Tesla operates in EVs and energy storage, not commercial aviation.'
+      'explanation':
+          'Tesla operates in EVs and energy storage, not commercial aviation.'
     },
     {
-      'headline': 'Scientists confirm daily coffee consumption reverses memory loss',
+      'headline':
+          'Scientists confirm daily coffee consumption reverses memory loss',
       'isReal': false,
-      'explanation': 'No study confirms coffee reverses memory loss. Some suggest mild cognitive benefits only.'
+      'explanation':
+          'No study confirms coffee reverses memory loss. Some suggest mild cognitive benefits only.'
     },
     {
-      'headline': 'UN passes resolution making internet access a basic human right with enforcement powers',
+      'headline':
+          'UN passes resolution making internet access a basic human right with enforcement powers',
       'isReal': false,
-      'explanation': 'The UN has called internet access important but passed no binding enforcement resolution.'
+      'explanation':
+          'The UN has called internet access important but passed no binding enforcement resolution.'
     },
     {
-      'headline': 'Microsoft acquires Nintendo for \$75 billion to enter gaming hardware market',
+      'headline':
+          'Microsoft acquires Nintendo for \$75 billion to enter gaming hardware market',
       'isReal': false,
-      'explanation': 'Microsoft acquired Activision Blizzard but has not acquired Nintendo.'
+      'explanation':
+          'Microsoft acquired Activision Blizzard but has not acquired Nintendo.'
     },
     {
-      'headline': 'New study confirms humans only use 10 percent of their brain capacity',
+      'headline':
+          'New study confirms humans only use 10 percent of their brain capacity',
       'isReal': false,
-      'explanation': 'This is a long-debunked myth. Brain imaging shows all brain areas are regularly active.'
+      'explanation':
+          'This is a long-debunked myth. Brain imaging shows all brain areas are regularly active.'
     },
     {
-      'headline': 'Sweden mandates four-day work week for all companies with over 50 employees',
+      'headline':
+          'Sweden mandates four-day work week for all companies with over 50 employees',
       'isReal': false,
-      'explanation': 'Sweden trialled shorter hours in some sectors but has no national four-day work week law.'
+      'explanation':
+          'Sweden trialled shorter hours in some sectors but has no national four-day work week law.'
     },
     {
-      'headline': 'Apple launches its own satellite internet service to rival Starlink',
+      'headline':
+          'Apple launches its own satellite internet service to rival Starlink',
       'isReal': false,
       'explanation': 'Apple has not launched a satellite internet service.'
     },
     {
       'headline': 'Google announces plans to acquire TikTok for \$30 billion',
       'isReal': false,
-      'explanation': 'Google has not acquired TikTok. ByteDance still owns it despite US legislative pressure.'
+      'explanation':
+          'Google has not acquired TikTok. ByteDance still owns it despite US legislative pressure.'
     },
     {
-      'headline': 'Tesla unveils a consumer flying car priced at \$25,000 for 2027 delivery',
+      'headline':
+          'Tesla unveils a consumer flying car priced at \$25,000 for 2027 delivery',
       'isReal': false,
-      'explanation': 'Tesla has no flying car programme. It focuses on ground-based electric vehicles.'
+      'explanation':
+          'Tesla has no flying car programme. It focuses on ground-based electric vehicles.'
     },
     {
-      'headline': 'Scientists develop a daily pill that fully replaces the need for physical exercise',
+      'headline':
+          'Scientists develop a daily pill that fully replaces the need for physical exercise',
       'isReal': false,
-      'explanation': 'No approved pill replicates the full benefits of exercise. Research exists but no product.'
+      'explanation':
+          'No approved pill replicates the full benefits of exercise. Research exists but no product.'
     },
     {
-      'headline': 'Spotify announces it will pay artists \$1 per stream starting 2025',
+      'headline':
+          'Spotify announces it will pay artists \$1 per stream starting 2025',
       'isReal': false,
-      'explanation': 'Spotify pays roughly \$0.003–\$0.005 per stream. A \$1 per stream rate is completely fictional.'
+      'explanation':
+          'Spotify pays roughly \$0.003–\$0.005 per stream. A \$1 per stream rate is completely fictional.'
     },
     {
-      'headline': 'Apple purchases Formula 1 broadcasting rights for \$10 billion',
+      'headline':
+          'Apple purchases Formula 1 broadcasting rights for \$10 billion',
       'isReal': false,
-      'explanation': 'Apple has not purchased F1 broadcasting rights. It does have an F1 film in production.'
+      'explanation':
+          'Apple has not purchased F1 broadcasting rights. It does have an F1 film in production.'
     },
     {
       'headline': 'Meta shuts down Instagram and migrates all users to Threads',
       'isReal': false,
-      'explanation': 'Instagram remains one of the world\'s most-used apps. Meta runs both Instagram and Threads.'
+      'explanation':
+          'Instagram remains one of the world\'s most-used apps. Meta runs both Instagram and Threads.'
     },
     {
-      'headline': 'Scientists confirm signs of microbial life in the clouds of Venus',
+      'headline':
+          'Scientists confirm signs of microbial life in the clouds of Venus',
       'isReal': false,
-      'explanation': 'Phosphine was detected in Venusian clouds (disputed), but life has not been confirmed.'
+      'explanation':
+          'Phosphine was detected in Venusian clouds (disputed), but life has not been confirmed.'
     },
     {
-      'headline': 'Microsoft acquires Adobe for \$75 billion to dominate creative software',
+      'headline':
+          'Microsoft acquires Adobe for \$75 billion to dominate creative software',
       'isReal': false,
-      'explanation': 'Adobe\'s proposed acquisition by Figma (\$20B) was scrapped. Microsoft has not acquired Adobe.'
+      'explanation':
+          'Adobe\'s proposed acquisition by Figma (\$20B) was scrapped. Microsoft has not acquired Adobe.'
     },
     {
-      'headline': 'EU mandates all social media posts must be fact-checked before publishing',
+      'headline':
+          'EU mandates all social media posts must be fact-checked before publishing',
       'isReal': false,
-      'explanation': 'No such law exists. The EU\'s Digital Services Act requires platforms to address illegal content, not pre-screen posts.'
+      'explanation':
+          'No such law exists. The EU\'s Digital Services Act requires platforms to address illegal content, not pre-screen posts.'
     },
     {
-      'headline': 'WHO classifies excessive social media use as a recognised mental disorder',
+      'headline':
+          'WHO classifies excessive social media use as a recognised mental disorder',
       'isReal': false,
-      'explanation': 'The WHO has not classified social media use as a mental disorder. Gaming disorder was added in 2018.'
+      'explanation':
+          'The WHO has not classified social media use as a mental disorder. Gaming disorder was added in 2018.'
     },
     {
-      'headline': 'China successfully lands astronauts on the Moon before NASA\'s Artemis crew',
+      'headline':
+          'China successfully lands astronauts on the Moon before NASA\'s Artemis crew',
       'isReal': false,
-      'explanation': 'As of 2024, no human has walked on the Moon since Apollo 17 in 1972. China targets the Moon by the 2030s.'
+      'explanation':
+          'As of 2024, no human has walked on the Moon since Apollo 17 in 1972. China targets the Moon by the 2030s.'
     },
     {
-      'headline': 'YouTube introduces mandatory 30-second unskippable ads before every video',
+      'headline':
+          'YouTube introduces mandatory 30-second unskippable ads before every video',
       'isReal': false,
-      'explanation': 'YouTube has non-skippable ads but they are typically 15–20 seconds and not on every video.'
+      'explanation':
+          'YouTube has non-skippable ads but they are typically 15–20 seconds and not on every video.'
     },
     {
-      'headline': 'Bitcoin becomes legal tender in the United States by executive order',
+      'headline':
+          'Bitcoin becomes legal tender in the United States by executive order',
       'isReal': false,
-      'explanation': 'Bitcoin is legal in the US but is not legal tender. El Salvador adopted it as legal tender in 2021.'
+      'explanation':
+          'Bitcoin is legal in the US but is not legal tender. El Salvador adopted it as legal tender in 2021.'
     },
     {
-      'headline': 'Facebook sues Google for copying the concept of social \'likes\'',
+      'headline':
+          'Facebook sues Google for copying the concept of social \'likes\'',
       'isReal': false,
-      'explanation': 'No such lawsuit exists. The \'like\' button concept predates Facebook and has never been exclusively claimed.'
+      'explanation':
+          'No such lawsuit exists. The \'like\' button concept predates Facebook and has never been exclusively claimed.'
     },
     {
-      'headline': 'Apple acquires Netflix for \$200 billion in a landmark streaming deal',
+      'headline':
+          'Apple acquires Netflix for \$200 billion in a landmark streaming deal',
       'isReal': false,
-      'explanation': 'Apple has not acquired Netflix. Both companies run separate, competing streaming services.'
+      'explanation':
+          'Apple has not acquired Netflix. Both companies run separate, competing streaming services.'
     },
     {
-      'headline': 'Scientists successfully grow a fully functional human heart in a laboratory',
+      'headline':
+          'Scientists successfully grow a fully functional human heart in a laboratory',
       'isReal': false,
-      'explanation': 'Researchers have grown organoids and partial heart tissue, but not a full functional human heart.'
+      'explanation':
+          'Researchers have grown organoids and partial heart tissue, but not a full functional human heart.'
     },
     {
       'headline': 'Elon Musk purchases Disney to merge it with X and Tesla',
       'isReal': false,
-      'explanation': 'Musk has not purchased Disney. He has expressed interest but made no formal bid.'
+      'explanation':
+          'Musk has not purchased Disney. He has expressed interest but made no formal bid.'
     },
     {
-      'headline': 'Netflix announces it will charge extra for watching more than 4 hours of content per day',
+      'headline':
+          'Netflix announces it will charge extra for watching more than 4 hours of content per day',
       'isReal': false,
-      'explanation': 'Netflix charges a flat subscription fee with no daily viewing limits.'
+      'explanation':
+          'Netflix charges a flat subscription fee with no daily viewing limits.'
     },
     {
-      'headline': 'WHO declares climate anxiety a globally recognised mental health emergency',
+      'headline':
+          'WHO declares climate anxiety a globally recognised mental health emergency',
       'isReal': false,
-      'explanation': 'Climate anxiety is acknowledged by mental health bodies, but the WHO has not declared it an emergency.'
+      'explanation':
+          'Climate anxiety is acknowledged by mental health bodies, but the WHO has not declared it an emergency.'
     },
     {
-      'headline': 'Japan introduces a law requiring humanoid robots to hold legal rights by 2030',
+      'headline':
+          'Japan introduces a law requiring humanoid robots to hold legal rights by 2030',
       'isReal': false,
-      'explanation': 'No country has granted legal rights to robots. Japan leads in robotics but has passed no such law.'
+      'explanation':
+          'No country has granted legal rights to robots. Japan leads in robotics but has passed no such law.'
     },
     {
       'headline': 'Scientists invent a pill that eliminates the need for sleep',
       'isReal': false,
-      'explanation': 'No approved drug replaces sleep. Some military research explores wakeful agents, none eliminate sleep need.'
+      'explanation':
+          'No approved drug replaces sleep. Some military research explores wakeful agents, none eliminate sleep need.'
     },
     {
-      'headline': 'Google launches a free smartphone to directly compete with the iPhone',
+      'headline':
+          'Google launches a free smartphone to directly compete with the iPhone',
       'isReal': false,
-      'explanation': 'Google makes the Pixel phone but it is not free. A free Google-branded phone does not exist.'
+      'explanation':
+          'Google makes the Pixel phone but it is not free. A free Google-branded phone does not exist.'
     },
     {
-      'headline': 'NASA confirms it has received a signal from an alien civilisation',
+      'headline':
+          'NASA confirms it has received a signal from an alien civilisation',
       'isReal': false,
-      'explanation': 'NASA has found no confirmed signal from extraterrestrial intelligence. The search continues via SETI.'
+      'explanation':
+          'NASA has found no confirmed signal from extraterrestrial intelligence. The search continues via SETI.'
     },
     {
-      'headline': 'Amazon announces free delivery will no longer be included with Prime',
+      'headline':
+          'Amazon announces free delivery will no longer be included with Prime',
       'isReal': false,
-      'explanation': 'Free delivery remains a core Prime benefit as of 2024. Amazon has raised prices but kept the feature.'
+      'explanation':
+          'Free delivery remains a core Prime benefit as of 2024. Amazon has raised prices but kept the feature.'
     },
     {
-      'headline': 'Facebook introduces a feature showing exactly who viewed your profile',
+      'headline':
+          'Facebook introduces a feature showing exactly who viewed your profile',
       'isReal': false,
-      'explanation': 'Facebook has never offered a profile-viewer feature and has repeatedly confirmed it cannot be built.'
+      'explanation':
+          'Facebook has never offered a profile-viewer feature and has repeatedly confirmed it cannot be built.'
     },
     {
       'headline': 'PayPal acquires Snapchat to expand into social commerce',
       'isReal': false,
-      'explanation': 'PayPal has not acquired Snapchat. Snap Inc. remains an independent company.'
+      'explanation':
+          'PayPal has not acquired Snapchat. Snap Inc. remains an independent company.'
     },
     {
-      'headline': 'EU bans all targeted advertising aimed at users under the age of 18',
+      'headline':
+          'EU bans all targeted advertising aimed at users under the age of 18',
       'isReal': false,
-      'explanation': 'The EU has restricted some targeting of minors under GDPR and DSA, but not banned all targeted ads.'
+      'explanation':
+          'The EU has restricted some targeting of minors under GDPR and DSA, but not banned all targeted ads.'
     },
     {
-      'headline': 'McDonald\'s announces plans to go fully vegetarian across all menus by 2030',
+      'headline':
+          'McDonald\'s announces plans to go fully vegetarian across all menus by 2030',
       'isReal': false,
-      'explanation': 'McDonald\'s has added plant-based options but has no plan to remove meat from its global menu.'
+      'explanation':
+          'McDonald\'s has added plant-based options but has no plan to remove meat from its global menu.'
     },
     {
-      'headline': 'Amazon builds the world\'s first fully operational drone delivery motorway',
+      'headline':
+          'Amazon builds the world\'s first fully operational drone delivery motorway',
       'isReal': false,
-      'explanation': 'Amazon Prime Air drone deliveries exist in limited trials. A dedicated drone motorway does not exist.'
+      'explanation':
+          'Amazon Prime Air drone deliveries exist in limited trials. A dedicated drone motorway does not exist.'
     },
     {
-      'headline': 'UN votes to ban all private jet travel by 2028 for climate reasons',
+      'headline':
+          'UN votes to ban all private jet travel by 2028 for climate reasons',
       'isReal': false,
-      'explanation': 'No UN resolution banning private jets has been passed. France banned short domestic flights in 2023.'
+      'explanation':
+          'No UN resolution banning private jets has been passed. France banned short domestic flights in 2023.'
     },
     {
-      'headline': 'Scientists confirm that drinking a glass of red wine daily significantly extends lifespan',
+      'headline':
+          'Scientists confirm that drinking a glass of red wine daily significantly extends lifespan',
       'isReal': false,
-      'explanation': 'Many studies suggest moderate alcohol offers little to no health benefit. No confirmed lifespan extension.'
+      'explanation':
+          'Many studies suggest moderate alcohol offers little to no health benefit. No confirmed lifespan extension.'
     },
     {
-      'headline': 'Wikipedia permanently bans all AI-generated content from its articles',
+      'headline':
+          'Wikipedia permanently bans all AI-generated content from its articles',
       'isReal': false,
-      'explanation': 'Wikipedia has introduced guidance on AI content but has not issued a blanket permanent ban.'
+      'explanation':
+          'Wikipedia has introduced guidance on AI content but has not issued a blanket permanent ban.'
     },
     {
-      'headline': 'OpenAI creates an AI that writes full novels completely indistinguishable from human authors',
+      'headline':
+          'OpenAI creates an AI that writes full novels completely indistinguishable from human authors',
       'isReal': false,
-      'explanation': 'AI can produce novel-length text, but studies show AI writing remains detectable by trained reviewers.'
+      'explanation':
+          'AI can produce novel-length text, but studies show AI writing remains detectable by trained reviewers.'
     },
     {
-      'headline': 'South Korea passes a law making social media addiction a criminal offence',
+      'headline':
+          'South Korea passes a law making social media addiction a criminal offence',
       'isReal': false,
-      'explanation': 'South Korea treats gaming addiction as a health issue, not a crime. No such social media law exists.'
+      'explanation':
+          'South Korea treats gaming addiction as a health issue, not a crime. No such social media law exists.'
     },
     {
-      'headline': 'China bans all fossil fuel vehicles with immediate 90-day notice to drivers',
+      'headline':
+          'China bans all fossil fuel vehicles with immediate 90-day notice to drivers',
       'isReal': false,
-      'explanation': 'China aims to reduce fossil fuel vehicles by 2035 but has not issued an immediate ban.'
+      'explanation':
+          'China aims to reduce fossil fuel vehicles by 2035 but has not issued an immediate ban.'
     },
     {
-      'headline': 'Apple announces the iPhone will switch to the Android operating system',
+      'headline':
+          'Apple announces the iPhone will switch to the Android operating system',
       'isReal': false,
-      'explanation': 'Apple develops its own iOS and has never indicated any plan to adopt Android.'
+      'explanation':
+          'Apple develops its own iOS and has never indicated any plan to adopt Android.'
     },
   ];
 }
@@ -591,118 +786,568 @@ class _RealOrFakeData {
 class _OldestToLatestData {
   static const List<Map<String, dynamic>> events = [
     // ── Pre-20th century ──────────────────────────────────────────────────
-    {'event': 'Battle of Hastings: William the Conqueror defeats King Harold', 'year': 1066, 'detail': 'October 14, 1066 — Norman conquest of England'},
-    {'event': 'King John signs the Magna Carta', 'year': 1215, 'detail': 'June 15, 1215 — first limits on royal power'},
-    {'event': 'Gutenberg completes his printing press with movable type', 'year': 1440, 'detail': 'c.1440 — transforms mass communication'},
-    {'event': 'Columbus reaches the Americas on behalf of Spain', 'year': 1492, 'detail': 'October 12, 1492 — lands in the Bahamas'},
-    {'event': 'Copernicus publishes his heliocentric model of the solar system', 'year': 1543, 'detail': 'De revolutionibus, 1543'},
-    {'event': 'Newton publishes his laws of gravity in Principia Mathematica', 'year': 1687, 'detail': 'July 5, 1687 — foundations of classical mechanics'},
-    {'event': 'American Declaration of Independence signed in Philadelphia', 'year': 1776, 'detail': 'July 4, 1776'},
-    {'event': 'French Revolution begins: the Bastille is stormed', 'year': 1789, 'detail': 'July 14, 1789 — Bastille Day'},
-    {'event': 'Napoleon Bonaparte defeated at the Battle of Waterloo', 'year': 1815, 'detail': 'June 18, 1815 — end of the Napoleonic Wars'},
-    {'event': 'Darwin publishes On the Origin of Species', 'year': 1859, 'detail': 'November 24, 1859 — theory of evolution by natural selection'},
-    {'event': 'Alexander Graham Bell patents the telephone', 'year': 1876, 'detail': 'March 7, 1876 — first practical voice communication device'},
-    {'event': 'Edison demonstrates the first practical incandescent light bulb', 'year': 1879, 'detail': 'October 21, 1879 — changes life after dark forever'},
-    {'event': 'Karl Benz patents the first true petrol-powered automobile', 'year': 1886, 'detail': 'January 29, 1886 — the Benz Patent-Motorwagen'},
-    {'event': 'First modern Olympic Games held in Athens, Greece', 'year': 1896, 'detail': 'April 6–15, 1896 — 14 nations compete'},
-    {'event': 'Wright Brothers achieve first powered flight at Kitty Hawk', 'year': 1903, 'detail': 'December 17, 1903 — 12 seconds, 120 feet'},
-    {'event': 'Einstein publishes the Special Theory of Relativity', 'year': 1905, 'detail': 'June 30, 1905 — E=mc² introduced'},
+    {
+      'event': 'Battle of Hastings: William the Conqueror defeats King Harold',
+      'year': 1066,
+      'detail': 'October 14, 1066 — Norman conquest of England'
+    },
+    {
+      'event': 'King John signs the Magna Carta',
+      'year': 1215,
+      'detail': 'June 15, 1215 — first limits on royal power'
+    },
+    {
+      'event': 'Gutenberg completes his printing press with movable type',
+      'year': 1440,
+      'detail': 'c.1440 — transforms mass communication'
+    },
+    {
+      'event': 'Columbus reaches the Americas on behalf of Spain',
+      'year': 1492,
+      'detail': 'October 12, 1492 — lands in the Bahamas'
+    },
+    {
+      'event':
+          'Copernicus publishes his heliocentric model of the solar system',
+      'year': 1543,
+      'detail': 'De revolutionibus, 1543'
+    },
+    {
+      'event': 'Newton publishes his laws of gravity in Principia Mathematica',
+      'year': 1687,
+      'detail': 'July 5, 1687 — foundations of classical mechanics'
+    },
+    {
+      'event': 'American Declaration of Independence signed in Philadelphia',
+      'year': 1776,
+      'detail': 'July 4, 1776'
+    },
+    {
+      'event': 'French Revolution begins: the Bastille is stormed',
+      'year': 1789,
+      'detail': 'July 14, 1789 — Bastille Day'
+    },
+    {
+      'event': 'Napoleon Bonaparte defeated at the Battle of Waterloo',
+      'year': 1815,
+      'detail': 'June 18, 1815 — end of the Napoleonic Wars'
+    },
+    {
+      'event': 'Darwin publishes On the Origin of Species',
+      'year': 1859,
+      'detail': 'November 24, 1859 — theory of evolution by natural selection'
+    },
+    {
+      'event': 'Alexander Graham Bell patents the telephone',
+      'year': 1876,
+      'detail': 'March 7, 1876 — first practical voice communication device'
+    },
+    {
+      'event':
+          'Edison demonstrates the first practical incandescent light bulb',
+      'year': 1879,
+      'detail': 'October 21, 1879 — changes life after dark forever'
+    },
+    {
+      'event': 'Karl Benz patents the first true petrol-powered automobile',
+      'year': 1886,
+      'detail': 'January 29, 1886 — the Benz Patent-Motorwagen'
+    },
+    {
+      'event': 'First modern Olympic Games held in Athens, Greece',
+      'year': 1896,
+      'detail': 'April 6–15, 1896 — 14 nations compete'
+    },
+    {
+      'event': 'Wright Brothers achieve first powered flight at Kitty Hawk',
+      'year': 1903,
+      'detail': 'December 17, 1903 — 12 seconds, 120 feet'
+    },
+    {
+      'event': 'Einstein publishes the Special Theory of Relativity',
+      'year': 1905,
+      'detail': 'June 30, 1905 — E=mc² introduced'
+    },
     // ── 1910s–1940s ───────────────────────────────────────────────────────
-    {'event': 'RMS Titanic sinks on her maiden voyage', 'year': 1912, 'detail': 'April 15, 1912 — 1,517 lives lost'},
-    {'event': 'World War I begins following assassination of Archduke Franz Ferdinand', 'year': 1914, 'detail': 'June 28, 1914 — four years of global conflict'},
-    {'event': 'Russian Revolution begins: Tsar Nicholas II abdicates', 'year': 1917, 'detail': 'March 15, 1917 — end of the Romanov dynasty'},
-    {'event': 'Treaty of Versailles officially ends World War I', 'year': 1919, 'detail': 'June 28, 1919 — signed in the Hall of Mirrors'},
-    {'event': 'Fleming discovers penicillin in a contaminated petri dish', 'year': 1928, 'detail': 'September 28, 1928 — world\'s first antibiotic'},
-    {'event': 'Wall Street Crash triggers the Great Depression', 'year': 1929, 'detail': 'October 29, 1929 — Black Tuesday'},
-    {'event': 'Amelia Earhart becomes first woman to fly solo across the Atlantic', 'year': 1932, 'detail': 'May 20–21, 1932 — Harbour Grace to Londonderry'},
-    {'event': 'Germany invades Poland, starting World War II', 'year': 1939, 'detail': 'September 1, 1939 — two days later Britain and France declare war'},
-    {'event': 'D-Day: Allied forces storm the beaches of Normandy', 'year': 1944, 'detail': 'June 6, 1944 — largest seaborne invasion in history'},
-    {'event': 'Atomic bomb dropped on Hiroshima, Japan', 'year': 1945, 'detail': 'August 6, 1945 — \'Little Boy\' kills an estimated 80,000 immediately'},
+    {
+      'event': 'RMS Titanic sinks on her maiden voyage',
+      'year': 1912,
+      'detail': 'April 15, 1912 — 1,517 lives lost'
+    },
+    {
+      'event':
+          'World War I begins following assassination of Archduke Franz Ferdinand',
+      'year': 1914,
+      'detail': 'June 28, 1914 — four years of global conflict'
+    },
+    {
+      'event': 'Russian Revolution begins: Tsar Nicholas II abdicates',
+      'year': 1917,
+      'detail': 'March 15, 1917 — end of the Romanov dynasty'
+    },
+    {
+      'event': 'Treaty of Versailles officially ends World War I',
+      'year': 1919,
+      'detail': 'June 28, 1919 — signed in the Hall of Mirrors'
+    },
+    {
+      'event': 'Fleming discovers penicillin in a contaminated petri dish',
+      'year': 1928,
+      'detail': 'September 28, 1928 — world\'s first antibiotic'
+    },
+    {
+      'event': 'Wall Street Crash triggers the Great Depression',
+      'year': 1929,
+      'detail': 'October 29, 1929 — Black Tuesday'
+    },
+    {
+      'event':
+          'Amelia Earhart becomes first woman to fly solo across the Atlantic',
+      'year': 1932,
+      'detail': 'May 20–21, 1932 — Harbour Grace to Londonderry'
+    },
+    {
+      'event': 'Germany invades Poland, starting World War II',
+      'year': 1939,
+      'detail':
+          'September 1, 1939 — two days later Britain and France declare war'
+    },
+    {
+      'event': 'D-Day: Allied forces storm the beaches of Normandy',
+      'year': 1944,
+      'detail': 'June 6, 1944 — largest seaborne invasion in history'
+    },
+    {
+      'event': 'Atomic bomb dropped on Hiroshima, Japan',
+      'year': 1945,
+      'detail':
+          'August 6, 1945 — \'Little Boy\' kills an estimated 80,000 immediately'
+    },
     // ── 1947–1970 ─────────────────────────────────────────────────────────
-    {'event': 'India gains independence from British rule', 'year': 1947, 'detail': 'August 15, 1947 — Nehru\'s \'Tryst with Destiny\' speech'},
-    {'event': 'State of Israel officially declared', 'year': 1948, 'detail': 'May 14, 1948 — proclaimed by David Ben-Gurion'},
-    {'event': 'Mao Zedong proclaims the People\'s Republic of China', 'year': 1949, 'detail': 'October 1, 1949 — Tiananmen Square ceremony'},
-    {'event': 'Korean War begins as North Korea invades South Korea', 'year': 1950, 'detail': 'June 25, 1950 — the "Forgotten War"'},
-    {'event': 'Watson and Crick publish the double helix structure of DNA', 'year': 1953, 'detail': 'April 25, 1953 — in Nature magazine'},
-    {'event': 'Roger Bannister runs the first sub-four-minute mile', 'year': 1954, 'detail': 'May 6, 1954 — 3:59.4 at Oxford'},
-    {'event': 'Rosa Parks refuses to give up her bus seat in Montgomery', 'year': 1955, 'detail': 'December 1, 1955 — sparks the Montgomery Bus Boycott'},
-    {'event': 'Sputnik launched as the first artificial satellite in Earth orbit', 'year': 1957, 'detail': 'October 4, 1957 — Soviet Union beats US into space'},
-    {'event': 'NASA established as the US civilian space agency', 'year': 1958, 'detail': 'October 1, 1958 — born out of the space race'},
-    {'event': 'Yuri Gagarin becomes the first human to travel in space', 'year': 1961, 'detail': 'April 12, 1961 — orbit completed in 108 minutes'},
-    {'event': 'Cuban Missile Crisis: the closest the world came to nuclear war', 'year': 1962, 'detail': 'October 16–28, 1962 — 13 days of standoff'},
-    {'event': 'President John F. Kennedy assassinated in Dallas, Texas', 'year': 1963, 'detail': 'November 22, 1963 — Lee Harvey Oswald charged'},
-    {'event': 'Civil Rights Act signed into law in the United States', 'year': 1964, 'detail': 'July 2, 1964 — signed by President Lyndon Johnson'},
-    {'event': 'Neil Armstrong walks on the Moon', 'year': 1969, 'detail': 'Apollo 11 mission, July 20, 1969'},
-    {'event': 'Apollo 13 safely returns to Earth after an oxygen tank explosion', 'year': 1970, 'detail': 'April 17, 1970 — "Houston, we have a problem"'},
+    {
+      'event': 'India gains independence from British rule',
+      'year': 1947,
+      'detail': 'August 15, 1947 — Nehru\'s \'Tryst with Destiny\' speech'
+    },
+    {
+      'event': 'State of Israel officially declared',
+      'year': 1948,
+      'detail': 'May 14, 1948 — proclaimed by David Ben-Gurion'
+    },
+    {
+      'event': 'Mao Zedong proclaims the People\'s Republic of China',
+      'year': 1949,
+      'detail': 'October 1, 1949 — Tiananmen Square ceremony'
+    },
+    {
+      'event': 'Korean War begins as North Korea invades South Korea',
+      'year': 1950,
+      'detail': 'June 25, 1950 — the "Forgotten War"'
+    },
+    {
+      'event': 'Watson and Crick publish the double helix structure of DNA',
+      'year': 1953,
+      'detail': 'April 25, 1953 — in Nature magazine'
+    },
+    {
+      'event': 'Roger Bannister runs the first sub-four-minute mile',
+      'year': 1954,
+      'detail': 'May 6, 1954 — 3:59.4 at Oxford'
+    },
+    {
+      'event': 'Rosa Parks refuses to give up her bus seat in Montgomery',
+      'year': 1955,
+      'detail': 'December 1, 1955 — sparks the Montgomery Bus Boycott'
+    },
+    {
+      'event':
+          'Sputnik launched as the first artificial satellite in Earth orbit',
+      'year': 1957,
+      'detail': 'October 4, 1957 — Soviet Union beats US into space'
+    },
+    {
+      'event': 'NASA established as the US civilian space agency',
+      'year': 1958,
+      'detail': 'October 1, 1958 — born out of the space race'
+    },
+    {
+      'event': 'Yuri Gagarin becomes the first human to travel in space',
+      'year': 1961,
+      'detail': 'April 12, 1961 — orbit completed in 108 minutes'
+    },
+    {
+      'event':
+          'Cuban Missile Crisis: the closest the world came to nuclear war',
+      'year': 1962,
+      'detail': 'October 16–28, 1962 — 13 days of standoff'
+    },
+    {
+      'event': 'President John F. Kennedy assassinated in Dallas, Texas',
+      'year': 1963,
+      'detail': 'November 22, 1963 — Lee Harvey Oswald charged'
+    },
+    {
+      'event': 'Civil Rights Act signed into law in the United States',
+      'year': 1964,
+      'detail': 'July 2, 1964 — signed by President Lyndon Johnson'
+    },
+    {
+      'event': 'Neil Armstrong walks on the Moon',
+      'year': 1969,
+      'detail': 'Apollo 11 mission, July 20, 1969'
+    },
+    {
+      'event':
+          'Apollo 13 safely returns to Earth after an oxygen tank explosion',
+      'year': 1970,
+      'detail': 'April 17, 1970 — "Houston, we have a problem"'
+    },
     // ── 1970s–1990 ────────────────────────────────────────────────────────
-    {'event': 'Intel releases the 4004, the world\'s first commercial microprocessor', 'year': 1971, 'detail': 'November 15, 1971 — 2,300 transistors, 740 kHz'},
-    {'event': 'Roe v. Wade legalises abortion in the United States', 'year': 1973, 'detail': 'January 22, 1973 — overturned by Dobbs ruling in 2022'},
-    {'event': 'President Nixon resigns over the Watergate scandal', 'year': 1974, 'detail': 'August 9, 1974 — only US president to resign'},
-    {'event': 'Microsoft founded by Bill Gates and Paul Allen', 'year': 1975, 'detail': 'April 4, 1975 — originally based in Albuquerque'},
-    {'event': 'Apple Computer Company founded by Steve Jobs and Steve Wozniak', 'year': 1976, 'detail': 'April 1, 1976 — incorporated in the Jobs family garage'},
-    {'event': 'Star Wars premieres and becomes a global cultural phenomenon', 'year': 1977, 'detail': 'May 25, 1977 — goes on to earn billions worldwide'},
-    {'event': 'First test-tube baby, Louise Brown, born in the UK', 'year': 1978, 'detail': 'July 25, 1978 — pioneer of in vitro fertilisation'},
-    {'event': 'Sony launches the Walkman, transforming personal music', 'year': 1979, 'detail': 'July 1, 1979 — music becomes truly portable'},
-    {'event': 'John Lennon shot outside his New York apartment', 'year': 1980, 'detail': 'December 8, 1980 — killed by Mark David Chapman'},
-    {'event': 'IBM launches its first personal computer', 'year': 1981, 'detail': 'August 12, 1981 — the IBM PC sets the standard'},
-    {'event': 'Compact disc commercially launched by Sony and Philips', 'year': 1982, 'detail': 'October 1, 1982 — replaces vinyl and cassette over time'},
-    {'event': 'Microsoft Word is released for the first time', 'year': 1983, 'detail': 'October 25, 1983 — for MS-DOS'},
-    {'event': 'Apple Macintosh launched with the iconic Super Bowl advertisement', 'year': 1984, 'detail': 'January 22, 1984 — the "1984" ad directed by Ridley Scott'},
-    {'event': 'Microsoft launches Windows 1.0', 'year': 1985, 'detail': 'November 20, 1985 — the beginning of Windows'},
-    {'event': 'Space Shuttle Challenger breaks apart 73 seconds after launch', 'year': 1986, 'detail': 'January 28, 1986 — all seven crew members killed'},
-    {'event': 'Black Monday: global stock markets lose 20% in a single day', 'year': 1987, 'detail': 'October 19, 1987 — worst single-day crash in history'},
-    {'event': 'Ben Johnson stripped of 100m Olympic gold medal for doping', 'year': 1988, 'detail': 'September 24, 1988 — Seoul Olympics scandal'},
-    {'event': 'The Berlin Wall falls', 'year': 1989, 'detail': 'November 9, 1989'},
-    {'event': 'Tim Berners-Lee proposes the World Wide Web', 'year': 1990, 'detail': 'March 12, 1990 — his CERN proposal called it "vague but exciting"'},
+    {
+      'event':
+          'Intel releases the 4004, the world\'s first commercial microprocessor',
+      'year': 1971,
+      'detail': 'November 15, 1971 — 2,300 transistors, 740 kHz'
+    },
+    {
+      'event': 'Roe v. Wade legalises abortion in the United States',
+      'year': 1973,
+      'detail': 'January 22, 1973 — overturned by Dobbs ruling in 2022'
+    },
+    {
+      'event': 'President Nixon resigns over the Watergate scandal',
+      'year': 1974,
+      'detail': 'August 9, 1974 — only US president to resign'
+    },
+    {
+      'event': 'Microsoft founded by Bill Gates and Paul Allen',
+      'year': 1975,
+      'detail': 'April 4, 1975 — originally based in Albuquerque'
+    },
+    {
+      'event': 'Apple Computer Company founded by Steve Jobs and Steve Wozniak',
+      'year': 1976,
+      'detail': 'April 1, 1976 — incorporated in the Jobs family garage'
+    },
+    {
+      'event': 'Star Wars premieres and becomes a global cultural phenomenon',
+      'year': 1977,
+      'detail': 'May 25, 1977 — goes on to earn billions worldwide'
+    },
+    {
+      'event': 'First test-tube baby, Louise Brown, born in the UK',
+      'year': 1978,
+      'detail': 'July 25, 1978 — pioneer of in vitro fertilisation'
+    },
+    {
+      'event': 'Sony launches the Walkman, transforming personal music',
+      'year': 1979,
+      'detail': 'July 1, 1979 — music becomes truly portable'
+    },
+    {
+      'event': 'John Lennon shot outside his New York apartment',
+      'year': 1980,
+      'detail': 'December 8, 1980 — killed by Mark David Chapman'
+    },
+    {
+      'event': 'IBM launches its first personal computer',
+      'year': 1981,
+      'detail': 'August 12, 1981 — the IBM PC sets the standard'
+    },
+    {
+      'event': 'Compact disc commercially launched by Sony and Philips',
+      'year': 1982,
+      'detail': 'October 1, 1982 — replaces vinyl and cassette over time'
+    },
+    {
+      'event': 'Microsoft Word is released for the first time',
+      'year': 1983,
+      'detail': 'October 25, 1983 — for MS-DOS'
+    },
+    {
+      'event':
+          'Apple Macintosh launched with the iconic Super Bowl advertisement',
+      'year': 1984,
+      'detail': 'January 22, 1984 — the "1984" ad directed by Ridley Scott'
+    },
+    {
+      'event': 'Microsoft launches Windows 1.0',
+      'year': 1985,
+      'detail': 'November 20, 1985 — the beginning of Windows'
+    },
+    {
+      'event': 'Space Shuttle Challenger breaks apart 73 seconds after launch',
+      'year': 1986,
+      'detail': 'January 28, 1986 — all seven crew members killed'
+    },
+    {
+      'event': 'Black Monday: global stock markets lose 20% in a single day',
+      'year': 1987,
+      'detail': 'October 19, 1987 — worst single-day crash in history'
+    },
+    {
+      'event': 'Ben Johnson stripped of 100m Olympic gold medal for doping',
+      'year': 1988,
+      'detail': 'September 24, 1988 — Seoul Olympics scandal'
+    },
+    {
+      'event': 'The Berlin Wall falls',
+      'year': 1989,
+      'detail': 'November 9, 1989'
+    },
+    {
+      'event': 'Tim Berners-Lee proposes the World Wide Web',
+      'year': 1990,
+      'detail':
+          'March 12, 1990 — his CERN proposal called it "vague but exciting"'
+    },
     // ── 1991–2010 ─────────────────────────────────────────────────────────
-    {'event': 'The World Wide Web becomes publicly accessible', 'year': 1991, 'detail': 'August 6, 1991 — first website goes live'},
-    {'event': 'First SMS text message sent, reading "Merry Christmas"', 'year': 1992, 'detail': 'December 3, 1992 — sent by Neil Papworth'},
-    {'event': 'Mosaic launches as the first widely-used graphical web browser', 'year': 1993, 'detail': 'January 23, 1993 — makes the internet visual'},
-    {'event': 'Amazon is founded by Jeff Bezos', 'year': 1994, 'detail': 'Started as an online bookstore'},
-    {'event': 'Windows 95 launches with the iconic Start button', 'year': 1995, 'detail': 'August 24, 1995 — sold 7 million copies in five weeks'},
-    {'event': 'Dolly the sheep unveiled as the first mammal cloned from an adult cell', 'year': 1996, 'detail': 'February 22, 1997 — announced; cloned in July 1996'},
-    {'event': 'IBM\'s Deep Blue defeats world chess champion Garry Kasparov', 'year': 1997, 'detail': 'May 11, 1997 — first time a computer beat a world champion in a match'},
-    {'event': 'Google is founded', 'year': 1998, 'detail': 'Incorporated September 4, 1998'},
-    {'event': 'Napster launches and transforms music piracy online', 'year': 1999, 'detail': 'June 1, 1999 — shut down by court order in 2001'},
-    {'event': 'Y2K bug causes no disasters despite worldwide panic', 'year': 2000, 'detail': 'January 1, 2000 — billions spent on fixes paid off'},
-    {'event': 'Wikipedia launches publicly', 'year': 2001, 'detail': 'January 15, 2001'},
-    {'event': 'Euro banknotes and coins enter circulation across 12 EU nations', 'year': 2002, 'detail': 'January 1, 2002'},
-    {'event': 'Skype launches, enabling free internet voice and video calls', 'year': 2003, 'detail': 'August 29, 2003 — acquired by Microsoft in 2011'},
-    {'event': 'Facebook launches from a Harvard dorm room', 'year': 2004, 'detail': 'February 4, 2004'},
-    {'event': 'YouTube is founded', 'year': 2005, 'detail': 'First video uploaded April 23, 2005'},
-    {'event': 'Twitter is founded', 'year': 2006, 'detail': 'First tweet by Jack Dorsey, March 21, 2006'},
-    {'event': 'First iPhone is unveiled by Steve Jobs', 'year': 2007, 'detail': 'Macworld, January 9, 2007'},
-    {'event': 'Barack Obama elected as US President', 'year': 2008, 'detail': 'November 4, 2008'},
-    {'event': 'Lehman Brothers collapses, triggering the global financial crisis', 'year': 2008, 'detail': 'September 15, 2008 — largest bankruptcy in US history'},
-    {'event': 'Bitcoin is created by Satoshi Nakamoto', 'year': 2009, 'detail': 'Genesis block mined January 3, 2009'},
-    {'event': 'Instagram launches on the App Store', 'year': 2010, 'detail': 'October 6, 2010'},
-    {'event': 'Apple launches the iPad, creating the tablet computer market', 'year': 2010, 'detail': 'January 27, 2010 — unveiled by Steve Jobs'},
+    {
+      'event': 'The World Wide Web becomes publicly accessible',
+      'year': 1991,
+      'detail': 'August 6, 1991 — first website goes live'
+    },
+    {
+      'event': 'First SMS text message sent, reading "Merry Christmas"',
+      'year': 1992,
+      'detail': 'December 3, 1992 — sent by Neil Papworth'
+    },
+    {
+      'event': 'Mosaic launches as the first widely-used graphical web browser',
+      'year': 1993,
+      'detail': 'January 23, 1993 — makes the internet visual'
+    },
+    {
+      'event': 'Amazon is founded by Jeff Bezos',
+      'year': 1994,
+      'detail': 'Started as an online bookstore'
+    },
+    {
+      'event': 'Windows 95 launches with the iconic Start button',
+      'year': 1995,
+      'detail': 'August 24, 1995 — sold 7 million copies in five weeks'
+    },
+    {
+      'event':
+          'Dolly the sheep unveiled as the first mammal cloned from an adult cell',
+      'year': 1996,
+      'detail': 'February 22, 1997 — announced; cloned in July 1996'
+    },
+    {
+      'event': 'IBM\'s Deep Blue defeats world chess champion Garry Kasparov',
+      'year': 1997,
+      'detail':
+          'May 11, 1997 — first time a computer beat a world champion in a match'
+    },
+    {
+      'event': 'Google is founded',
+      'year': 1998,
+      'detail': 'Incorporated September 4, 1998'
+    },
+    {
+      'event': 'Napster launches and transforms music piracy online',
+      'year': 1999,
+      'detail': 'June 1, 1999 — shut down by court order in 2001'
+    },
+    {
+      'event': 'Y2K bug causes no disasters despite worldwide panic',
+      'year': 2000,
+      'detail': 'January 1, 2000 — billions spent on fixes paid off'
+    },
+    {
+      'event': 'Wikipedia launches publicly',
+      'year': 2001,
+      'detail': 'January 15, 2001'
+    },
+    {
+      'event':
+          'Euro banknotes and coins enter circulation across 12 EU nations',
+      'year': 2002,
+      'detail': 'January 1, 2002'
+    },
+    {
+      'event': 'Skype launches, enabling free internet voice and video calls',
+      'year': 2003,
+      'detail': 'August 29, 2003 — acquired by Microsoft in 2011'
+    },
+    {
+      'event': 'Facebook launches from a Harvard dorm room',
+      'year': 2004,
+      'detail': 'February 4, 2004'
+    },
+    {
+      'event': 'YouTube is founded',
+      'year': 2005,
+      'detail': 'First video uploaded April 23, 2005'
+    },
+    {
+      'event': 'Twitter is founded',
+      'year': 2006,
+      'detail': 'First tweet by Jack Dorsey, March 21, 2006'
+    },
+    {
+      'event': 'First iPhone is unveiled by Steve Jobs',
+      'year': 2007,
+      'detail': 'Macworld, January 9, 2007'
+    },
+    {
+      'event': 'Barack Obama elected as US President',
+      'year': 2008,
+      'detail': 'November 4, 2008'
+    },
+    {
+      'event':
+          'Lehman Brothers collapses, triggering the global financial crisis',
+      'year': 2008,
+      'detail': 'September 15, 2008 — largest bankruptcy in US history'
+    },
+    {
+      'event': 'Bitcoin is created by Satoshi Nakamoto',
+      'year': 2009,
+      'detail': 'Genesis block mined January 3, 2009'
+    },
+    {
+      'event': 'Instagram launches on the App Store',
+      'year': 2010,
+      'detail': 'October 6, 2010'
+    },
+    {
+      'event': 'Apple launches the iPad, creating the tablet computer market',
+      'year': 2010,
+      'detail': 'January 27, 2010 — unveiled by Steve Jobs'
+    },
     // ── 2011–2024 ─────────────────────────────────────────────────────────
-    {'event': 'Osama bin Laden killed by US Navy SEALs in Pakistan', 'year': 2011, 'detail': 'May 2, 2011 — Operation Neptune Spear'},
-    {'event': 'Steve Jobs dies aged 56 after battling pancreatic cancer', 'year': 2011, 'detail': 'October 5, 2011 — six weeks after stepping down as Apple CEO'},
-    {'event': 'Snapchat launches', 'year': 2011, 'detail': 'Originally called "Picaboo"'},
-    {'event': 'NASA\'s Curiosity rover lands on Mars using a sky-crane system', 'year': 2012, 'detail': 'August 6, 2012 — Gale Crater'},
-    {'event': 'Edward Snowden leaks classified NSA surveillance documents', 'year': 2013, 'detail': 'June 5, 2013 — triggers global privacy debate'},
-    {'event': 'Facebook acquires WhatsApp for \$19 billion', 'year': 2014, 'detail': 'February 19, 2014 — largest venture-backed acquisition at the time'},
-    {'event': 'SpaceX lands a rocket booster for the first time', 'year': 2015, 'detail': 'Cape Canaveral, December 21, 2015'},
-    {'event': 'Paris Agreement on climate change signed by 195 nations', 'year': 2015, 'detail': 'December 12, 2015 — COP21'},
-    {'event': 'UK votes to leave the European Union in the Brexit referendum', 'year': 2016, 'detail': 'June 23, 2016 — 52% vote Leave'},
-    {'event': 'Pokémon Go downloaded 100 million times in its first month', 'year': 2016, 'detail': 'July 2016 — augmented reality craze'},
-    {'event': '#MeToo movement goes viral, reshaping conversations on harassment', 'year': 2017, 'detail': 'October 2017 — hashtag used millions of times'},
-    {'event': 'TikTok launches internationally after merging with Musical.ly', 'year': 2018, 'detail': 'August 2018'},
-    {'event': 'First ever photograph of a black hole released by astronomers', 'year': 2019, 'detail': 'April 10, 2019 — Event Horizon Telescope team'},
-    {'event': 'Notre-Dame Cathedral fire devastates Paris, destroying the medieval spire', 'year': 2019, 'detail': 'April 15, 2019'},
-    {'event': 'COVID-19 declared a global pandemic', 'year': 2020, 'detail': 'WHO declaration, March 11, 2020'},
-    {'event': 'George Floyd\'s death sparks global Black Lives Matter protests', 'year': 2020, 'detail': 'May 25, 2020 — worldwide demonstrations follow'},
-    {'event': 'James Webb Space Telescope launches on Christmas Day', 'year': 2021, 'detail': 'December 25, 2021 — most powerful space telescope ever'},
-    {'event': 'Container ship Ever Given blocks the Suez Canal for six days', 'year': 2021, 'detail': 'March 23–29, 2021 — \$9B of trade disrupted daily'},
-    {'event': 'Russia launches a full-scale military invasion of Ukraine', 'year': 2022, 'detail': 'February 24, 2022'},
-    {'event': 'Elon Musk acquires Twitter and renames it X', 'year': 2022, 'detail': 'October 27, 2022'},
-    {'event': 'ChatGPT launches publicly', 'year': 2022, 'detail': 'OpenAI, November 30, 2022'},
-    {'event': 'India overtakes China as world\'s most populous country', 'year': 2023, 'detail': 'UN confirmed mid-2023'},
-    {'event': 'India\'s Chandrayaan-3 lands near the Moon\'s south pole — a world first', 'year': 2023, 'detail': 'August 23, 2023'},
-    {'event': 'Nvidia briefly becomes the world\'s most valuable publicly traded company', 'year': 2024, 'detail': 'June 2024 — driven by AI chip demand'},
-    {'event': 'Australia bans social media for under-16s', 'year': 2024, 'detail': 'World-first law, late 2024'},
+    {
+      'event': 'Osama bin Laden killed by US Navy SEALs in Pakistan',
+      'year': 2011,
+      'detail': 'May 2, 2011 — Operation Neptune Spear'
+    },
+    {
+      'event': 'Steve Jobs dies aged 56 after battling pancreatic cancer',
+      'year': 2011,
+      'detail': 'October 5, 2011 — six weeks after stepping down as Apple CEO'
+    },
+    {
+      'event': 'Snapchat launches',
+      'year': 2011,
+      'detail': 'Originally called "Picaboo"'
+    },
+    {
+      'event': 'NASA\'s Curiosity rover lands on Mars using a sky-crane system',
+      'year': 2012,
+      'detail': 'August 6, 2012 — Gale Crater'
+    },
+    {
+      'event': 'Edward Snowden leaks classified NSA surveillance documents',
+      'year': 2013,
+      'detail': 'June 5, 2013 — triggers global privacy debate'
+    },
+    {
+      'event': 'Facebook acquires WhatsApp for \$19 billion',
+      'year': 2014,
+      'detail':
+          'February 19, 2014 — largest venture-backed acquisition at the time'
+    },
+    {
+      'event': 'SpaceX lands a rocket booster for the first time',
+      'year': 2015,
+      'detail': 'Cape Canaveral, December 21, 2015'
+    },
+    {
+      'event': 'Paris Agreement on climate change signed by 195 nations',
+      'year': 2015,
+      'detail': 'December 12, 2015 — COP21'
+    },
+    {
+      'event': 'UK votes to leave the European Union in the Brexit referendum',
+      'year': 2016,
+      'detail': 'June 23, 2016 — 52% vote Leave'
+    },
+    {
+      'event': 'Pokémon Go downloaded 100 million times in its first month',
+      'year': 2016,
+      'detail': 'July 2016 — augmented reality craze'
+    },
+    {
+      'event':
+          '#MeToo movement goes viral, reshaping conversations on harassment',
+      'year': 2017,
+      'detail': 'October 2017 — hashtag used millions of times'
+    },
+    {
+      'event': 'TikTok launches internationally after merging with Musical.ly',
+      'year': 2018,
+      'detail': 'August 2018'
+    },
+    {
+      'event': 'First ever photograph of a black hole released by astronomers',
+      'year': 2019,
+      'detail': 'April 10, 2019 — Event Horizon Telescope team'
+    },
+    {
+      'event':
+          'Notre-Dame Cathedral fire devastates Paris, destroying the medieval spire',
+      'year': 2019,
+      'detail': 'April 15, 2019'
+    },
+    {
+      'event': 'COVID-19 declared a global pandemic',
+      'year': 2020,
+      'detail': 'WHO declaration, March 11, 2020'
+    },
+    {
+      'event':
+          'George Floyd\'s death sparks global Black Lives Matter protests',
+      'year': 2020,
+      'detail': 'May 25, 2020 — worldwide demonstrations follow'
+    },
+    {
+      'event': 'James Webb Space Telescope launches on Christmas Day',
+      'year': 2021,
+      'detail': 'December 25, 2021 — most powerful space telescope ever'
+    },
+    {
+      'event': 'Container ship Ever Given blocks the Suez Canal for six days',
+      'year': 2021,
+      'detail': 'March 23–29, 2021 — \$9B of trade disrupted daily'
+    },
+    {
+      'event': 'Russia launches a full-scale military invasion of Ukraine',
+      'year': 2022,
+      'detail': 'February 24, 2022'
+    },
+    {
+      'event': 'Elon Musk acquires Twitter and renames it X',
+      'year': 2022,
+      'detail': 'October 27, 2022'
+    },
+    {
+      'event': 'ChatGPT launches publicly',
+      'year': 2022,
+      'detail': 'OpenAI, November 30, 2022'
+    },
+    {
+      'event': 'India overtakes China as world\'s most populous country',
+      'year': 2023,
+      'detail': 'UN confirmed mid-2023'
+    },
+    {
+      'event':
+          'India\'s Chandrayaan-3 lands near the Moon\'s south pole — a world first',
+      'year': 2023,
+      'detail': 'August 23, 2023'
+    },
+    {
+      'event':
+          'Nvidia briefly becomes the world\'s most valuable publicly traded company',
+      'year': 2024,
+      'detail': 'June 2024 — driven by AI chip demand'
+    },
+    {
+      'event': 'Australia bans social media for under-16s',
+      'year': 2024,
+      'detail': 'World-first law, late 2024'
+    },
   ];
 }
 
@@ -724,6 +1369,11 @@ IconData _iconForCat(String id) {
 }
 
 String _fmt(int n) => n >= 1000 ? '${(n / 1000).toStringAsFixed(1)}K' : '$n';
+const String _playStoreUrl =
+    'https://play.google.com/store/apps/details?id=com.binaygautam.briefed';
+const String _playBadgeUrl =
+    'https://play.google.com/intl/en_us/badges/static/images/badges/en_badge_web_generic.png';
+
 String _formatReminderTime(int hour, int minute) {
   final period = hour >= 12 ? 'PM' : 'AM';
   final displayHour = hour % 12 == 0 ? 12 : hour % 12;
@@ -753,7 +1403,9 @@ class _MainShellState extends ConsumerState<MainShell> {
   }
 
   Future<void> _loadData() async {
-    unawaited(ref.read(userProvider.notifier).syncAuthProfile(AuthService.currentUser));
+    unawaited(ref
+        .read(userProvider.notifier)
+        .syncAuthProfile(AuthService.currentUser));
     final user = ref.read(userProvider);
     ref.read(newsProvider.notifier).load(
       country: user.country,
@@ -770,6 +1422,17 @@ class _MainShellState extends ConsumerState<MainShell> {
   @override
   Widget build(BuildContext context) {
     final tab = ref.watch(selectedTabProvider);
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        if (!kIsWeb || constraints.maxWidth < 700) {
+          return _buildMobileShell(tab);
+        }
+        return const ResponsiveShell();
+      },
+    );
+  }
+
+  Widget _buildMobileShell(int tab) {
     return Scaffold(
       body: IndexedStack(index: tab, children: _pages),
       bottomNavigationBar: Container(
@@ -779,8 +1442,7 @@ class _MainShellState extends ConsumerState<MainShell> {
         child: SafeArea(
             top: false,
             child: Padding(
-                padding:
-                    const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                 child: Row(
                     mainAxisAlignment: MainAxisAlignment.spaceAround,
                     children: [
@@ -818,6 +1480,976 @@ class _MainShellState extends ConsumerState<MainShell> {
   }
 }
 
+class ResponsiveShell extends ConsumerWidget {
+  const ResponsiveShell({super.key});
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final tab = ref.watch(selectedTabProvider);
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final width = constraints.maxWidth;
+        final isDesktop = width > 1100;
+        final horizontalPadding = isDesktop ? 32.0 : 20.0;
+        return Scaffold(
+          backgroundColor: context.bgColor,
+          body: Column(children: [
+            WebTopNav(
+              currentIndex: tab,
+              onSelect: (index) =>
+                  ref.read(selectedTabProvider.notifier).state = index,
+            ),
+            Expanded(
+              child: SingleChildScrollView(
+                padding: EdgeInsets.fromLTRB(
+                  horizontalPadding,
+                  18,
+                  horizontalPadding,
+                  36,
+                ),
+                child: Align(
+                  alignment: Alignment.topCenter,
+                  child: ConstrainedBox(
+                    constraints: const BoxConstraints(maxWidth: 1320),
+                    child: _WebShellBody(tab: tab, isDesktop: isDesktop),
+                  ),
+                ),
+              ),
+            ),
+          ]),
+        );
+      },
+    );
+  }
+}
+
+class _WebShellBody extends ConsumerWidget {
+  final int tab;
+  final bool isDesktop;
+
+  const _WebShellBody({required this.tab, required this.isDesktop});
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    if (tab == 0) return DesktopHomePage(showRightSidebar: isDesktop);
+    final content = switch (tab) {
+      1 => const DesktopBriefingPage(),
+      2 => const DesktopGamesPage(),
+      3 => const _DesktopProfilePage(),
+      _ => DesktopHomePage(showRightSidebar: isDesktop),
+    };
+    if (isDesktop) return content;
+    return Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
+      Expanded(child: content),
+      const SizedBox(width: 18),
+      const SizedBox(width: 280, child: RightSidebar()),
+    ]);
+  }
+}
+
+class WebTopNav extends ConsumerWidget {
+  final int currentIndex;
+  final ValueChanged<int> onSelect;
+
+  const WebTopNav({
+    super.key,
+    required this.currentIndex,
+    required this.onSelect,
+  });
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final items = [
+      ('Briefed', 0),
+      ('Daily Quiz', -1),
+      ('Briefing', 1),
+      ('Games', 2),
+      ('Profile', 3),
+    ];
+    return Container(
+      decoration: BoxDecoration(
+        color: context.cardColor,
+        border: Border(bottom: BorderSide(color: context.borderColor)),
+      ),
+      child: SafeArea(
+        bottom: false,
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 28, vertical: 12),
+          child: Row(children: [
+            GestureDetector(
+              onTap: () => onSelect(0),
+              child: RichText(
+                text: TextSpan(children: [
+                  TextSpan(
+                    text: 'Briefed',
+                    style: GoogleFonts.dmSans(
+                      fontSize: 26,
+                      fontWeight: FontWeight.w900,
+                      color: context.textColor,
+                      letterSpacing: -0.4,
+                    ),
+                  ),
+                  TextSpan(
+                    text: '.',
+                    style: GoogleFonts.dmSans(
+                      fontSize: 26,
+                      fontWeight: FontWeight.w900,
+                      color: AppColors.accent,
+                    ),
+                  ),
+                ]),
+              ),
+            ),
+            const SizedBox(width: 28),
+            Expanded(
+              child: Wrap(
+                spacing: 4,
+                runSpacing: 6,
+                crossAxisAlignment: WrapCrossAlignment.center,
+                children: [
+                  for (final item in items)
+                    _TopNavButton(
+                      label: item.$1,
+                      selected: currentIndex == item.$2,
+                      onTap: () {
+                        if (item.$2 == -1) {
+                          Navigator.of(context).pushNamed('/quiz');
+                        } else {
+                          onSelect(item.$2);
+                        }
+                      },
+                    ),
+                ],
+              ),
+            ),
+            const SizedBox(width: 12),
+            _TopNavButton(
+              label: 'Download App',
+              selected: false,
+              filled: true,
+              onTap: () => _launchUrl(_playStoreUrl),
+            ),
+          ]),
+        ),
+      ),
+    );
+  }
+}
+
+class _TopNavButton extends StatelessWidget {
+  final String label;
+  final bool selected;
+  final bool filled;
+  final VoidCallback onTap;
+
+  const _TopNavButton({
+    required this.label,
+    required this.selected,
+    required this.onTap,
+    this.filled = false,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final bg = filled
+        ? AppColors.accent
+        : selected
+            ? AppColors.accent.withValues(alpha: 0.1)
+            : Colors.transparent;
+    return TextButton(
+      onPressed: onTap,
+      style: TextButton.styleFrom(
+        backgroundColor: bg,
+        foregroundColor: filled
+            ? Colors.white
+            : selected
+                ? AppColors.accent
+                : context.subColor,
+        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+      ),
+      child: Text(
+        label,
+        style: GoogleFonts.dmSans(fontSize: 13, fontWeight: FontWeight.w800),
+      ),
+    );
+  }
+}
+
+class DesktopHomePage extends ConsumerWidget {
+  final bool showRightSidebar;
+
+  const DesktopHomePage({super.key, this.showRightSidebar = true});
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final news = ref.watch(newsProvider);
+    final articles = news.articles;
+    final hero = articles.isNotEmpty ? articles.first : null;
+    final latest = articles.skip(1).take(10).toList();
+    final main =
+        Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+      _DesktopHeroSection(article: hero),
+      const SizedBox(height: 18),
+      const WebAdPlaceholder(label: 'Homepage leaderboard ad'),
+      const SizedBox(height: 22),
+      LayoutBuilder(builder: (context, constraints) {
+        final wide = constraints.maxWidth > 820;
+        if (!wide) {
+          return const Column(children: [
+            QuizPanel(),
+            SizedBox(height: 18),
+            GamesGrid(compact: true),
+          ]);
+        }
+        return const Flex(
+          direction: Axis.horizontal,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Expanded(flex: 5, child: QuizPanel()),
+            SizedBox(width: 18),
+            Expanded(flex: 6, child: GamesGrid()),
+          ],
+        );
+      }),
+      const SizedBox(height: 26),
+      _WebSectionTitle(
+        title: 'Latest Briefing',
+        action: 'View briefing',
+        onTap: () => ref.read(selectedTabProvider.notifier).state = 1,
+      ),
+      const SizedBox(height: 12),
+      NewsCardGrid(articles: latest.isEmpty ? articles : latest),
+    ]);
+
+    if (!showRightSidebar) {
+      return Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
+        Expanded(child: main),
+        const SizedBox(width: 18),
+        const SizedBox(width: 280, child: RightSidebar()),
+      ]);
+    }
+
+    return Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
+      Expanded(child: main),
+      const SizedBox(width: 24),
+      const SizedBox(width: 320, child: RightSidebar()),
+    ]);
+  }
+}
+
+class _DesktopHeroSection extends StatelessWidget {
+  final NewsArticle? article;
+
+  const _DesktopHeroSection({required this.article});
+
+  @override
+  Widget build(BuildContext context) {
+    final catColor = article == null
+        ? AppColors.accent
+        : AppColors.categoryColor(article!.category);
+    return LayoutBuilder(builder: (context, constraints) {
+      final stacked = constraints.maxWidth < 760;
+      final image = Container(
+        height: stacked ? 240 : 360,
+        color: catColor.withValues(alpha: 0.12),
+        child: article?.imageUrl?.isNotEmpty == true
+            ? Image.network(
+                article!.imageUrl!,
+                fit: BoxFit.cover,
+                errorBuilder: (_, __, ___) => _HeroPlaceholder(color: catColor),
+              )
+            : _HeroPlaceholder(color: catColor),
+      );
+      final copy = Padding(
+        padding: const EdgeInsets.all(28),
+        child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+          Text(
+            'TODAY ON BRIEFED',
+            style: GoogleFonts.dmSans(
+              fontSize: 11,
+              fontWeight: FontWeight.w900,
+              color: AppColors.accent,
+              letterSpacing: 1.6,
+            ),
+          ),
+          const SizedBox(height: 12),
+          Text(
+            article?.title ?? 'Your daily news briefing, sharpened.',
+            maxLines: 5,
+            overflow: TextOverflow.ellipsis,
+            style: GoogleFonts.dmSans(
+              fontSize: 42,
+              fontWeight: FontWeight.w900,
+              height: 1.05,
+              color: context.textColor,
+            ),
+          ),
+          const SizedBox(height: 14),
+          Text(
+            article?.description ??
+                'Catch up on the headlines, test yourself with the daily quiz, and play fast news games from one clean desktop hub.',
+            maxLines: 4,
+            overflow: TextOverflow.ellipsis,
+            style: GoogleFonts.roboto(
+              fontSize: 17,
+              height: 1.45,
+              color: context.subColor,
+            ),
+          ),
+          const SizedBox(height: 20),
+          Wrap(spacing: 10, runSpacing: 10, children: [
+            if (article != null) CategoryTag(category: article!.category),
+            _MetaPill(
+              icon: Icons.schedule_rounded,
+              label: article?.timeAgo ?? 'Updated daily',
+            ),
+            _MetaPill(
+              icon: Icons.public_rounded,
+              label: article?.sourceName ?? 'Briefed',
+            ),
+          ]),
+          const SizedBox(height: 24),
+          AccentButton(
+            text: article == null ? 'Open Briefing' : 'Read Story',
+            icon: Icons.arrow_forward_rounded,
+            onTap: () {
+              if (article == null) return;
+              _openArticle(context, article!);
+            },
+          ),
+        ]),
+      );
+      return Container(
+        constraints: const BoxConstraints(minHeight: 330),
+        decoration: BoxDecoration(
+          color: context.cardColor,
+          borderRadius: BorderRadius.circular(8),
+          border: Border.all(color: context.borderColor),
+        ),
+        clipBehavior: Clip.antiAlias,
+        child: stacked
+            ? Column(children: [image, copy])
+            : Row(children: [
+                Expanded(flex: 5, child: image),
+                Expanded(flex: 4, child: copy),
+              ]),
+      );
+    });
+  }
+}
+
+class _HeroPlaceholder extends StatelessWidget {
+  final Color color;
+
+  const _HeroPlaceholder({required this.color});
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      decoration: BoxDecoration(
+        gradient: LinearGradient(
+          colors: [color.withValues(alpha: 0.9), AppColors.accent],
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+        ),
+      ),
+      child: Center(
+        child: Icon(Icons.newspaper_rounded,
+            size: 96, color: Colors.white.withValues(alpha: 0.36)),
+      ),
+    );
+  }
+}
+
+class _MetaPill extends StatelessWidget {
+  final IconData icon;
+  final String label;
+
+  const _MetaPill({required this.icon, required this.label});
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 11, vertical: 7),
+      decoration: BoxDecoration(
+        color: context.inputBg,
+        borderRadius: BorderRadius.circular(999),
+      ),
+      child: Row(mainAxisSize: MainAxisSize.min, children: [
+        Icon(icon, size: 14, color: context.hintColor),
+        const SizedBox(width: 6),
+        Text(
+          label,
+          style: GoogleFonts.dmSans(
+            fontSize: 11,
+            fontWeight: FontWeight.w700,
+            color: context.subColor,
+          ),
+        ),
+      ]),
+    );
+  }
+}
+
+class WebAdPlaceholder extends StatelessWidget {
+  final String label;
+  final double height;
+
+  const WebAdPlaceholder({
+    super.key,
+    this.label = 'Advertisement',
+    this.height = 96,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      height: height,
+      width: double.infinity,
+      alignment: Alignment.center,
+      decoration: BoxDecoration(
+        color: context.inputBg,
+        borderRadius: BorderRadius.circular(8),
+        border: Border.all(color: context.border2Color),
+      ),
+      child: Text(
+        label.toUpperCase(),
+        style: GoogleFonts.dmSans(
+          fontSize: 10,
+          fontWeight: FontWeight.w800,
+          letterSpacing: 1.4,
+          color: context.hintColor,
+        ),
+      ),
+    );
+  }
+}
+
+class PlayStoreDownloadCard extends StatelessWidget {
+  const PlayStoreDownloadCard({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    return BriefedCard(
+      borderRadius: 8,
+      child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+        Row(children: [
+          Container(
+            width: 42,
+            height: 42,
+            decoration: BoxDecoration(
+              color: AppColors.accent.withValues(alpha: 0.1),
+              borderRadius: BorderRadius.circular(8),
+            ),
+            child: const Icon(Icons.phone_android_rounded,
+                color: AppColors.accent),
+          ),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Text(
+              'Get the full experience on Android',
+              style: GoogleFonts.dmSans(
+                fontSize: 15,
+                fontWeight: FontWeight.w900,
+                height: 1.25,
+                color: context.textColor,
+              ),
+            ),
+          ),
+        ]),
+        const SizedBox(height: 14),
+        GestureDetector(
+          onTap: () => _launchUrl(_playStoreUrl),
+          child: Image.network(
+            _playBadgeUrl,
+            height: 54,
+            fit: BoxFit.contain,
+            alignment: Alignment.centerLeft,
+            errorBuilder: (_, __, ___) => Container(
+              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+              decoration: BoxDecoration(
+                color: Colors.black,
+                borderRadius: BorderRadius.circular(8),
+              ),
+              child: Text(
+                'GET IT ON Google Play',
+                style: GoogleFonts.dmSans(
+                    color: Colors.white, fontWeight: FontWeight.w800),
+              ),
+            ),
+          ),
+        ),
+      ]),
+    );
+  }
+}
+
+class NewsCardGrid extends StatelessWidget {
+  final List<NewsArticle> articles;
+  final bool includeAds;
+
+  const NewsCardGrid({
+    super.key,
+    required this.articles,
+    this.includeAds = false,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    if (articles.isEmpty) {
+      return const WebAdPlaceholder(label: 'Latest stories loading');
+    }
+    return LayoutBuilder(builder: (context, constraints) {
+      final columns = constraints.maxWidth > 980
+          ? 3
+          : constraints.maxWidth > 620
+              ? 2
+              : 1;
+      final children = <Widget>[];
+      for (var i = 0; i < articles.length; i++) {
+        if (includeAds && i > 0 && i % 5 == 0) {
+          children.add(const WebAdPlaceholder(
+              label: 'Briefing in-feed ad', height: 110));
+        }
+        children.add(_WebNewsCard(article: articles[i]));
+      }
+      return GridView.builder(
+        shrinkWrap: true,
+        physics: const NeverScrollableScrollPhysics(),
+        itemCount: children.length,
+        gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+          crossAxisCount: columns,
+          crossAxisSpacing: 14,
+          mainAxisSpacing: 14,
+          childAspectRatio: columns == 1 ? 1.65 : 0.92,
+        ),
+        itemBuilder: (_, i) => children[i],
+      );
+    });
+  }
+}
+
+class _WebNewsCard extends StatelessWidget {
+  final NewsArticle article;
+
+  const _WebNewsCard({required this.article});
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      onTap: () => _openArticle(context, article),
+      child: Container(
+        decoration: BoxDecoration(
+          color: context.cardColor,
+          borderRadius: BorderRadius.circular(8),
+          border: Border.all(color: context.borderColor),
+        ),
+        clipBehavior: Clip.antiAlias,
+        child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+          Builder(builder: (context) {
+            final catColor = AppColors.categoryColor(article.category);
+            final hasImage =
+                article.imageUrl != null && article.imageUrl!.isNotEmpty;
+            final placeholder = Container(
+              width: double.infinity,
+              height: 150,
+              decoration: BoxDecoration(
+                gradient: LinearGradient(
+                  colors: [
+                    catColor.withValues(alpha: 0.76),
+                    AppColors.categoryBg(article.category),
+                  ],
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
+                ),
+              ),
+              child: Icon(Icons.article_rounded,
+                  size: 63,
+                  color: Colors.white.withValues(alpha: 0.38)),
+            );
+            return hasImage
+                ? Image.network(article.imageUrl!,
+                    width: double.infinity,
+                    height: 150,
+                    fit: BoxFit.cover,
+                    errorBuilder: (_, __, ___) => placeholder)
+                : placeholder;
+          }),
+          Padding(
+            padding: const EdgeInsets.all(14),
+            child:
+                Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+              Row(children: [
+                CategoryTag(category: article.category, small: true),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: Text(
+                    article.timeAgo,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: GoogleFonts.dmSans(
+                        fontSize: 10, color: context.hintColor),
+                  ),
+                ),
+              ]),
+              const SizedBox(height: 8),
+              Text(
+                article.title,
+                maxLines: 3,
+                overflow: TextOverflow.ellipsis,
+                style: GoogleFonts.dmSans(
+                  fontSize: 15,
+                  fontWeight: FontWeight.w800,
+                  height: 1.28,
+                  color: context.textColor,
+                ),
+              ),
+              const SizedBox(height: 8),
+              Text(
+                'Source: ${article.sourceName}',
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: GoogleFonts.dmSans(
+                  fontSize: 11,
+                  fontWeight: FontWeight.w700,
+                  color: context.subColor,
+                ),
+              ),
+            ]),
+          ),
+        ]),
+      ),
+    );
+  }
+}
+
+class QuizPanel extends ConsumerWidget {
+  const QuizPanel({super.key});
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final user = ref.watch(userProvider);
+    return _QuizHeroCard(
+      user: user,
+      latestResult:
+          user.recentResults.isEmpty ? null : user.recentResults.first,
+      onTap: () => Navigator.of(context).pushNamed('/quiz'),
+    );
+  }
+}
+
+class GamesGrid extends StatelessWidget {
+  final bool compact;
+
+  const GamesGrid({super.key, this.compact = false});
+
+  @override
+  Widget build(BuildContext context) {
+    final cards = [
+      _GameCard(
+        gradient: const LinearGradient(
+          colors: [Color(0xFF2979FF), Color(0xFF1565C0)],
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+        ),
+        icon: Icons.fact_check_rounded,
+        title: 'Real or Fake?',
+        description:
+            'Can you tell a real headline from a convincing fake? 10 rounds, tap as fast as you can.',
+        tag: 'QUICK PLAY',
+        tagColor: AppColors.blue,
+        stats: const ['10 rounds', '~60 sec'],
+        onTap: () => Navigator.of(context)
+            .push(MaterialPageRoute(builder: (_) => const RealOrFakeGame())),
+      ),
+      _GameCard(
+        gradient: const LinearGradient(
+          colors: [Color(0xFF7C4DFF), Color(0xFF512DA8)],
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+        ),
+        icon: Icons.timeline_rounded,
+        title: 'Oldest to Latest',
+        description:
+            'Sort 4 historical events from oldest to most recent. A fast little brain workout.',
+        tag: 'BRAIN TEASER',
+        tagColor: AppColors.purple,
+        stats: const ['4 events', '~45 sec'],
+        onTap: () => Navigator.of(context).push(
+            MaterialPageRoute(builder: (_) => const OldestToLatestGame())),
+      ),
+    ];
+    if (compact) {
+      return Column(children: [
+        for (final card in cards) ...[card, const SizedBox(height: 14)],
+      ]);
+    }
+    return Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+      const _WebSectionTitle(title: 'News Games'),
+      const SizedBox(height: 12),
+      Row(children: [
+        Expanded(child: cards[0]),
+        const SizedBox(width: 14),
+        Expanded(child: cards[1]),
+      ]),
+    ]);
+  }
+}
+
+class RightSidebar extends ConsumerWidget {
+  const RightSidebar({super.key});
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final user = ref.watch(userProvider);
+    final news = ref.watch(newsProvider).articles;
+    final trending = news
+        .map((a) => a.category)
+        .where((c) => c.trim().isNotEmpty)
+        .fold<Map<String, int>>({}, (acc, cat) {
+          final key = cat[0].toUpperCase() + cat.substring(1).toLowerCase();
+          acc[key] = (acc[key] ?? 0) + 1;
+          return acc;
+        })
+        .entries
+        .toList()
+      ..sort((a, b) => b.value.compareTo(a.value));
+    return Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+      _SidebarCard(
+        title: 'Trending Topics',
+        child: Wrap(
+          spacing: 8,
+          runSpacing: 8,
+          children: [
+            for (final topic in trending.take(8))
+              CategoryTag(category: topic.key, small: true, showIcon: false),
+          ],
+        ),
+      ),
+      const SizedBox(height: 14),
+      _SidebarCard(
+        title: 'Your Streak',
+        child: Row(children: [
+          _SidebarMetric(
+              value: '${user.streak}',
+              label: 'days',
+              icon: Icons.local_fire_department_rounded,
+              color: AppColors.accent),
+          const SizedBox(width: 10),
+          _SidebarMetric(
+              value: _fmt(user.knowledgeScore),
+              label: 'pts',
+              icon: Icons.bolt_rounded,
+              color: AppColors.gold),
+        ]),
+      ),
+      const SizedBox(height: 14),
+      const WebAdPlaceholder(label: 'Sidebar ad', height: 250),
+      const SizedBox(height: 14),
+      const PlayStoreDownloadCard(),
+    ]);
+  }
+}
+
+class _SidebarCard extends StatelessWidget {
+  final String title;
+  final Widget child;
+
+  const _SidebarCard({required this.title, required this.child});
+
+  @override
+  Widget build(BuildContext context) {
+    return BriefedCard(
+      borderRadius: 8,
+      child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+        Text(
+          title,
+          style: GoogleFonts.dmSans(
+            fontSize: 14,
+            fontWeight: FontWeight.w900,
+            color: context.textColor,
+          ),
+        ),
+        const SizedBox(height: 12),
+        child,
+      ]),
+    );
+  }
+}
+
+class _SidebarMetric extends StatelessWidget {
+  final String value;
+  final String label;
+  final IconData icon;
+  final Color color;
+
+  const _SidebarMetric({
+    required this.value,
+    required this.label,
+    required this.icon,
+    required this.color,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Expanded(
+      child: Container(
+        padding: const EdgeInsets.all(12),
+        decoration: BoxDecoration(
+          color: color.withValues(alpha: 0.1),
+          borderRadius: BorderRadius.circular(8),
+        ),
+        child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+          Icon(icon, color: color, size: 18),
+          const SizedBox(height: 8),
+          Text(
+            value,
+            style: GoogleFonts.dmSans(
+              fontSize: 22,
+              fontWeight: FontWeight.w900,
+              color: context.textColor,
+            ),
+          ),
+          Text(label,
+              style:
+                  GoogleFonts.dmSans(fontSize: 11, color: context.subColor)),
+        ]),
+      ),
+    );
+  }
+}
+
+class DesktopBriefingPage extends ConsumerWidget {
+  const DesktopBriefingPage({super.key});
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final news = ref.watch(newsProvider);
+    return Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+      _WebSectionTitle(
+        title: 'Briefing',
+        action: 'Refresh',
+        onTap: () => ref.read(newsProvider.notifier).refresh(),
+      ),
+      const SizedBox(height: 6),
+      Text(
+        'Latest headlines grouped for desktop reading.',
+        style: GoogleFonts.dmSans(fontSize: 14, color: context.subColor),
+      ),
+      const SizedBox(height: 18),
+      if (news.isLoading)
+        const WebAdPlaceholder(label: 'Loading latest briefing')
+      else
+        NewsCardGrid(articles: news.articles, includeAds: true),
+    ]);
+  }
+}
+
+class DesktopGamesPage extends StatelessWidget {
+  const DesktopGamesPage({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+      const _WebSectionTitle(title: 'Games'),
+      const SizedBox(height: 6),
+      Text(
+        'Quick news games to sharpen your mind.',
+        style: GoogleFonts.dmSans(fontSize: 14, color: context.subColor),
+      ),
+      const SizedBox(height: 18),
+      const GamesGrid(),
+      const SizedBox(height: 18),
+      const WebAdPlaceholder(label: 'Games page ad'),
+      const SizedBox(height: 18),
+      BriefedCard(
+        borderRadius: 8,
+        child: Row(children: [
+          Container(
+            width: 44,
+            height: 44,
+            decoration: BoxDecoration(
+              color: context.inputBg,
+              borderRadius: BorderRadius.circular(8),
+            ),
+            child: Icon(Icons.lock_rounded, color: context.hintColor, size: 22),
+          ),
+          const SizedBox(width: 14),
+          Expanded(
+            child:
+                Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+              Text(
+                'More games coming soon',
+                style: GoogleFonts.dmSans(
+                    fontSize: 14,
+                    fontWeight: FontWeight.w800,
+                    color: context.textColor),
+              ),
+              Text(
+                'Flash Headlines, News Connections and more',
+                style:
+                    GoogleFonts.dmSans(fontSize: 12, color: context.subColor),
+              ),
+            ]),
+          ),
+        ]),
+      ),
+    ]);
+  }
+}
+
+class _DesktopProfilePage extends StatelessWidget {
+  const _DesktopProfilePage();
+
+  @override
+  Widget build(BuildContext context) {
+    return SizedBox(
+      height: max(700, MediaQuery.of(context).size.height - 120),
+      child: ConstrainedBox(
+        constraints: const BoxConstraints(maxWidth: 760),
+        child: const ProfileScreen(),
+      ),
+    );
+  }
+}
+
+class _WebSectionTitle extends StatelessWidget {
+  final String title;
+  final String? action;
+  final VoidCallback? onTap;
+
+  const _WebSectionTitle({required this.title, this.action, this.onTap});
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(children: [
+      Expanded(
+        child: Text(
+          title,
+          style: GoogleFonts.dmSans(
+            fontSize: 30,
+            fontWeight: FontWeight.w900,
+            color: context.textColor,
+          ),
+        ),
+      ),
+      if (action != null)
+        TextButton(
+          onPressed: onTap,
+          child: Text(
+            action!,
+            style: GoogleFonts.dmSans(
+              fontSize: 13,
+              fontWeight: FontWeight.w800,
+              color: AppColors.accent,
+            ),
+          ),
+        ),
+    ]);
+  }
+}
+
 class _NavItem extends StatelessWidget {
   final IconData icon;
   final String label;
@@ -848,7 +2480,7 @@ class _NavItem extends StatelessWidget {
                   size: 22, color: on ? AppColors.accent : context.hintColor),
               const SizedBox(height: 3),
               Text(label,
-                  style: GoogleFonts.poppins(
+                  style: GoogleFonts.dmSans(
                       fontSize: 10,
                       fontWeight: FontWeight.w700,
                       color: on ? AppColors.accent : context.hintColor)),
@@ -924,14 +2556,14 @@ class _SplashScreenState extends State<SplashScreen>
                                   color: AppColors.accent, size: 42)))),
                   const SizedBox(height: 20),
                   Text('Briefed.',
-                      style: GoogleFonts.poppins(
+                      style: GoogleFonts.dmSans(
                           fontSize: 38,
                           fontWeight: FontWeight.w900,
                           color: Colors.white,
                           letterSpacing: -1.5)),
                   const SizedBox(height: 6),
                   Text('STAY SHARP',
-                      style: GoogleFonts.poppins(
+                      style: GoogleFonts.dmSans(
                           fontSize: 11,
                           fontWeight: FontWeight.w600,
                           color: Colors.white.withValues(alpha: 0.7),
@@ -1097,14 +2729,14 @@ class _SignInScreenState extends ConsumerState<SignInScreen> {
                           text: TextSpan(children: [
                         TextSpan(
                             text: 'Briefed',
-                            style: GoogleFonts.playfairDisplay(
+                            style: GoogleFonts.dmSans(
                                 fontSize: 36,
                                 fontWeight: FontWeight.w900,
                                 color: context.textColor,
                                 letterSpacing: -1.2)),
                         TextSpan(
                             text: '.',
-                            style: GoogleFonts.playfairDisplay(
+                            style: GoogleFonts.dmSans(
                                 fontSize: 36,
                                 fontWeight: FontWeight.w900,
                                 color: AppColors.accent,
@@ -1112,7 +2744,7 @@ class _SignInScreenState extends ConsumerState<SignInScreen> {
                       ])),
                       const SizedBox(height: 6),
                       Text('Stay sharp. Stay informed.',
-                          style: GoogleFonts.sourceSans3(
+                          style: GoogleFonts.roboto(
                               fontSize: 14, color: context.hintColor)),
                     ])),
                     const SizedBox(height: 48),
@@ -1129,10 +2761,10 @@ class _SignInScreenState extends ConsumerState<SignInScreen> {
                         child: Row(
                             mainAxisAlignment: MainAxisAlignment.center,
                             children: [
-                              const _GoogleLogo(size: 22),
+                              const _GoogleLogo(size: 28),
                               const SizedBox(width: 12),
                               Text('Continue with Google',
-                                  style: GoogleFonts.sourceSans3(
+                                  style: GoogleFonts.roboto(
                                       fontSize: 15,
                                       fontWeight: FontWeight.w700,
                                       color: context.textColor)),
@@ -1159,7 +2791,7 @@ class _SignInScreenState extends ConsumerState<SignInScreen> {
                                     color: Colors.white, size: 20),
                                 const SizedBox(width: 10),
                                 Text('Continue with Email',
-                                    style: GoogleFonts.sourceSans3(
+                                    style: GoogleFonts.roboto(
                                         fontSize: 15,
                                         fontWeight: FontWeight.w700,
                                         color: Colors.white)),
@@ -1196,7 +2828,7 @@ class _SignInScreenState extends ConsumerState<SignInScreen> {
                                                       BorderRadius.circular(
                                                           10)),
                                               child: Text('Sign In',
-                                                  style: GoogleFonts.sourceSans3(
+                                                  style: GoogleFonts.roboto(
                                                       fontSize: 13,
                                                       fontWeight:
                                                           FontWeight.w700,
@@ -1223,7 +2855,7 @@ class _SignInScreenState extends ConsumerState<SignInScreen> {
                                                       BorderRadius.circular(
                                                           10)),
                                               child: Text('Create Account',
-                                                  style: GoogleFonts.sourceSans3(
+                                                  style: GoogleFonts.roboto(
                                                       fontSize: 13,
                                                       fontWeight:
                                                           FontWeight.w700,
@@ -1257,7 +2889,7 @@ class _SignInScreenState extends ConsumerState<SignInScreen> {
                                     }),
                                 child: Center(
                                     child: Text('Back',
-                                        style: GoogleFonts.sourceSans3(
+                                        style: GoogleFonts.roboto(
                                             fontSize: 12,
                                             color: context.hintColor)))),
                           ])),
@@ -1273,7 +2905,7 @@ class _SignInScreenState extends ConsumerState<SignInScreen> {
                               border: Border.all(
                                   color: AppColors.red.withValues(alpha: 0.2))),
                           child: Text(_error!,
-                              style: GoogleFonts.sourceSans3(
+                              style: GoogleFonts.roboto(
                                   fontSize: 12, color: AppColors.red))),
                     ],
 
@@ -1292,7 +2924,7 @@ class _SignInScreenState extends ConsumerState<SignInScreen> {
                         child: GestureDetector(
                       onTap: _loading ? null : _continueAsGuest,
                       child: Text('Continue as Guest',
-                          style: GoogleFonts.sourceSans3(
+                          style: GoogleFonts.roboto(
                               fontSize: 13,
                               color: context.hintColor,
                               decoration: TextDecoration.underline,
@@ -1309,11 +2941,11 @@ class _SignInScreenState extends ConsumerState<SignInScreen> {
       controller: ctrl,
       keyboardType: type,
       obscureText: obscure,
-      style: GoogleFonts.sourceSans3(fontSize: 14, color: context.textColor),
+      style: GoogleFonts.roboto(fontSize: 14, color: context.textColor),
       decoration: InputDecoration(
         hintText: hint,
         hintStyle:
-            GoogleFonts.sourceSans3(color: context.hintColor, fontSize: 14),
+            GoogleFonts.roboto(color: context.hintColor, fontSize: 14),
         prefixIcon: Icon(icon, size: 18, color: context.hintColor),
         filled: true,
         fillColor: context.inputBg,
@@ -1338,8 +2970,17 @@ class OnboardingScreen extends ConsumerStatefulWidget {
 class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
   int _step = 0;
   final List<String> _selected = ['world', 'tech', 'business'];
+  String _selectedCountry = AppConstants.defaultCountry;
+  final _countrySearch = TextEditingController();
+  List<Map<String, String>> _filteredCountries = [];
   int _notifHour = 8;
   int _notifMinute = 0;
+
+  static final _sortedCountries = [
+    AppConstants.allCountries.firstWhere((c) => c['code'] == 'world'),
+    ...(AppConstants.allCountries.where((c) => c['code'] != 'world').toList()
+      ..sort((a, b) => a['name']!.compareTo(b['name']!))),
+  ];
   final List<Map<String, dynamic>> _notifOptions = [
     {
       'label': '7:00 AM',
@@ -1377,10 +3018,38 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
       'minute': 0
     },
   ];
+  @override
+  void initState() {
+    super.initState();
+    _filteredCountries = _sortedCountries;
+    _countrySearch.addListener(_onCountrySearch);
+  }
+
+  void _onCountrySearch() {
+    final q = _countrySearch.text.toLowerCase().trim();
+    setState(() {
+      _filteredCountries = q.isEmpty
+          ? _sortedCountries
+          : _sortedCountries
+              .where((c) =>
+                  c['name']!.toLowerCase().contains(q) ||
+                  c['code']!.contains(q))
+              .toList();
+    });
+  }
+
+  @override
+  void dispose() {
+    _countrySearch.dispose();
+    super.dispose();
+  }
+
   Future<void> _finish() async {
     await StorageService.setOnboardingDone();
     await StorageService.setSelectedCategories(_selected);
+    await StorageService.setUserCountry(_selectedCountry);
     ref.read(userProvider.notifier).updateCategories(_selected);
+    ref.read(userProvider.notifier).updateCountry(_selectedCountry);
     ref
         .read(userProvider.notifier)
         .updateNotificationTime(_notifHour, _notifMinute);
@@ -1397,10 +3066,10 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
                 child: Column(children: [
                   Row(
                       children: List.generate(
-                          3,
+                          4,
                           (i) => Expanded(
                               child: Container(
-                                  margin: EdgeInsets.only(right: i < 2 ? 4 : 0),
+                                  margin: EdgeInsets.only(right: i < 3 ? 4 : 0),
                                   height: 3,
                                   decoration: BoxDecoration(
                                       color: i <= _step
@@ -1409,16 +3078,17 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
                                       borderRadius:
                                           BorderRadius.circular(3)))))),
                   const SizedBox(height: 28),
-                  Text('0${_step + 1} / 03',
-                      style: GoogleFonts.poppins(
+                  Text('0${_step + 1} / 04',
+                      style: GoogleFonts.dmSans(
                           fontSize: 10,
                           fontWeight: FontWeight.w700,
                           color: context.hintColor,
                           letterSpacing: 2)),
                   const SizedBox(height: 8),
                   if (_step == 0) ..._buildStep0(),
-                  if (_step == 1) ..._buildStep1(),
-                  if (_step == 2) ..._buildStep2(),
+                  if (_step == 1) ..._buildCountryStep(),
+                  if (_step == 2) ..._buildStep1(),
+                  if (_step == 3) ..._buildStep2(),
                 ]))));
   }
 
@@ -1524,7 +3194,7 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
                                                 size: 12)),
                                     ]),
                                 Text(cat['label']!,
-                                    style: GoogleFonts.poppins(
+                                    style: GoogleFonts.dmSans(
                                         fontSize: 13,
                                         fontWeight: FontWeight.w700,
                                         color: on
@@ -1538,6 +3208,102 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
             onTap: () => setState(() => _step = 1),
             icon: Icons.arrow_forward_rounded),
       ];
+  List<Widget> _buildCountryStep() => [
+        Align(
+            alignment: Alignment.centerLeft,
+            child:
+                Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+              Text('Where are',
+                  style: Theme.of(context).textTheme.headlineLarge),
+              RichText(
+                  text: TextSpan(children: [
+                TextSpan(
+                    text: 'you based',
+                    style: Theme.of(context).textTheme.headlineLarge),
+                TextSpan(
+                    text: '?',
+                    style: Theme.of(context)
+                        .textTheme
+                        .headlineLarge
+                        ?.copyWith(color: AppColors.accent)),
+              ])),
+              const SizedBox(height: 6),
+              Text('Your quiz and news will match your country',
+                  style: Theme.of(context)
+                      .textTheme
+                      .bodyMedium
+                      ?.copyWith(color: context.subColor)),
+            ])),
+        const SizedBox(height: 16),
+        TextField(
+            controller: _countrySearch,
+            style:
+                GoogleFonts.dmSans(fontSize: 13, color: context.textColor),
+            decoration: InputDecoration(
+                hintText: 'Search countries…',
+                hintStyle: GoogleFonts.dmSans(
+                    fontSize: 13, color: context.hintColor),
+                prefixIcon:
+                    Icon(Icons.search_rounded, color: context.hintColor),
+                filled: true,
+                fillColor: context.inputBg,
+                contentPadding: const EdgeInsets.symmetric(
+                    horizontal: 16, vertical: 12),
+                border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(14),
+                    borderSide: BorderSide.none))),
+        const SizedBox(height: 8),
+        Expanded(
+            child: ListView.builder(
+                padding: const EdgeInsets.only(bottom: 8),
+                itemCount: _filteredCountries.length,
+                itemBuilder: (ctx, i) {
+                  final c = _filteredCountries[i];
+                  final isSelected = c['code'] == _selectedCountry;
+                  return GestureDetector(
+                      onTap: () =>
+                          setState(() => _selectedCountry = c['code']!),
+                      child: AnimatedContainer(
+                          duration: const Duration(milliseconds: 150),
+                          margin: const EdgeInsets.symmetric(vertical: 3),
+                          padding: const EdgeInsets.symmetric(
+                              horizontal: 14, vertical: 11),
+                          decoration: BoxDecoration(
+                              color: isSelected
+                                  ? AppColors.accent.withValues(alpha: 0.08)
+                                  : context.cardColor,
+                              borderRadius: BorderRadius.circular(12),
+                              border: Border.all(
+                                  color: isSelected
+                                      ? AppColors.accent
+                                          .withValues(alpha: 0.35)
+                                      : context.borderColor)),
+                          child: Row(children: [
+                            Text(c['flag']!,
+                                style: const TextStyle(fontSize: 22)),
+                            const SizedBox(width: 12),
+                            Expanded(
+                                child: Text(c['name']!,
+                                    style: GoogleFonts.dmSans(
+                                        fontSize: 13,
+                                        fontWeight: isSelected
+                                            ? FontWeight.w700
+                                            : FontWeight.w500,
+                                        color: isSelected
+                                            ? context.textColor
+                                            : context.subColor))),
+                            if (isSelected)
+                              const Icon(Icons.check_circle_rounded,
+                                  size: 18, color: AppColors.accent),
+                          ])));
+                })),
+        const SizedBox(height: 16),
+        AccentButton(
+            text: 'Continue',
+            onTap: () => setState(() => _step = 2),
+            icon: Icons.arrow_forward_rounded),
+      ];
+
   List<Widget> _buildStep1() => [
         Align(
             alignment: Alignment.centerLeft,
@@ -1639,7 +3405,7 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
                                           ? _formatReminderTime(
                                               _notifHour, _notifMinute)
                                           : opt!['label'] as String,
-                                      style: GoogleFonts.poppins(
+                                      style: GoogleFonts.dmSans(
                                           fontSize: 15,
                                           fontWeight: FontWeight.w700,
                                           color: on
@@ -1649,7 +3415,7 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
                                       isCustom
                                           ? 'Choose your own time'
                                           : opt!['sub'] as String,
-                                      style: GoogleFonts.poppins(
+                                      style: GoogleFonts.dmSans(
                                           fontSize: 11,
                                           color: context.hintColor)),
                                 ])),
@@ -1676,7 +3442,7 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
         const SizedBox(height: 16),
         AccentButton(
             text: 'Continue',
-            onTap: () => setState(() => _step = 2),
+            onTap: () => setState(() => _step = 3),
             icon: Icons.arrow_forward_rounded),
       ];
   List<Widget> _buildStep2() => [
@@ -1719,7 +3485,7 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
         const SizedBox(height: 10),
         Center(
             child: Text('No account needed · All progress saved locally',
-                style: GoogleFonts.poppins(
+                style: GoogleFonts.dmSans(
                     fontSize: 10, color: context.hintColor))),
       ];
 }
@@ -1745,7 +3511,7 @@ class HomeScreen extends ConsumerWidget {
                                 crossAxisAlignment: CrossAxisAlignment.start,
                                 children: [
                               Text(_greeting(),
-                                  style: GoogleFonts.poppins(
+                                  style: GoogleFonts.dmSans(
                                       fontSize: 9,
                                       fontWeight: FontWeight.w700,
                                       color: context.hintColor,
@@ -1755,14 +3521,14 @@ class HomeScreen extends ConsumerWidget {
                                   text: TextSpan(children: [
                                 TextSpan(
                                     text: user.name.split(' ').first,
-                                    style: GoogleFonts.poppins(
+                                    style: GoogleFonts.dmSans(
                                         fontSize: 32,
                                         fontWeight: FontWeight.w800,
                                         color: context.textColor,
                                         letterSpacing: -0.8)),
                                 TextSpan(
                                     text: '.',
-                                    style: GoogleFonts.poppins(
+                                    style: GoogleFonts.dmSans(
                                         fontSize: 32,
                                         fontWeight: FontWeight.w800,
                                         color: AppColors.accent)),
@@ -1777,13 +3543,13 @@ class HomeScreen extends ConsumerWidget {
                                   color: AppColors.accent, size: 16),
                               const SizedBox(width: 5),
                               Text('${user.streak}',
-                                  style: GoogleFonts.poppins(
+                                  style: GoogleFonts.dmSans(
                                       fontSize: 16,
                                       fontWeight: FontWeight.w900,
                                       color: context.textColor)),
                               const SizedBox(width: 3),
                               Text('days',
-                                  style: GoogleFonts.poppins(
+                                  style: GoogleFonts.dmSans(
                                       fontSize: 9, color: context.hintColor)),
                             ])),
                       ]),
@@ -1796,7 +3562,7 @@ class HomeScreen extends ConsumerWidget {
                                 color: AppColors.gold, size: 16),
                             const SizedBox(width: 6),
                             Text('${_fmt(user.knowledgeScore)} pts',
-                                style: GoogleFonts.poppins(
+                                style: GoogleFonts.dmSans(
                                     fontSize: 13,
                                     fontWeight: FontWeight.w800,
                                     color: context.textColor)),
@@ -1807,7 +3573,7 @@ class HomeScreen extends ConsumerWidget {
                                 height: 14,
                                 color: context.borderColor),
                             Text(user.globalRankLabel,
-                                style: GoogleFonts.poppins(
+                                style: GoogleFonts.dmSans(
                                     fontSize: 12,
                                     fontWeight: FontWeight.w700,
                                     color: AppColors.gold)),
@@ -1820,6 +3586,8 @@ class HomeScreen extends ConsumerWidget {
                               : user.recentResults.first,
                           onTap: () =>
                               Navigator.of(context).pushNamed('/quiz')),
+                      const SizedBox(height: 14),
+                      const _CategoryQuizRow(),
                       const SizedBox(height: 14),
                       _DidYouKnowCard(),
                       const SizedBox(height: 14),
@@ -1968,7 +3736,7 @@ class _QuizHeroCardState extends State<_QuizHeroCard> {
               ]),
               const SizedBox(height: 12),
               Text('TODAY\'S TOPICS',
-                  style: GoogleFonts.poppins(
+                  style: GoogleFonts.dmSans(
                       fontSize: 10,
                       fontWeight: FontWeight.w700,
                       color: Colors.white.withValues(alpha: 0.7),
@@ -1988,7 +3756,7 @@ class _QuizHeroCardState extends State<_QuizHeroCard> {
                             color: Colors.white.withValues(alpha: 0.18),
                             borderRadius: BorderRadius.circular(999)),
                         child: Text(label,
-                            style: GoogleFonts.poppins(
+                            style: GoogleFonts.dmSans(
                                 fontSize: 11,
                                 fontWeight: FontWeight.w700,
                                 color: Colors.white)));
@@ -2000,7 +3768,7 @@ class _QuizHeroCardState extends State<_QuizHeroCard> {
                           ? 'Play another fresh quiz'
                           : "You've completed today's quiz!"
                       : "How well do you know what happened today?",
-                  style: GoogleFonts.poppins(
+                  style: GoogleFonts.dmSans(
                       fontSize: 20,
                       fontWeight: FontWeight.w900,
                       color: Colors.white,
@@ -2017,7 +3785,7 @@ class _QuizHeroCardState extends State<_QuizHeroCard> {
                                   ? 'Preparing your bonus ad...'
                                   : 'Earn a bonus round by watching a short ad'
                               : 'New quiz available in ${_nextQuizIn()}',
-                  style: GoogleFonts.poppins(
+                  style: GoogleFonts.dmSans(
                       fontSize: 12,
                       color: Colors.white.withValues(alpha: 0.7))),
               const SizedBox(height: 16),
@@ -2041,7 +3809,7 @@ class _QuizHeroCardState extends State<_QuizHeroCard> {
                               color: AppColors.accent, size: 20),
                           const SizedBox(width: 6),
                           Text("Start Today's Quiz",
-                              style: GoogleFonts.poppins(
+                              style: GoogleFonts.dmSans(
                                   fontSize: 15,
                                   fontWeight: FontWeight.w900,
                                   color: AppColors.accent)),
@@ -2066,7 +3834,7 @@ class _QuizHeroCardState extends State<_QuizHeroCard> {
                               color: AppColors.accent, size: 20),
                           const SizedBox(width: 6),
                           Text('Play Fresh Replay',
-                              style: GoogleFonts.poppins(
+                              style: GoogleFonts.dmSans(
                                   fontSize: 15,
                                   fontWeight: FontWeight.w900,
                                   color: AppColors.accent)),
@@ -2099,7 +3867,7 @@ class _QuizHeroCardState extends State<_QuizHeroCard> {
                               _loadingRewardAd
                                   ? 'Preparing Ad'
                                   : 'Watch Ad · Play Again',
-                              style: GoogleFonts.poppins(
+                              style: GoogleFonts.dmSans(
                                   fontSize: 15,
                                   fontWeight: FontWeight.w900,
                                   color: Colors.white)),
@@ -2111,7 +3879,7 @@ class _QuizHeroCardState extends State<_QuizHeroCard> {
                                   color: Colors.amber,
                                   borderRadius: BorderRadius.circular(6)),
                               child: Text('AD',
-                                  style: GoogleFonts.poppins(
+                                  style: GoogleFonts.dmSans(
                                       fontSize: 9,
                                       fontWeight: FontWeight.w900,
                                       color: Colors.black))),
@@ -2131,14 +3899,14 @@ class _QuizHeroCardState extends State<_QuizHeroCard> {
                                 color: Colors.white54, size: 16),
                             const SizedBox(width: 6),
                             Text('Come back tomorrow',
-                                style: GoogleFonts.poppins(
+                                style: GoogleFonts.dmSans(
                                     fontSize: 14,
                                     fontWeight: FontWeight.w700,
                                     color: Colors.white54)),
                           ]),
                       const SizedBox(height: 2),
                       Text(_nextQuizIn(),
-                          style: GoogleFonts.poppins(
+                          style: GoogleFonts.dmSans(
                               fontSize: 11,
                               color: Colors.white38,
                               fontWeight: FontWeight.w600)),
@@ -2161,7 +3929,7 @@ class _QuizHeroCardState extends State<_QuizHeroCard> {
                       Expanded(
                           child: Text(
                               'Last score: ${widget.latestResult!.score}/${widget.latestResult!.totalQuestions} · ${widget.latestResult!.performanceLabel}',
-                              style: GoogleFonts.poppins(
+                              style: GoogleFonts.dmSans(
                                   fontSize: 11,
                                   fontWeight: FontWeight.w700,
                                   color:
@@ -2177,8 +3945,100 @@ class _QuizHeroCardState extends State<_QuizHeroCard> {
           color: Colors.white.withValues(alpha: 0.2),
           borderRadius: BorderRadius.circular(999)),
       child: Text(t,
-          style: GoogleFonts.poppins(
+          style: GoogleFonts.dmSans(
               fontSize: 9, fontWeight: FontWeight.w800, color: Colors.white)));
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// CATEGORY QUIZ ROW
+// Category quiz chips — tap to go straight into the quiz.
+// Interstitial ad fires after the quiz completes (same as daily quiz).
+// ─────────────────────────────────────────────────────────────────────────────
+
+class _CategoryQuizRow extends ConsumerStatefulWidget {
+  const _CategoryQuizRow();
+  @override
+  ConsumerState<_CategoryQuizRow> createState() => _CategoryQuizRowState();
+}
+
+class _CategoryQuizRowState extends ConsumerState<_CategoryQuizRow> {
+  void _onChipTap(String catId) {
+    Navigator.of(context).pushNamed('/quiz', arguments: {
+      'categoryFilter': catId,
+    });
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final user = ref.watch(userProvider);
+    final articles = ref.watch(newsProvider).articles;
+
+    final cats = AppConstants.allCategories
+        .where((c) => user.selectedCategories.contains(c['id']))
+        .toList();
+
+    if (cats.isEmpty) return const SizedBox.shrink();
+
+    return Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+      Padding(
+        padding: const EdgeInsets.only(left: 2, bottom: 10),
+        child: Text('Quiz by Topic',
+            style: GoogleFonts.dmSans(
+                fontSize: 13,
+                fontWeight: FontWeight.w800,
+                color: context.textColor)),
+      ),
+      SizedBox(
+        height: 44,
+        child: ListView.separated(
+          scrollDirection: Axis.horizontal,
+          padding: const EdgeInsets.symmetric(horizontal: 2),
+          itemCount: cats.length,
+          separatorBuilder: (_, __) => const SizedBox(width: 8),
+          itemBuilder: (ctx, i) {
+            final cat = cats[i];
+            final id = cat['id']!;
+            final label = cat['label']!;
+            final color = AppColors.categoryColor(label);
+            final hasArticles =
+                articles.any((a) => a.category.toLowerCase() == id);
+
+            return GestureDetector(
+              onTap: hasArticles ? () => _onChipTap(id) : null,
+              child: AnimatedContainer(
+                duration: const Duration(milliseconds: 150),
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+                decoration: BoxDecoration(
+                  color: hasArticles
+                      ? color.withValues(alpha: 0.10)
+                      : context.inputBg,
+                  borderRadius: BorderRadius.circular(22),
+                  border: Border.all(
+                      color: hasArticles
+                          ? color.withValues(alpha: 0.35)
+                          : context.borderColor),
+                ),
+                child: Row(mainAxisSize: MainAxisSize.min, children: [
+                  Icon(_iconForCat(id),
+                      size: 14,
+                      color: hasArticles ? color : context.hintColor),
+                  const SizedBox(width: 6),
+                  Text(label,
+                      style: GoogleFonts.dmSans(
+                          fontSize: 12,
+                          fontWeight: FontWeight.w700,
+                          color: hasArticles
+                              ? context.textColor
+                              : context.hintColor)),
+                ]),
+              ),
+            );
+          },
+        ),
+      ),
+    ]);
+  }
 }
 
 class _DidYouKnowCard extends ConsumerStatefulWidget {
@@ -2204,7 +4064,8 @@ class _DidYouKnowCardState extends ConsumerState<_DidYouKnowCard> {
     if (news.isLoading) {
       return const ClipRRect(
         borderRadius: BorderRadius.all(Radius.circular(22)),
-        child: ShimmerBox(width: double.infinity, height: 220, borderRadius: 22),
+        child:
+            ShimmerBox(width: double.infinity, height: 220, borderRadius: 22),
       );
     }
     if (news.articles.isEmpty) return const SizedBox.shrink();
@@ -2233,7 +4094,7 @@ class _DidYouKnowCardState extends ConsumerState<_DidYouKnowCard> {
               top: -8,
               left: 12,
               child: Text('"',
-                  style: GoogleFonts.playfairDisplay(
+                  style: GoogleFonts.dmSans(
                     fontSize: 120,
                     fontWeight: FontWeight.w900,
                     color: Colors.white.withValues(alpha: 0.08),
@@ -2270,7 +4131,7 @@ class _DidYouKnowCardState extends ConsumerState<_DidYouKnowCard> {
                                         color: Colors.white, size: 10),
                                     const SizedBox(width: 4),
                                     Text('DID YOU KNOW',
-                                        style: GoogleFonts.sourceSans3(
+                                        style: GoogleFonts.roboto(
                                           fontSize: 9,
                                           fontWeight: FontWeight.w700,
                                           color: Colors.white,
@@ -2297,7 +4158,7 @@ class _DidYouKnowCardState extends ConsumerState<_DidYouKnowCard> {
                           const SizedBox(height: 14),
                           Text(
                             a.title,
-                            style: GoogleFonts.playfairDisplay(
+                            style: GoogleFonts.dmSans(
                               fontSize: 16,
                               fontWeight: FontWeight.w700,
                               color: Colors.white,
@@ -2324,8 +4185,8 @@ class _DidYouKnowCardState extends ConsumerState<_DidYouKnowCard> {
                     borderRadius: BorderRadius.circular(6),
                   ),
                   child: Text(
-                    articles[_page].sourceName,
-                    style: GoogleFonts.sourceSans3(
+                    'Source: ${articles[_page].sourceName}',
+                    style: GoogleFonts.roboto(
                         fontSize: 10,
                         fontWeight: FontWeight.w600,
                         color: Colors.white.withValues(alpha: 0.8)),
@@ -2369,14 +4230,8 @@ class BriefingScreen extends ConsumerStatefulWidget {
 
 class _BriefingScreenState extends ConsumerState<BriefingScreen>
     with SingleTickerProviderStateMixin {
-  static const _filters = [
-    'For you',
-    'Headlines',
-    'Technology',
-    'World',
-    'Business',
-    'Sports',
-    'Entertainment'
+  static const _tabs = [
+    'For You', 'World', 'Politics', 'Sports', 'Technology', 'Business'
   ];
   late final TabController _tabCtrl;
   final ScrollController _tabScroll = ScrollController();
@@ -2384,7 +4239,7 @@ class _BriefingScreenState extends ConsumerState<BriefingScreen>
   @override
   void initState() {
     super.initState();
-    _tabCtrl = TabController(length: _filters.length, vsync: this);
+    _tabCtrl = TabController(length: _tabs.length, vsync: this);
     _tabCtrl.addListener(_onTabChange);
   }
 
@@ -2398,7 +4253,7 @@ class _BriefingScreenState extends ConsumerState<BriefingScreen>
 
   void _scrollTabIntoView(int i) {
     if (!_tabScroll.hasClients) return;
-    const itemW = 90.0;
+    const itemW = 100.0;
     final screenW = MediaQuery.of(context).size.width;
     final target = (i * itemW) - (screenW / 2 - itemW / 2);
     _tabScroll.animateTo(target.clamp(0.0, _tabScroll.position.maxScrollExtent),
@@ -2415,318 +4270,228 @@ class _BriefingScreenState extends ConsumerState<BriefingScreen>
 
   @override
   Widget build(BuildContext context) {
-    final news = ref.watch(newsProvider);
+    final pipeline = ref.watch(newsPipelineProvider);
     return Scaffold(
-        backgroundColor: context.bgColor,
-        body: SafeArea(
-            child: Column(children: [
+      backgroundColor: context.bgColor,
+      body: SafeArea(
+        child: Column(children: [
           Padding(
-              padding: const EdgeInsets.fromLTRB(16, 12, 16, 0),
-              child: Row(children: [
-                Expanded(
-                    child: RichText(
-                        text: TextSpan(children: [
-                  TextSpan(
+            padding: const EdgeInsets.fromLTRB(16, 12, 16, 0),
+            child: Row(children: [
+              Expanded(
+                child: RichText(
+                  text: TextSpan(children: [
+                    TextSpan(
                       text: 'Briefed',
-                      style: GoogleFonts.poppins(
+                      style: GoogleFonts.dmSans(
                           fontSize: 32,
                           fontWeight: FontWeight.w800,
                           color: context.textColor,
-                          letterSpacing: -0.8)),
-                  TextSpan(
+                          letterSpacing: -0.8),
+                    ),
+                    TextSpan(
                       text: '.',
-                      style: GoogleFonts.poppins(
+                      style: GoogleFonts.dmSans(
                           fontSize: 32,
                           fontWeight: FontWeight.w800,
-                          color: AppColors.accent)),
-                  TextSpan(
+                          color: AppColors.accent),
+                    ),
+                    TextSpan(
                       text: '  Briefing',
-                      style: GoogleFonts.poppins(
+                      style: GoogleFonts.dmSans(
                           fontSize: 12,
                           fontWeight: FontWeight.w400,
-                          color: context.hintColor)),
-                ]))),
-                BriefedCard(
-                    padding: const EdgeInsets.all(8),
-                    child: Icon(Icons.search_rounded,
-                        color: context.hintColor, size: 18)),
-              ])),
-          if (news.isOffline)
+                          color: context.hintColor),
+                    ),
+                  ]),
+                ),
+              ),
+              BriefedCard(
+                padding: const EdgeInsets.all(8),
+                child: Icon(Icons.search_rounded,
+                    color: context.hintColor, size: 18),
+              ),
+            ]),
+          ),
+          if (pipeline.error != null && pipeline.byCategory.isEmpty)
             const _NewsBanner(
-              icon: Icons.wifi_off_rounded,
-              message: 'Connect to internet for daily news',
-            ),
-          if (!news.isOffline && news.error != null)
-            _NewsBanner(
               icon: Icons.error_outline_rounded,
-              message: 'News error: ${news.error}',
+              message: 'News error — pull down to retry',
             ),
           SizedBox(
-              height: 52,
-              child: ListView.builder(
-                  controller: _tabScroll,
-                  scrollDirection: Axis.horizontal,
-                  padding: const EdgeInsets.fromLTRB(16, 8, 16, 8),
-                  itemCount: _filters.length,
-                  itemBuilder: (context, i) {
-                    final on = _tabCtrl.index == i;
-                    final label = _filters[i];
-                    final chipColor = (label == 'For you' || label == 'Headlines')
-                        ? AppColors.accent
-                        : AppColors.categoryColor(label.toLowerCase());
-                    return GestureDetector(
-                        onTap: () => _tabCtrl.animateTo(i),
-                        child: AnimatedContainer(
-                            duration: const Duration(milliseconds: 180),
-                            margin: const EdgeInsets.only(right: 8),
-                            padding: const EdgeInsets.symmetric(
-                                horizontal: 16, vertical: 6),
-                            decoration: BoxDecoration(
-                                color: on
-                                    ? chipColor
-                                    : chipColor.withValues(alpha: 0.1),
-                                borderRadius: BorderRadius.circular(999),
-                                border: Border.all(
-                                    color: on
-                                        ? chipColor
-                                        : chipColor.withValues(alpha: 0.3),
-                                    width: 1.5)),
-                            child: Text(label,
-                                style: GoogleFonts.poppins(
-                                    fontSize: 13,
-                                    fontWeight: FontWeight.w700,
-                                    color: on
-                                        ? Colors.white
-                                        : chipColor))));
-                  })),
+            height: 52,
+            child: ListView.builder(
+              controller: _tabScroll,
+              scrollDirection: Axis.horizontal,
+              padding: const EdgeInsets.fromLTRB(16, 8, 16, 8),
+              itemCount: _tabs.length,
+              itemBuilder: (context, i) {
+                final on = _tabCtrl.index == i;
+                final chipColor = _tabColor(_tabs[i]);
+                return GestureDetector(
+                  onTap: () => _tabCtrl.animateTo(i),
+                  child: AnimatedContainer(
+                    duration: const Duration(milliseconds: 180),
+                    margin: const EdgeInsets.only(right: 8),
+                    padding: const EdgeInsets.symmetric(
+                        horizontal: 16, vertical: 6),
+                    decoration: BoxDecoration(
+                      color: on ? chipColor : chipColor.withValues(alpha: 0.1),
+                      borderRadius: BorderRadius.circular(999),
+                      border: Border.all(
+                        color: on
+                            ? chipColor
+                            : chipColor.withValues(alpha: 0.3),
+                        width: 1.5,
+                      ),
+                    ),
+                    child: Text(
+                      _tabs[i],
+                      style: GoogleFonts.dmSans(
+                          fontSize: 13,
+                          fontWeight: FontWeight.w700,
+                          color: on ? Colors.white : chipColor),
+                    ),
+                  ),
+                );
+              },
+            ),
+          ),
           Divider(height: 1, color: context.borderColor),
           Expanded(
-              child: news.isLoading
-                  ? _buildShimmer()
-                  : TabBarView(
-                      controller: _tabCtrl,
-                      children: _filters
-                          .map((f) => RefreshIndicator(
-                                color: AppColors.accent,
-                                onRefresh: () async {
-                                  await ref
-                                      .read(newsProvider.notifier)
-                                      .refresh();
-                                  _tabCtrl.animateTo(0);
-                                },
-                                child: _buildFeed(news.articles, f),
-                              ))
-                          .toList())),
-        ])));
+            child: pipeline.isLoading && pipeline.byCategory.isEmpty
+                ? _buildSkeleton()
+                : TabBarView(
+                    controller: _tabCtrl,
+                    children: _tabs.map((tab) {
+                      return RefreshIndicator(
+                        color: AppColors.accent,
+                        onRefresh: () async {
+                          await ref
+                              .read(newsPipelineProvider.notifier)
+                              .refresh();
+                          _tabCtrl.animateTo(0);
+                        },
+                        child: _buildFeed(pipeline, tab),
+                      );
+                    }).toList(),
+                  ),
+          ),
+        ]),
+      ),
+    );
   }
 
-  List<NewsArticle> _filtered(List<NewsArticle> all, String filter) {
-    switch (filter) {
-      case 'For you':
-        return all;
-      case 'Headlines':
-        return all.take(6).toList();
-      default:
-        return all
-            .where(
-                (a) => a.category.toLowerCase().contains(filter.toLowerCase()))
-            .toList();
+  Color _tabColor(String tab) {
+    switch (tab) {
+      case 'World':     return AppColors.blue;
+      case 'Politics':  return AppColors.purple;
+      case 'Sports':    return AppColors.green;
+      case 'Technology':return AppColors.teal;
+      case 'Business':  return AppColors.orange;
+      default:          return AppColors.accent;
     }
   }
 
-  Widget _buildFeed(List<NewsArticle> articles, String filter) {
-    final items = _filtered(articles, filter);
+  List<RankedArticle> _articlesForTab(PipelineState pipeline, String tab) {
+    switch (tab) {
+      case 'For You':    return pipeline.forYouStories;
+      case 'World':      return pipeline.getTopStoriesForDisplay(NewsCategory.world);
+      case 'Politics':   return pipeline.getTopStoriesForDisplay(NewsCategory.politics);
+      case 'Sports':     return pipeline.getTopStoriesForDisplay(NewsCategory.sports);
+      case 'Technology': return pipeline.getTopStoriesForDisplay(NewsCategory.technology);
+      case 'Business':   return pipeline.getTopStoriesForDisplay(NewsCategory.business);
+      default:           return [];
+    }
+  }
+
+  Widget _buildFeed(PipelineState pipeline, String filter) {
+    final items = _articlesForTab(pipeline, filter);
+
     if (items.isEmpty) {
       return ListView(children: [
-        Center(
-            child: Padding(
-                padding: const EdgeInsets.only(top: 80),
-                child: Text(
-                    'No ${filter == "For you" ? "stories" : filter.toLowerCase()} articles yet',
-                    style: GoogleFonts.poppins(color: context.hintColor))))
+        SizedBox(
+          height: 300,
+          child: Center(
+            child: Column(mainAxisSize: MainAxisSize.min, children: [
+              Icon(Icons.newspaper_rounded, size: 48, color: context.hintColor),
+              const SizedBox(height: 12),
+              Text('No stories yet',
+                  style: GoogleFonts.dmSans(
+                      fontSize: 16,
+                      fontWeight: FontWeight.w600,
+                      color: context.hintColor)),
+              const SizedBox(height: 8),
+              Text('Pull down to refresh',
+                  style: GoogleFonts.dmSans(
+                      fontSize: 13, color: context.hintColor)),
+            ]),
+          ),
+        ),
       ]);
     }
 
-    if (filter == 'For you') {
-      final hero = items.first;
-      final rows = items.skip(1).take(3).toList();
-      String artKey(NewsArticle a) => a.link.isNotEmpty ? a.link : a.title;
-      final shown = <String>{artKey(hero), ...rows.map(artKey)};
-
-      return ListView(padding: EdgeInsets.zero, children: [
-        Padding(
-            padding: const EdgeInsets.fromLTRB(16, 14, 16, 0),
-            child:
-                Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-              const _SectionHeader(title: 'Top stories'),
-              const SizedBox(height: 10),
-              _HeroStoryCard(
-                  article: hero, onTap: () => _openArticle(context, hero)),
-            ])),
-        if (rows.isNotEmpty)
-          Padding(
-              padding: const EdgeInsets.fromLTRB(16, 10, 16, 0),
-              child: BriefedCard(
-                  padding: const EdgeInsets.fromLTRB(14, 4, 14, 4),
-                  child: Column(
-                      children: rows
-                          .asMap()
-                          .entries
-                          .map((e) => StoryRow(
-                              title: e.value.title,
-                              sourceName: e.value.sourceName,
-                              category: e.value.category,
-                              timeAgo: e.value.timeAgo,
-                              isLast: e.key == 2,
-                              onTap: () => _openArticle(context, e.value)))
-                          .toList()))),
-        Padding(
-            padding: const EdgeInsets.fromLTRB(16, 14, 16, 0),
-            child: _QuizPromoStrip()),
-        const Padding(
-            padding: EdgeInsets.fromLTRB(16, 14, 16, 0),
-            child: BriefedNativeAd()),
-        ...['technology', 'world', 'business', 'sports', 'entertainment']
-            .map((cat) {
-          final catArticles = articles
-              .where((a) =>
-                  a.category.toLowerCase() == cat && !shown.contains(artKey(a)))
-              .toList();
-          if (catArticles.isEmpty) return const SizedBox.shrink();
-          final visible = catArticles.take(3).toList();
-          for (final a in visible) {
-            shown.add(artKey(a));
-          }
-          final label = cat[0].toUpperCase() + cat.substring(1);
+    return ListView.builder(
+      padding: const EdgeInsets.fromLTRB(16, 14, 16, 32),
+      itemCount: items.length + (filter == 'For You' ? 1 : 0),
+      itemBuilder: (context, index) {
+        // Insert quiz promo strip after the first card on For You
+        if (filter == 'For You' && index == 1) {
           return Padding(
-              padding: const EdgeInsets.fromLTRB(16, 16, 16, 0),
+            padding: const EdgeInsets.only(bottom: 12),
+            child: _QuizPromoStrip(),
+          );
+        }
+        final articleIndex =
+            (filter == 'For You' && index > 1) ? index - 1 : index;
+        if (articleIndex >= items.length) return const SizedBox.shrink();
+        final article = items[articleIndex];
+        return Padding(
+          padding: const EdgeInsets.only(bottom: 12),
+          child: _NewsCard(
+            article: article,
+            onTap: () => _openRankedArticle(context, article),
+          ),
+        );
+      },
+    );
+  }
+
+  Widget _buildSkeleton() {
+    return ListView.builder(
+      padding: const EdgeInsets.fromLTRB(16, 14, 16, 32),
+      itemCount: 3,
+      itemBuilder: (_, __) => Padding(
+        padding: const EdgeInsets.only(bottom: 12),
+        child: Container(
+          decoration: BoxDecoration(
+            color: context.cardColor,
+            borderRadius: BorderRadius.circular(20),
+            border: Border.all(color: context.borderColor),
+          ),
+          clipBehavior: Clip.antiAlias,
+          child: const Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+            ShimmerBox(width: double.infinity, height: 210, borderRadius: 0),
+            Padding(
+              padding: EdgeInsets.fromLTRB(14, 12, 14, 14),
               child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    const Center(child: BriefedBannerAd()),
-                    const SizedBox(height: 14),
-                    _SectionHeader(title: label, category: cat),
-                    const SizedBox(height: 10),
-                    BriefedCard(
-                        padding: const EdgeInsets.fromLTRB(14, 4, 14, 4),
-                        child: Column(
-                            children: visible
-                                .asMap()
-                                .entries
-                                .map((e) => StoryRow(
-                                    title: e.value.title,
-                                    sourceName: e.value.sourceName,
-                                    category: e.value.category,
-                                    timeAgo: e.value.timeAgo,
-                                    isLast: e.key == min(2, visible.length - 1),
-                                    onTap: () =>
-                                        _openArticle(context, e.value)))
-                                .toList())),
-                  ]));
-        }),
-        const SizedBox(height: 24),
-      ]);
-    }
-
-    // Headlines
-    if (filter == 'Headlines') {
-      return ListView(
-        padding: const EdgeInsets.fromLTRB(16, 14, 16, 24),
-        children: [
-          Row(children: [
-            const Expanded(child: _SectionHeader(title: 'Latest headlines')),
-            const SizedBox(width: 10),
-            Container(
-              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-              decoration: BoxDecoration(
-                color: AppColors.accent.withValues(alpha: 0.1),
-                borderRadius: BorderRadius.circular(999),
-                border:
-                    Border.all(color: AppColors.accent.withValues(alpha: 0.2)),
-              ),
-              child: Text(
-                '${items.length} updates',
-                style: GoogleFonts.poppins(
-                  fontSize: 10,
-                  fontWeight: FontWeight.w800,
-                  color: AppColors.accent,
-                ),
-              ),
+                    ShimmerBox(width: 140, height: 11, borderRadius: 6),
+                    SizedBox(height: 10),
+                    ShimmerBox(
+                        width: double.infinity, height: 18, borderRadius: 6),
+                    SizedBox(height: 6),
+                    ShimmerBox(width: 240, height: 18, borderRadius: 6),
+                    SizedBox(height: 14),
+                    ShimmerBox(width: 80, height: 22, borderRadius: 11),
+                  ]),
             ),
           ]),
-          const SizedBox(height: 10),
-          _HeadlineLeadCard(
-            article: items.first,
-            onTap: () => _openArticle(context, items.first),
-          ),
-          const SizedBox(height: 12),
-          ...items.skip(1).toList().asMap().entries.map((e) {
-            final article = e.value;
-            return Padding(
-              padding: const EdgeInsets.only(bottom: 10),
-              child: _HeadlineCard(
-                article: article,
-                rank: e.key + 2,
-                onTap: () => _openArticle(context, article),
-              ),
-            );
-          }),
-        ],
-      );
-    }
-
-    // Specific category
-    final cat = filter.toLowerCase();
-    return ListView(padding: EdgeInsets.zero, children: [
-      Padding(
-          padding: const EdgeInsets.fromLTRB(16, 14, 16, 0),
-          child:
-              Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-            _SectionHeader(title: filter, category: cat),
-            const SizedBox(height: 10),
-            _HeroStoryCard(
-                article: items.first,
-                onTap: () => _openArticle(context, items.first)),
-          ])),
-      if (items.length > 1)
-        Padding(
-            padding: const EdgeInsets.fromLTRB(16, 10, 16, 0),
-            child: BriefedCard(
-                padding: const EdgeInsets.fromLTRB(14, 4, 14, 4),
-                child: Column(
-                    children: items
-                        .skip(1)
-                        .toList()
-                        .asMap()
-                        .entries
-                        .map((e) => StoryRow(
-                            title: e.value.title,
-                            sourceName: e.value.sourceName,
-                            category: e.value.category,
-                            timeAgo: e.value.timeAgo,
-                            isLast: e.key == items.length - 2,
-                            onTap: () => _openArticle(context, e.value)))
-                        .toList()))),
-      const Padding(
-          padding: EdgeInsets.fromLTRB(16, 14, 16, 0),
-          child: Center(child: BriefedBannerAd())),
-      const SizedBox(height: 24),
-    ]);
+        ),
+      ),
+    );
   }
-
-  Widget _buildShimmer() => ListView.builder(
-      padding: const EdgeInsets.all(16),
-      itemCount: 4,
-      itemBuilder: (_, __) => const Padding(
-          padding: EdgeInsets.only(bottom: 12),
-          child:
-              Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-            ShimmerBox(width: double.infinity, height: 140, borderRadius: 18),
-            SizedBox(height: 8),
-            ShimmerBox(width: 200, height: 14, borderRadius: 7),
-            SizedBox(height: 6),
-            ShimmerBox(width: double.infinity, height: 14, borderRadius: 7),
-          ])));
 }
 
 class _NewsBanner extends StatelessWidget {
@@ -2748,10 +4513,8 @@ class _NewsBanner extends StatelessWidget {
             message,
             maxLines: 2,
             overflow: TextOverflow.ellipsis,
-            style: GoogleFonts.poppins(
-                fontSize: 12,
-                fontWeight: FontWeight.w600,
-                color: Colors.white),
+            style: GoogleFonts.dmSans(
+                fontSize: 12, fontWeight: FontWeight.w600, color: Colors.white),
           ),
         ),
       ]),
@@ -2759,271 +4522,147 @@ class _NewsBanner extends StatelessWidget {
   }
 }
 
-class _SectionHeader extends StatelessWidget {
-  final String title;
-  final String? category;
-  const _SectionHeader({required this.title, this.category});
-  IconData _icon(String cat) {
-    switch (cat.toLowerCase()) {
-      case 'technology':
-        return Icons.memory_rounded;
-      case 'business':
-        return Icons.trending_up_rounded;
-      case 'sports':
-        return Icons.sports_soccer_rounded;
-      case 'entertainment':
-        return Icons.star_rounded;
-      case 'world':
-        return Icons.language_rounded;
-      default:
-        return Icons.article_rounded;
+// ── NEW NEWS CARD (pipeline articles) ────────────────────────────────────────
+
+class _NewsCard extends StatelessWidget {
+  final RankedArticle article;
+  final VoidCallback? onTap;
+  const _NewsCard({required this.article, this.onTap});
+
+  Color _catColor() {
+    switch (article.category) {
+      case NewsCategory.world:      return AppColors.blue;
+      case NewsCategory.politics:   return AppColors.purple;
+      case NewsCategory.sports:     return AppColors.green;
+      case NewsCategory.technology: return AppColors.teal;
+      case NewsCategory.business:   return AppColors.orange;
     }
   }
 
-  @override
-  Widget build(BuildContext context) {
-    final color = category != null
-        ? AppColors.categoryColor(category!)
-        : context.textColor;
-    return Row(children: [
-      if (category != null) ...[
-        Container(
-            width: 24,
-            height: 24,
-            decoration: BoxDecoration(
-                color: AppColors.categoryBg(category!),
-                borderRadius: BorderRadius.circular(7)),
-            child: Icon(_icon(category!), size: 13, color: color)),
-        const SizedBox(width: 8),
-      ],
-      Text(title,
-          style: GoogleFonts.poppins(
-              fontSize: 14,
-              fontWeight: FontWeight.w800,
-              color: context.textColor)),
-      const SizedBox(width: 6),
-      const Icon(Icons.chevron_right_rounded,
-          color: AppColors.accent, size: 16),
-    ]);
+  IconData _catIcon() {
+    switch (article.category) {
+      case NewsCategory.world:      return Icons.language_rounded;
+      case NewsCategory.politics:   return Icons.account_balance_rounded;
+      case NewsCategory.sports:     return Icons.sports_rounded;
+      case NewsCategory.technology: return Icons.memory_rounded;
+      case NewsCategory.business:   return Icons.trending_up_rounded;
+    }
   }
-}
 
-class _HeadlineLeadCard extends StatelessWidget {
-  final NewsArticle article;
-  final VoidCallback? onTap;
-  const _HeadlineLeadCard({required this.article, this.onTap});
+  Color _sourceColor(BuildContext ctx) {
+    if (article.sourceQualityScore >= 100) return ctx.textColor;
+    if (article.sourceQualityScore >= 80) {
+      return ctx.textColor.withValues(alpha: 0.82);
+    }
+    if (article.sourceQualityScore >= 60) return ctx.subColor;
+    return ctx.hintColor;
+  }
 
   @override
   Widget build(BuildContext context) {
-    final catColor = AppColors.categoryColor(article.category);
+    final catColor = _catColor();
     return GestureDetector(
       onTap: onTap,
       child: Container(
         decoration: BoxDecoration(
           color: context.cardColor,
           borderRadius: BorderRadius.circular(20),
-          border: Border.all(color: catColor.withValues(alpha: 0.22)),
-          boxShadow: [
-            BoxShadow(
-              color: catColor.withValues(alpha: context.isDark ? 0.16 : 0.1),
-              blurRadius: 20,
-              offset: const Offset(0, 8),
-            ),
-          ],
-        ),
-        clipBehavior: Clip.antiAlias,
-        child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-          Stack(children: [
-            _HeadlineImage(article: article, height: 200),
-            Positioned.fill(
-              child: DecoratedBox(
-                decoration: BoxDecoration(
-                  gradient: LinearGradient(
-                    colors: [
-                      Colors.black.withValues(alpha: 0.0),
-                      Colors.black.withValues(alpha: 0.58),
-                    ],
-                    begin: Alignment.topCenter,
-                    end: Alignment.bottomCenter,
-                  ),
-                ),
-              ),
-            ),
-            Positioned(
-              left: 12,
-              right: 12,
-              bottom: 12,
-              child: Row(children: [
-                CategoryTag(category: article.category, small: true),
-                const SizedBox(width: 8),
-                Expanded(
-                  child: Text(
-                    '${article.sourceName}  -  ${article.timeAgo}',
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: GoogleFonts.poppins(
-                      fontSize: 11,
-                      fontWeight: FontWeight.w700,
-                      color: Colors.white.withValues(alpha: 0.86),
-                    ),
-                  ),
-                ),
-              ]),
-            ),
-          ]),
-          Padding(
-            padding: const EdgeInsets.fromLTRB(14, 13, 14, 14),
-            child:
-                Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-              Row(children: [
-                Container(
-                  padding:
-                      const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                  decoration: BoxDecoration(
-                    color: catColor.withValues(alpha: 0.12),
-                    borderRadius: BorderRadius.circular(999),
-                  ),
-                  child: Text(
-                    'LEAD STORY',
-                    style: GoogleFonts.poppins(
-                      fontSize: 9,
-                      fontWeight: FontWeight.w900,
-                      letterSpacing: 1.1,
-                      color: catColor,
-                    ),
-                  ),
-                ),
-                const Spacer(),
-                Icon(Icons.arrow_forward_rounded,
-                    size: 17, color: context.hintColor),
-              ]),
-              const SizedBox(height: 9),
-              Text(
-                article.title,
-                maxLines: 3,
-                overflow: TextOverflow.ellipsis,
-                style: GoogleFonts.poppins(
-                  fontSize: 17,
-                  fontWeight: FontWeight.w800,
-                  height: 1.32,
-                  color: context.textColor,
-                ),
-              ),
-            ]),
-          ),
-        ]),
-      ),
-    );
-  }
-}
-
-class _HeadlineCard extends StatelessWidget {
-  final NewsArticle article;
-  final int rank;
-  final VoidCallback? onTap;
-  const _HeadlineCard({
-    required this.article,
-    required this.rank,
-    this.onTap,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    final catColor = AppColors.categoryColor(article.category);
-    return GestureDetector(
-      onTap: onTap,
-      child: AnimatedContainer(
-        duration: const Duration(milliseconds: 180),
-        padding: const EdgeInsets.all(10),
-        decoration: BoxDecoration(
-          color: context.cardColor,
-          borderRadius: BorderRadius.circular(18),
           border: Border.all(color: context.borderColor),
           boxShadow: [
             BoxShadow(
-              color:
-                  Colors.black.withValues(alpha: context.isDark ? 0.18 : 0.04),
+              color: Colors.black
+                  .withValues(alpha: context.isDark ? 0.18 : 0.05),
               blurRadius: 12,
               offset: const Offset(0, 4),
             ),
           ],
         ),
-        child: Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
-          Stack(children: [
-            _HeadlineImage(article: article, width: 78, height: 78),
-            Positioned(
-              left: 6,
-              top: 6,
-              child: Container(
-                width: 24,
-                height: 24,
-                decoration: BoxDecoration(
-                  color: context.cardColor.withValues(alpha: 0.92),
-                  shape: BoxShape.circle,
-                  border: Border.all(color: catColor.withValues(alpha: 0.28)),
-                ),
-                child: Center(
-                  child: Text(
-                    '$rank',
-                    style: GoogleFonts.poppins(
-                      fontSize: 11,
-                      fontWeight: FontWeight.w900,
-                      color: catColor,
-                    ),
-                  ),
-                ),
-              ),
+        clipBehavior: Clip.antiAlias,
+        child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+          // 16:9 image — effectiveImageUrl always provides a URL
+          AspectRatio(
+            aspectRatio: 16 / 9,
+            child: Image.network(
+              article.effectiveImageUrl,
+              fit: BoxFit.cover,
+              width: double.infinity,
+              errorBuilder: (_, __, ___) => _placeholder(catColor),
             ),
-          ]),
-          const SizedBox(width: 12),
-          Expanded(
-            child:
-                Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+          ),
+          Padding(
+            padding: const EdgeInsets.fromLTRB(14, 12, 14, 14),
+            child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
               Row(children: [
-                Expanded(
-                  child: Text(
-                    article.sourceName,
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: GoogleFonts.poppins(
-                      fontSize: 11,
-                      fontWeight: FontWeight.w800,
-                      color: catColor,
-                    ),
-                  ),
-                ),
                 Text(
-                  article.timeAgo,
-                  style: GoogleFonts.poppins(
-                    fontSize: 10,
-                    fontWeight: FontWeight.w600,
-                    color: context.hintColor,
+                  article.sourceName,
+                  style: GoogleFonts.dmSans(
+                    fontSize: 12,
+                    fontWeight: FontWeight.w800,
+                    color: _sourceColor(context),
                   ),
                 ),
+                const SizedBox(width: 5),
+                Text('·',
+                    style: TextStyle(
+                        color: context.hintColor, fontSize: 10)),
+                const SizedBox(width: 5),
+                Text(article.timeAgo,
+                    style: GoogleFonts.dmSans(
+                        fontSize: 11, color: context.hintColor)),
               ]),
-              const SizedBox(height: 5),
+              const SizedBox(height: 8),
               Text(
                 article.title,
-                maxLines: 3,
+                maxLines: 2,
                 overflow: TextOverflow.ellipsis,
-                style: GoogleFonts.poppins(
-                  fontSize: 14,
+                style: GoogleFonts.dmSans(
+                  fontSize: 17,
                   fontWeight: FontWeight.w700,
                   height: 1.35,
                   color: context.textColor,
                 ),
               ),
-              const SizedBox(height: 9),
+              const SizedBox(height: 12),
               Row(children: [
-                Flexible(
-                  child: Align(
-                    alignment: Alignment.centerLeft,
-                    child: CategoryTag(category: article.category, small: true),
+                Container(
+                  padding: const EdgeInsets.symmetric(
+                      horizontal: 10, vertical: 5),
+                  decoration: BoxDecoration(
+                    color: catColor.withValues(alpha: 0.12),
+                    borderRadius: BorderRadius.circular(999),
+                    border: Border.all(
+                        color: catColor.withValues(alpha: 0.25)),
                   ),
+                  child: Row(mainAxisSize: MainAxisSize.min, children: [
+                    Icon(_catIcon(), size: 11, color: catColor),
+                    const SizedBox(width: 4),
+                    Text(
+                      article.category.label,
+                      style: GoogleFonts.dmSans(
+                        fontSize: 11,
+                        fontWeight: FontWeight.w700,
+                        color: catColor,
+                      ),
+                    ),
+                  ]),
                 ),
                 const Spacer(),
-                Icon(Icons.chevron_right_rounded,
-                    size: 18, color: context.hintColor),
+                GestureDetector(
+                  onTap: () => Share.share(
+                      '${article.title}\n\n${article.url}'),
+                  child: Container(
+                    width: 34,
+                    height: 34,
+                    decoration: BoxDecoration(
+                      color: context.inputBg,
+                      borderRadius: BorderRadius.circular(10),
+                    ),
+                    child: Icon(Icons.share_rounded,
+                        color: context.hintColor, size: 16),
+                  ),
+                ),
               ]),
             ]),
           ),
@@ -3031,164 +4670,171 @@ class _HeadlineCard extends StatelessWidget {
       ),
     );
   }
-}
-
-class _HeadlineImage extends StatelessWidget {
-  final NewsArticle article;
-  final double? width;
-  final double height;
-  const _HeadlineImage({
-    required this.article,
-    this.width,
-    required this.height,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    final catColor = AppColors.categoryColor(article.category);
-    final hasImage = article.imageUrl != null && article.imageUrl!.isNotEmpty;
-    final resolvedWidth = width ?? double.infinity;
-    Widget placeholder = Container(
-      width: resolvedWidth,
-      height: height,
-      decoration: BoxDecoration(
-        gradient: LinearGradient(
-          colors: [
-            catColor.withValues(alpha: 0.76),
-            AppColors.categoryBg(article.category),
-          ],
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-        ),
-      ),
-      child: Icon(Icons.article_rounded,
-          size: min(height * 0.42, 42),
-          color: Colors.white.withValues(alpha: 0.38)),
-    );
-    return ClipRRect(
-      borderRadius: BorderRadius.circular(width == null ? 0 : 13),
-      child: hasImage
-          ? Image.network(
-              article.imageUrl!,
-              width: resolvedWidth,
-              height: height,
-              fit: BoxFit.cover,
-              errorBuilder: (_, __, ___) => placeholder,
-            )
-          : placeholder,
-    );
-  }
-}
-
-class _HeroStoryCard extends StatelessWidget {
-  final NewsArticle article;
-  final VoidCallback? onTap;
-  const _HeroStoryCard({required this.article, this.onTap});
 
   Widget _placeholder(Color catColor) => Container(
-        height: 200,
-        decoration: BoxDecoration(
-            gradient: LinearGradient(
-          colors: [
-            catColor.withValues(alpha: 0.6),
-            catColor.withValues(alpha: 0.2)
-          ],
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-        )),
+        width: double.infinity,
+        color: catColor.withValues(alpha: 0.15),
         child: Center(
-            child: Icon(Icons.article_rounded,
-                size: 64, color: Colors.white.withValues(alpha: 0.3))),
+          child: Icon(_catIcon(),
+              size: 48, color: catColor.withValues(alpha: 0.35)),
+        ),
       );
+}
+
+// ── RANKED ARTICLE BOTTOM SHEET ──────────────────────────────────────────────
+
+void _openRankedArticle(BuildContext ctx, RankedArticle article) {
+  showModalBottomSheet(
+    context: ctx,
+    isScrollControlled: true,
+    backgroundColor: Colors.transparent,
+    builder: (_) => _RankedArticleSheet(article: article),
+  );
+}
+
+class _RankedArticleSheet extends StatelessWidget {
+  final RankedArticle article;
+  const _RankedArticleSheet({required this.article});
 
   @override
   Widget build(BuildContext context) {
-    final catColor = AppColors.categoryColor(article.category);
-    final hasImage = article.imageUrl != null && article.imageUrl!.isNotEmpty;
-    return GestureDetector(
-        onTap: onTap,
-        child: BriefedCard(
-            padding: EdgeInsets.zero,
-            child:
-                Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-              ClipRRect(
-                borderRadius:
-                    const BorderRadius.vertical(top: Radius.circular(20)),
-                child: hasImage
-                    ? Image.network(article.imageUrl!,
-                        height: 200,
-                        width: double.infinity,
-                        fit: BoxFit.cover,
-                        errorBuilder: (_, __, ___) => _placeholder(catColor))
-                    : _placeholder(catColor),
+    final hasLink = article.url.isNotEmpty;
+    return Container(
+      padding: EdgeInsets.fromLTRB(
+          20, 12, 20, MediaQuery.of(context).viewInsets.bottom + 28),
+      decoration: BoxDecoration(
+        color: context.bgColor,
+        borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
+      ),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Center(
+            child: Container(
+              width: 40,
+              height: 4,
+              margin: const EdgeInsets.only(bottom: 16),
+              decoration: BoxDecoration(
+                color: context.borderColor,
+                borderRadius: BorderRadius.circular(2),
               ),
-              Padding(
-                  padding: const EdgeInsets.fromLTRB(14, 12, 14, 14),
-                  child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Row(children: [
-                          Container(
-                              width: 18,
-                              height: 18,
-                              decoration: BoxDecoration(
-                                  color: AppColors.categoryBg(article.category),
-                                  borderRadius: BorderRadius.circular(5)),
-                              child: Center(
-                                  child: Text(
-                                      article.sourceName
-                                          .substring(
-                                              0,
-                                              article.sourceName.length
-                                                  .clamp(0, 2))
-                                          .toUpperCase(),
-                                      style: GoogleFonts.poppins(
-                                          fontSize: 7,
-                                          fontWeight: FontWeight.w900,
-                                          color: catColor)))),
-                          const SizedBox(width: 6),
-                          Text(article.sourceName,
-                              style: GoogleFonts.poppins(
-                                  fontSize: 11,
-                                  fontWeight: FontWeight.w600,
-                                  color: context.hintColor)),
-                          const SizedBox(width: 4),
-                          Text('·',
-                              style: TextStyle(
-                                  color: context.hintColor, fontSize: 10)),
-                          const SizedBox(width: 4),
-                          Text(article.timeAgo,
-                              style: GoogleFonts.poppins(
-                                  fontSize: 11, color: context.hintColor)),
-                        ]),
-                        const SizedBox(height: 7),
-                        Text(article.title,
-                            style: GoogleFonts.poppins(
-                                fontSize: 15,
-                                fontWeight: FontWeight.w600,
-                                color: context.textColor,
-                                letterSpacing: 0.1,
-                                height: 1.55)),
-                        const SizedBox(height: 12),
-                        Row(children: [
-                          CategoryTag(category: article.category, small: true),
-                          const Spacer(),
-                          GestureDetector(
-                              onTap: () => Share.share(
-                                  '${article.title}\n\n${article.link}'),
-                              child: Container(
-                                  width: 32,
-                                  height: 32,
-                                  decoration: BoxDecoration(
-                                      color: context.inputBg,
-                                      borderRadius: BorderRadius.circular(10)),
-                                  child: Icon(Icons.share_rounded,
-                                      color: context.hintColor, size: 16))),
-                        ]),
-                      ])),
-            ])));
+            ),
+          ),
+          Row(children: [
+            _CategoryChip(article.category),
+            const SizedBox(width: 8),
+            Text(article.timeAgo,
+                style: GoogleFonts.dmSans(
+                    fontSize: 11, color: context.hintColor)),
+            const Spacer(),
+            Flexible(
+              child: Text(
+                article.sourceName,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: GoogleFonts.dmSans(
+                  fontSize: 11,
+                  fontWeight: FontWeight.w700,
+                  color: context.subColor,
+                ),
+              ),
+            ),
+          ]),
+          const SizedBox(height: 12),
+          Text(article.title,
+              style: GoogleFonts.dmSans(
+                fontSize: 18,
+                fontWeight: FontWeight.w700,
+                color: context.textColor,
+                height: 1.35,
+              )),
+          if (article.summary.isNotEmpty) ...[
+            const SizedBox(height: 10),
+            Text(article.summary,
+                style: GoogleFonts.roboto(
+                    fontSize: 14, color: context.subColor, height: 1.65)),
+          ],
+          const SizedBox(height: 20),
+          Row(children: [
+            GestureDetector(
+              onTap: () =>
+                  Share.share('${article.title}\n\n${article.url}'),
+              child: Container(
+                padding: const EdgeInsets.symmetric(
+                    horizontal: 20, vertical: 13),
+                decoration: BoxDecoration(
+                  color: context.inputBg,
+                  borderRadius: BorderRadius.circular(14),
+                ),
+                child: Row(children: [
+                  Icon(Icons.share_rounded,
+                      size: 16, color: context.subColor),
+                  const SizedBox(width: 6),
+                  Text('Share',
+                      style: GoogleFonts.dmSans(
+                        fontSize: 12,
+                        fontWeight: FontWeight.w600,
+                        color: context.subColor,
+                      )),
+                ]),
+              ),
+            ),
+            if (hasLink) ...[
+              const SizedBox(width: 10),
+              Expanded(
+                child: AccentButton(
+                  text: 'Read Full Story',
+                  icon: Icons.open_in_new_rounded,
+                  fontSize: 13,
+                  padding: const EdgeInsets.symmetric(vertical: 13),
+                  onTap: () => _launchUrl(article.url),
+                ),
+              ),
+            ],
+          ]),
+        ],
+      ),
+    );
   }
 }
+
+class _CategoryChip extends StatelessWidget {
+  final NewsCategory cat;
+  const _CategoryChip(this.cat);
+
+  Color _color() {
+    switch (cat) {
+      case NewsCategory.world:      return AppColors.blue;
+      case NewsCategory.politics:   return AppColors.purple;
+      case NewsCategory.sports:     return AppColors.green;
+      case NewsCategory.technology: return AppColors.teal;
+      case NewsCategory.business:   return AppColors.orange;
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final c = _color();
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+      decoration: BoxDecoration(
+        color: c.withValues(alpha: 0.12),
+        borderRadius: BorderRadius.circular(999),
+      ),
+      child: Text(
+        cat.label,
+        style: GoogleFonts.dmSans(
+          fontSize: 10,
+          fontWeight: FontWeight.w800,
+          color: c,
+          letterSpacing: 0.4,
+        ),
+      ),
+    );
+  }
+}
+
 
 void _openArticle(BuildContext ctx, NewsArticle article) {
   showModalBottomSheet(
@@ -3239,28 +4885,30 @@ class _ArticleSheet extends StatelessWidget {
             CategoryTag(category: article.category, small: true),
             const SizedBox(width: 8),
             Text(article.timeAgo,
-                style: GoogleFonts.poppins(
+                style: GoogleFonts.dmSans(
                     fontSize: 11, color: context.hintColor)),
             const Spacer(),
-            Text(article.sourceName,
-                style: GoogleFonts.poppins(
-                    fontSize: 11,
-                    fontWeight: FontWeight.w600,
-                    color: context.subColor)),
+            Flexible(
+                child: Text('Source: ${article.sourceName}',
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: GoogleFonts.dmSans(
+                        fontSize: 11,
+                        fontWeight: FontWeight.w600,
+                        color: context.subColor))),
           ]),
           const SizedBox(height: 12),
           Text(article.title,
-              style: GoogleFonts.poppins(
-                  fontSize: 16,
-                  fontWeight: FontWeight.w800,
+              style: GoogleFonts.dmSans(
+                  fontSize: 18,
+                  fontWeight: FontWeight.w700,
                   color: context.textColor,
-                  letterSpacing: -0.4,
                   height: 1.35)),
           if (article.description.isNotEmpty) ...[
             const SizedBox(height: 10),
             Text(article.description,
-                style: GoogleFonts.poppins(
-                    fontSize: 13, color: context.subColor, height: 1.6)),
+                style: GoogleFonts.roboto(
+                    fontSize: 14, color: context.subColor, height: 1.65)),
           ],
           const SizedBox(height: 20),
           Row(children: [
@@ -3276,7 +4924,7 @@ class _ArticleSheet extends StatelessWidget {
                   Icon(Icons.share_rounded, size: 16, color: context.subColor),
                   const SizedBox(width: 6),
                   Text('Share',
-                      style: GoogleFonts.poppins(
+                      style: GoogleFonts.dmSans(
                           fontSize: 12,
                           fontWeight: FontWeight.w600,
                           color: context.subColor)),
@@ -3347,7 +4995,7 @@ class _QuizPromoStrip extends ConsumerWidget {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                   Text('Test your knowledge',
-                      style: GoogleFonts.poppins(
+                      style: GoogleFonts.dmSans(
                           fontSize: 13,
                           fontWeight: FontWeight.w800,
                           color: context.textColor)),
@@ -3355,7 +5003,7 @@ class _QuizPromoStrip extends ConsumerWidget {
                       played
                           ? 'Come back tomorrow for a fresh quiz'
                           : '5 questions from today\'s top stories',
-                      style: GoogleFonts.poppins(
+                      style: GoogleFonts.dmSans(
                           fontSize: 11, color: context.subColor)),
                 ])),
             Container(
@@ -3372,7 +5020,7 @@ class _QuizPromoStrip extends ConsumerWidget {
                           offset: const Offset(0, 3))
                     ]),
                 child: Text(played ? 'View' : 'Start Quiz',
-                    style: GoogleFonts.poppins(
+                    style: GoogleFonts.dmSans(
                         fontSize: 11,
                         fontWeight: FontWeight.w800,
                         color: Colors.white))),
@@ -3399,7 +5047,7 @@ class GamesScreen extends StatelessWidget {
                           style: Theme.of(context).textTheme.headlineLarge),
                       const SizedBox(height: 4),
                       Text('Quick news games to sharpen your mind',
-                          style: GoogleFonts.poppins(
+                          style: GoogleFonts.dmSans(
                               fontSize: 13, color: context.subColor)),
                       const SizedBox(height: 24),
                       _GameCard(
@@ -3464,13 +5112,13 @@ class GamesScreen extends StatelessWidget {
                                         CrossAxisAlignment.start,
                                     children: [
                                   Text('More games coming soon',
-                                      style: GoogleFonts.poppins(
+                                      style: GoogleFonts.dmSans(
                                           fontSize: 13,
                                           fontWeight: FontWeight.w700,
                                           color: context.subColor)),
                                   Text(
                                       'Flash Headlines, News Connections & more',
-                                      style: GoogleFonts.poppins(
+                                      style: GoogleFonts.dmSans(
                                           fontSize: 11,
                                           color: context.hintColor)),
                                 ])),
@@ -3529,14 +5177,14 @@ class _GameCard extends StatelessWidget {
                           color: Colors.white.withValues(alpha: 0.2),
                           borderRadius: BorderRadius.circular(999)),
                       child: Text(tag,
-                          style: GoogleFonts.poppins(
+                          style: GoogleFonts.dmSans(
                               fontSize: 8,
                               fontWeight: FontWeight.w800,
                               color: Colors.white,
                               letterSpacing: 1.5))),
                   const SizedBox(height: 4),
                   Text(title,
-                      style: GoogleFonts.poppins(
+                      style: GoogleFonts.dmSans(
                           fontSize: 20,
                           fontWeight: FontWeight.w900,
                           color: Colors.white,
@@ -3545,7 +5193,7 @@ class _GameCard extends StatelessWidget {
               ]),
               const SizedBox(height: 14),
               Text(description,
-                  style: GoogleFonts.poppins(
+                  style: GoogleFonts.dmSans(
                       fontSize: 13,
                       color: Colors.white.withValues(alpha: 0.8),
                       height: 1.55)),
@@ -3560,7 +5208,7 @@ class _GameCard extends StatelessWidget {
                             color: Colors.white.withValues(alpha: 0.15),
                             borderRadius: BorderRadius.circular(999)),
                         child: Text(s,
-                            style: GoogleFonts.poppins(
+                            style: GoogleFonts.dmSans(
                                 fontSize: 9,
                                 fontWeight: FontWeight.w700,
                                 color: Colors.white))))),
@@ -3664,7 +5312,7 @@ class _RealOrFakeGameState extends State<RealOrFakeGame>
         backgroundColor: context.bgColor,
         appBar: AppBar(
             title: Text('Real or Fake?',
-                style: GoogleFonts.poppins(fontWeight: FontWeight.w800)),
+                style: GoogleFonts.dmSans(fontWeight: FontWeight.w800)),
             centerTitle: true,
             leading: BackButton(color: context.subColor),
             actions: [
@@ -3672,7 +5320,7 @@ class _RealOrFakeGameState extends State<RealOrFakeGame>
                   padding: const EdgeInsets.only(right: 16),
                   child: Center(
                       child: Text('${_index + 1}/$_rounds',
-                          style: GoogleFonts.poppins(
+                          style: GoogleFonts.dmSans(
                               fontSize: 13,
                               fontWeight: FontWeight.w700,
                               color: context.subColor))))
@@ -3700,14 +5348,14 @@ class _RealOrFakeGameState extends State<RealOrFakeGame>
           const SizedBox(height: 8),
           Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [
             Text('Round ${_index + 1} of $_rounds',
-                style: GoogleFonts.poppins(
+                style: GoogleFonts.dmSans(
                     fontSize: 10, color: context.hintColor)),
             Row(children: [
               const Icon(Icons.check_circle_rounded,
                   color: AppColors.green, size: 14),
               const SizedBox(width: 4),
               Text('$_score correct',
-                  style: GoogleFonts.poppins(
+                  style: GoogleFonts.dmSans(
                       fontSize: 10,
                       fontWeight: FontWeight.w700,
                       color: context.subColor))
@@ -3757,14 +5405,14 @@ class _RealOrFakeGameState extends State<RealOrFakeGame>
                             color: AppColors.blue.withValues(alpha: 0.1),
                             borderRadius: BorderRadius.circular(999)),
                         child: Text('HEADLINE',
-                            style: GoogleFonts.poppins(
+                            style: GoogleFonts.dmSans(
                                 fontSize: 9,
                                 fontWeight: FontWeight.w700,
                                 color: AppColors.blue,
                                 letterSpacing: 2))),
                     const SizedBox(height: 16),
                     Text(headline,
-                        style: GoogleFonts.poppins(
+                        style: GoogleFonts.dmSans(
                             fontSize: 17,
                             fontWeight: FontWeight.w700,
                             color: context.textColor,
@@ -3800,7 +5448,7 @@ class _RealOrFakeGameState extends State<RealOrFakeGame>
                                           correct
                                               ? 'Correct!'
                                               : 'This headline is ${isReal ? "REAL" : "FAKE"}',
-                                          style: GoogleFonts.poppins(
+                                          style: GoogleFonts.dmSans(
                                               fontSize: 12,
                                               fontWeight: FontWeight.w800,
                                               color: correct
@@ -3808,7 +5456,7 @@ class _RealOrFakeGameState extends State<RealOrFakeGame>
                                                   : AppColors.red)),
                                       const SizedBox(height: 3),
                                       Text(explanation,
-                                          style: GoogleFonts.poppins(
+                                          style: GoogleFonts.dmSans(
                                               fontSize: 11,
                                               color: context.subColor,
                                               height: 1.5)),
@@ -3819,7 +5467,7 @@ class _RealOrFakeGameState extends State<RealOrFakeGame>
           const Spacer(),
           if (!answered)
             Text('Is this headline real or fake?',
-                style: GoogleFonts.poppins(
+                style: GoogleFonts.dmSans(
                     fontSize: 12, color: context.hintColor)),
           const SizedBox(height: 16),
           Row(children: [
@@ -3879,7 +5527,7 @@ class _RealOrFakeGameState extends State<RealOrFakeGame>
           Text(emoji, style: const TextStyle(fontSize: 60)),
           const SizedBox(height: 10),
           Text(label.toUpperCase(),
-              style: GoogleFonts.poppins(
+              style: GoogleFonts.dmSans(
                   fontSize: 11,
                   fontWeight: FontWeight.w700,
                   color: color,
@@ -3889,7 +5537,7 @@ class _RealOrFakeGameState extends State<RealOrFakeGame>
               text: TextSpan(children: [
             TextSpan(
                 text: '$_score',
-                style: GoogleFonts.poppins(
+                style: GoogleFonts.dmSans(
                     fontSize: 88,
                     fontWeight: FontWeight.w900,
                     letterSpacing: -4,
@@ -3899,7 +5547,7 @@ class _RealOrFakeGameState extends State<RealOrFakeGame>
                           .createShader(const Rect.fromLTWH(0, 0, 100, 100)))),
             TextSpan(
                 text: '/$_rounds',
-                style: GoogleFonts.poppins(
+                style: GoogleFonts.dmSans(
                     fontSize: 36,
                     fontWeight: FontWeight.w800,
                     color: color.withValues(alpha: 0.7))),
@@ -3907,7 +5555,7 @@ class _RealOrFakeGameState extends State<RealOrFakeGame>
           const SizedBox(height: 6),
           Text('$pct% correct',
               style:
-                  GoogleFonts.poppins(fontSize: 13, color: context.subColor)),
+                  GoogleFonts.dmSans(fontSize: 13, color: context.subColor)),
           const Spacer(),
           const Center(child: BriefedBannerAd()),
           const SizedBox(height: 12),
@@ -3995,7 +5643,7 @@ class _VoteBtn extends StatelessWidget {
                       size: 28),
                   const SizedBox(height: 8),
                   Text(label,
-                      style: GoogleFonts.poppins(
+                      style: GoogleFonts.dmSans(
                           fontSize: 15,
                           fontWeight: FontWeight.w900,
                           color: tc)),
@@ -4076,7 +5724,7 @@ class _OldestToLatestGameState extends State<OldestToLatestGame> {
         backgroundColor: context.bgColor,
         appBar: AppBar(
             title: Text('Oldest to Latest',
-                style: GoogleFonts.poppins(fontWeight: FontWeight.w800)),
+                style: GoogleFonts.dmSans(fontWeight: FontWeight.w800)),
             centerTitle: true,
             leading: BackButton(color: context.subColor),
             actions: [
@@ -4084,7 +5732,7 @@ class _OldestToLatestGameState extends State<OldestToLatestGame> {
                   padding: const EdgeInsets.only(right: 16),
                   child: Center(
                       child: Text('$_roundNum/$_totalRounds',
-                          style: GoogleFonts.poppins(
+                          style: GoogleFonts.dmSans(
                               fontSize: 13,
                               fontWeight: FontWeight.w700,
                               color: context.subColor))))
@@ -4106,7 +5754,7 @@ class _OldestToLatestGameState extends State<OldestToLatestGame> {
           const SizedBox(height: 16),
           Text('Round $_roundNum of $_totalRounds',
               style:
-                  GoogleFonts.poppins(fontSize: 10, color: context.hintColor)),
+                  GoogleFonts.dmSans(fontSize: 10, color: context.hintColor)),
           const SizedBox(height: 4),
           Text(
               _submitted
@@ -4114,7 +5762,7 @@ class _OldestToLatestGameState extends State<OldestToLatestGame> {
                       ? 'Correct order! 🎉'
                       : 'Not quite — here\'s the right order:')
                   : 'Sort oldest → most recent',
-              style: GoogleFonts.poppins(
+              style: GoogleFonts.dmSans(
                   fontSize: 18,
                   fontWeight: FontWeight.w800,
                   color: _submitted
@@ -4124,7 +5772,7 @@ class _OldestToLatestGameState extends State<OldestToLatestGame> {
             const SizedBox(height: 4),
             Text('Drag to reorder the events by when they happened',
                 style:
-                    GoogleFonts.poppins(fontSize: 12, color: context.subColor))
+                    GoogleFonts.dmSans(fontSize: 12, color: context.subColor))
           ],
           const SizedBox(height: 12),
           const Center(child: BriefedBannerAd()),
@@ -4211,7 +5859,7 @@ class _OldestToLatestGameState extends State<OldestToLatestGame> {
           Text(emoji, style: const TextStyle(fontSize: 60)),
           const SizedBox(height: 10),
           Text(label.toUpperCase(),
-              style: GoogleFonts.poppins(
+              style: GoogleFonts.dmSans(
                   fontSize: 11,
                   fontWeight: FontWeight.w700,
                   color: color,
@@ -4221,7 +5869,7 @@ class _OldestToLatestGameState extends State<OldestToLatestGame> {
               text: TextSpan(children: [
             TextSpan(
                 text: '$_score',
-                style: GoogleFonts.poppins(
+                style: GoogleFonts.dmSans(
                     fontSize: 88,
                     fontWeight: FontWeight.w900,
                     letterSpacing: -4,
@@ -4231,7 +5879,7 @@ class _OldestToLatestGameState extends State<OldestToLatestGame> {
                           .createShader(const Rect.fromLTWH(0, 0, 100, 100)))),
             TextSpan(
                 text: '/$_totalRounds',
-                style: GoogleFonts.poppins(
+                style: GoogleFonts.dmSans(
                     fontSize: 36,
                     fontWeight: FontWeight.w800,
                     color: color.withValues(alpha: 0.7))),
@@ -4239,7 +5887,7 @@ class _OldestToLatestGameState extends State<OldestToLatestGame> {
           const SizedBox(height: 6),
           Text('$pct% rounds correct',
               style:
-                  GoogleFonts.poppins(fontSize: 13, color: context.subColor)),
+                  GoogleFonts.dmSans(fontSize: 13, color: context.subColor)),
           const Spacer(),
           const Center(child: BriefedBannerAd()),
           const SizedBox(height: 12),
@@ -4317,7 +5965,7 @@ class _EventCard extends StatelessWidget {
               child: Center(
                   child: isCorrect == null
                       ? Text('${index + 1}',
-                          style: GoogleFonts.poppins(
+                          style: GoogleFonts.dmSans(
                               fontSize: 14,
                               fontWeight: FontWeight.w900,
                               color: color))
@@ -4333,7 +5981,7 @@ class _EventCard extends StatelessWidget {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                 Text(event,
-                    style: GoogleFonts.poppins(
+                    style: GoogleFonts.dmSans(
                         fontSize: 13,
                         fontWeight: FontWeight.w700,
                         color: context.textColor,
@@ -4341,7 +5989,7 @@ class _EventCard extends StatelessWidget {
                 if (showYear && year != null) ...[
                   const SizedBox(height: 3),
                   Text(detail ?? '$year',
-                      style: GoogleFonts.poppins(
+                      style: GoogleFonts.dmSans(
                           fontSize: 10, color: context.hintColor))
                 ],
               ])),
@@ -4354,7 +6002,7 @@ class _EventCard extends StatelessWidget {
                         .withValues(alpha: 0.12),
                     borderRadius: BorderRadius.circular(999)),
                 child: Text('$year',
-                    style: GoogleFonts.poppins(
+                    style: GoogleFonts.dmSans(
                         fontSize: 12,
                         fontWeight: FontWeight.w800,
                         color: isCorrect! ? AppColors.green : AppColors.red))),
@@ -4393,6 +6041,7 @@ class _QuizScreenState extends ConsumerState<QuizScreen> {
         forceRefresh: args?['forceRefresh'] == true,
         bonusRound: args?['bonusRound'] == true,
         replaySeed: args?['replaySeed'] as int?,
+        categoryFilter: args?['categoryFilter'] as String?,
       );
     });
   }
@@ -4411,6 +6060,7 @@ class _QuizScreenState extends ConsumerState<QuizScreen> {
     bool forceRefresh = false,
     bool bonusRound = false,
     int? replaySeed,
+    String? categoryFilter,
   }) async {
     final news = ref.read(newsProvider);
     await ref.read(quizProvider.notifier).startQuiz(
@@ -4418,6 +6068,7 @@ class _QuizScreenState extends ConsumerState<QuizScreen> {
           forceRefresh: forceRefresh,
           bonusRound: bonusRound,
           replaySeed: replaySeed,
+          categoryFilter: categoryFilter,
         );
   }
 
@@ -4537,10 +6188,10 @@ class _QuizScreenState extends ConsumerState<QuizScreen> {
                 color: AppColors.accent, size: 30)),
         const SizedBox(height: 16),
         Text('Generating today\'s quiz...',
-            style: GoogleFonts.poppins(fontSize: 14, color: context.subColor)),
+            style: GoogleFonts.dmSans(fontSize: 14, color: context.subColor)),
         const SizedBox(height: 8),
         Text('Powered by AI',
-            style: GoogleFonts.poppins(fontSize: 11, color: context.hintColor)),
+            style: GoogleFonts.dmSans(fontSize: 11, color: context.hintColor)),
         const SizedBox(height: 20),
         const SizedBox(
             width: 24,
@@ -4568,7 +6219,7 @@ class _QuizScreenState extends ConsumerState<QuizScreen> {
                     border: Border.all(
                         color: AppColors.red.withValues(alpha: 0.2))),
                 child: Text(msg,
-                    style: GoogleFonts.poppins(
+                    style: GoogleFonts.dmSans(
                         fontSize: 11, color: context.subColor, height: 1.6))),
             const SizedBox(height: 20),
             AccentButton(
@@ -4618,7 +6269,7 @@ class _QuizScreenState extends ConsumerState<QuizScreen> {
                             .withValues(alpha: 0.35))),
                 child: Text(
                     q.difficulty[0].toUpperCase() + q.difficulty.substring(1),
-                    style: GoogleFonts.poppins(
+                    style: GoogleFonts.dmSans(
                         fontSize: 9,
                         fontWeight: FontWeight.w700,
                         color: q.isEasy ? AppColors.green : AppColors.orange))),
@@ -4650,12 +6301,12 @@ class _QuizScreenState extends ConsumerState<QuizScreen> {
                       const SizedBox(width: 10),
                       Text(
                           '${quiz.currentIndex + 1} of ${quiz.questions.length}',
-                          style: GoogleFonts.poppins(
+                          style: GoogleFonts.dmSans(
                               fontSize: 11, color: context.hintColor))
                     ]),
                     const SizedBox(height: 16),
                     Text(q.question,
-                        style: GoogleFonts.poppins(
+                        style: GoogleFonts.dmSans(
                             fontSize: 19,
                             fontWeight: FontWeight.w800,
                             color: context.textColor,
@@ -4703,7 +6354,7 @@ class _QuizScreenState extends ConsumerState<QuizScreen> {
                                           color: AppColors.accent, size: 15),
                                       const SizedBox(width: 8),
                                       Text('STORY BEHIND THIS',
-                                          style: GoogleFonts.poppins(
+                                          style: GoogleFonts.dmSans(
                                               fontSize: 9,
                                               fontWeight: FontWeight.w700,
                                               color: AppColors.accent,
@@ -4716,14 +6367,14 @@ class _QuizScreenState extends ConsumerState<QuizScreen> {
                                             CrossAxisAlignment.start,
                                         children: [
                                           Text(q.storySummary,
-                                              style: GoogleFonts.poppins(
+                                              style: GoogleFonts.dmSans(
                                                   fontSize: 12,
                                                   color: context.subColor,
                                                   height: 1.7)),
                                           const SizedBox(height: 8),
                                           Row(children: [
                                             Text(q.source,
-                                                style: GoogleFonts.poppins(
+                                                style: GoogleFonts.dmSans(
                                                     fontSize: 10,
                                                     color: context.hintColor)),
                                             Text(' · ',
@@ -4731,7 +6382,7 @@ class _QuizScreenState extends ConsumerState<QuizScreen> {
                                                     color: context.hintColor,
                                                     fontSize: 10)),
                                             Text('Read full story',
-                                                style: GoogleFonts.poppins(
+                                                style: GoogleFonts.dmSans(
                                                     fontSize: 10,
                                                     fontWeight: FontWeight.w700,
                                                     color: AppColors.accent))
@@ -4811,7 +6462,7 @@ class _QuizTimerBar extends StatelessWidget {
                   const SizedBox(width: 7),
                   Text(
                     answered ? 'Answered' : '$timeLeft',
-                    style: GoogleFonts.poppins(
+                    style: GoogleFonts.dmSans(
                         fontSize: 16,
                         fontWeight: FontWeight.w800,
                         color: color),
@@ -4819,7 +6470,7 @@ class _QuizTimerBar extends StatelessWidget {
                   if (!answered) ...[
                     const SizedBox(width: 2),
                     Text('sec',
-                        style: GoogleFonts.poppins(
+                        style: GoogleFonts.dmSans(
                             fontSize: 11,
                             fontWeight: FontWeight.w600,
                             color: color.withValues(alpha: 0.8))),
@@ -5131,7 +6782,7 @@ class _ResultScreenState extends ConsumerState<ResultScreen>
                                     style: const TextStyle(fontSize: 46)),
                                 const SizedBox(height: 2),
                                 Text(result.performanceLabel.toUpperCase(),
-                                    style: GoogleFonts.poppins(
+                                    style: GoogleFonts.dmSans(
                                         fontSize: 11,
                                         fontWeight: FontWeight.w700,
                                         color: sc,
@@ -5145,7 +6796,7 @@ class _ResultScreenState extends ConsumerState<ResultScreen>
                                       text: TextSpan(children: [
                                     TextSpan(
                                         text: '$v',
-                                        style: GoogleFonts.poppins(
+                                        style: GoogleFonts.dmSans(
                                             fontSize: 86,
                                             fontWeight: FontWeight.w900,
                                             letterSpacing: -5,
@@ -5159,7 +6810,7 @@ class _ResultScreenState extends ConsumerState<ResultScreen>
                                                       0, 0, 100, 100)))),
                                     TextSpan(
                                         text: '/$total',
-                                        style: GoogleFonts.poppins(
+                                        style: GoogleFonts.dmSans(
                                             fontSize: 36,
                                             fontWeight: FontWeight.w800,
                                             color: sc.withValues(alpha: 0.8))),
@@ -5183,7 +6834,7 @@ class _ResultScreenState extends ConsumerState<ResultScreen>
                                                 AlwaysStoppedAnimation(sc)))),
                                 const SizedBox(height: 6),
                                 Text('${result.percentageString} correct',
-                                    style: GoogleFonts.poppins(
+                                    style: GoogleFonts.dmSans(
                                         fontSize: 11,
                                         fontWeight: FontWeight.w600,
                                         color: Colors.black.withValues(
@@ -5217,6 +6868,11 @@ class _ResultScreenState extends ConsumerState<ResultScreen>
                                 color: AppColors.purple)),
                       ]),
                       const SizedBox(height: 14),
+                      if (kIsWeb &&
+                          MediaQuery.of(context).size.width >= 700) ...[
+                        const WebAdPlaceholder(label: 'Quiz results ad'),
+                        const SizedBox(height: 14),
+                      ],
                       Screenshot(
                           controller: _screenshotCtrl,
                           child: _ShareCard(
@@ -5251,7 +6907,7 @@ class _ResultScreenState extends ConsumerState<ResultScreen>
                                         size: 16),
                                     const SizedBox(width: 8),
                                     Text("Today's Hot Take",
-                                        style: GoogleFonts.poppins(
+                                        style: GoogleFonts.dmSans(
                                             fontSize: 14,
                                             fontWeight: FontWeight.w700,
                                             color: AppColors.purple)),
@@ -5305,7 +6961,7 @@ class _AnswerReviewCard extends StatelessWidget {
                     color: AppColors.blue, size: 18)),
             const SizedBox(width: 10),
             Text('Review Answers',
-                style: GoogleFonts.poppins(
+                style: GoogleFonts.dmSans(
                     fontSize: 14,
                     fontWeight: FontWeight.w800,
                     color: context.textColor)),
@@ -5348,7 +7004,7 @@ class _AnswerReviewCard extends StatelessWidget {
                     title: Text('Q${index + 1}. ${question.question}',
                         maxLines: 2,
                         overflow: TextOverflow.ellipsis,
-                        style: GoogleFonts.poppins(
+                        style: GoogleFonts.dmSans(
                             fontSize: 12,
                             fontWeight: FontWeight.w700,
                             color: context.textColor)),
@@ -5358,7 +7014,7 @@ class _AnswerReviewCard extends StatelessWidget {
                             : 'Your answer: $selectedLabel',
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
-                        style: GoogleFonts.poppins(
+                        style: GoogleFonts.dmSans(
                             fontSize: 10,
                             fontWeight: FontWeight.w600,
                             color: color)),
@@ -5406,13 +7062,13 @@ class _ReviewLine extends StatelessWidget {
           SizedBox(
               width: 86,
               child: Text(label,
-                  style: GoogleFonts.poppins(
+                  style: GoogleFonts.dmSans(
                       fontSize: 10,
                       fontWeight: FontWeight.w700,
                       color: context.hintColor))),
           Expanded(
               child: Text(value,
-                  style: GoogleFonts.poppins(
+                  style: GoogleFonts.dmSans(
                       fontSize: 11,
                       fontWeight: FontWeight.w700,
                       color: color))),
@@ -5446,14 +7102,14 @@ class _ReviewParagraph extends StatelessWidget {
                 Icon(icon, size: 14, color: AppColors.accent),
                 const SizedBox(width: 6),
                 Text(title,
-                    style: GoogleFonts.poppins(
+                    style: GoogleFonts.dmSans(
                         fontSize: 10,
                         fontWeight: FontWeight.w800,
                         color: context.textColor)),
               ]),
               const SizedBox(height: 4),
               Text(text,
-                  style: GoogleFonts.sourceSans3(
+                  style: GoogleFonts.roboto(
                       fontSize: 12, color: context.subColor, height: 1.35)),
             ])));
   }
@@ -5489,7 +7145,7 @@ class _ShareCard extends StatelessWidget {
                       children: [
                         Row(children: [
                           Text('Briefed.',
-                              style: GoogleFonts.poppins(
+                              style: GoogleFonts.dmSans(
                                   fontSize: 14,
                                   fontWeight: FontWeight.w900,
                                   color: Colors.white)),
@@ -5518,7 +7174,7 @@ class _ShareCard extends StatelessWidget {
                         ]),
                         const SizedBox(height: 10),
                         Text('$score/$total — ${result.performanceLabel}',
-                            style: GoogleFonts.poppins(
+                            style: GoogleFonts.dmSans(
                                 fontSize: 22,
                                 fontWeight: FontWeight.w900,
                                 color: Colors.white,
@@ -5526,7 +7182,7 @@ class _ShareCard extends StatelessWidget {
                         const SizedBox(height: 4),
                         Text(
                             '${result.pointsEarned} points · ${result.percentageString} correct',
-                            style: GoogleFonts.poppins(
+                            style: GoogleFonts.dmSans(
                                 fontSize: 11,
                                 color: Colors.white.withValues(alpha: 0.75))),
                       ])),
@@ -5535,19 +7191,19 @@ class _ShareCard extends StatelessWidget {
                   padding: const EdgeInsets.fromLTRB(18, 12, 18, 14),
                   child: Row(children: [
                     Text('#Briefed',
-                        style: GoogleFonts.poppins(
+                        style: GoogleFonts.dmSans(
                             fontSize: 11,
                             fontWeight: FontWeight.w700,
                             color: AppColors.accent)),
                     const SizedBox(width: 8),
                     Text('#StaySharp',
-                        style: GoogleFonts.poppins(
+                        style: GoogleFonts.dmSans(
                             fontSize: 11,
                             fontWeight: FontWeight.w700,
                             color: AppColors.accent)),
                     const Spacer(),
                     Text('briefedapp.com',
-                        style: GoogleFonts.poppins(
+                        style: GoogleFonts.dmSans(
                             fontSize: 10, color: context.hintColor)),
                   ])),
             ])));
@@ -5577,7 +7233,7 @@ class HotTakeScreen extends ConsumerWidget {
             child: Column(children: [
               const SizedBox(height: 20),
               Text(ht.question,
-                  style: GoogleFonts.poppins(
+                  style: GoogleFonts.dmSans(
                       fontSize: 20,
                       fontWeight: FontWeight.w800,
                       color: context.textColor,
@@ -5620,7 +7276,7 @@ class HotTakeScreen extends ConsumerWidget {
                             ht.total == 0
                                 ? 'Be the first to vote!'
                                 : '${_fmt(ht.total)} votes',
-                            style: GoogleFonts.poppins(
+                            style: GoogleFonts.dmSans(
                                 fontSize: 9,
                                 fontWeight: FontWeight.w700,
                                 color: context.hintColor,
@@ -5711,7 +7367,7 @@ class _VoteButton extends StatelessWidget {
                       color: isVoted ? color : context.hintColor, size: 26)),
               const SizedBox(height: 10),
               Text(label,
-                  style: GoogleFonts.poppins(
+                  style: GoogleFonts.dmSans(
                       fontSize: 18,
                       fontWeight: FontWeight.w900,
                       color: isVoted ? color : context.subColor)),
@@ -5730,13 +7386,13 @@ class _ResultBar extends StatelessWidget {
     return Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
       Row(children: [
         Text(label,
-            style: GoogleFonts.poppins(
+            style: GoogleFonts.dmSans(
                 fontSize: 12,
                 fontWeight: FontWeight.w700,
                 color: context.subColor)),
         const Spacer(),
         Text('$percent%',
-            style: GoogleFonts.poppins(
+            style: GoogleFonts.dmSans(
                 fontSize: 16, fontWeight: FontWeight.w900, color: color)),
       ]),
       const SizedBox(height: 6),
@@ -5902,7 +7558,7 @@ class ProfileScreen extends ConsumerWidget {
                                   style:
                                       Theme.of(context).textTheme.titleLarge),
                               Text('${user.totalQuizzes} quizzes completed',
-                                  style: GoogleFonts.sourceSans3(
+                                  style: GoogleFonts.roboto(
                                       fontSize: 11, color: context.hintColor)),
                             ])),
                         GestureDetector(
@@ -5934,7 +7590,7 @@ class ProfileScreen extends ConsumerWidget {
                                 Expanded(
                                     child: Text(
                                         'Sign in to sync your progress across devices',
-                                        style: GoogleFonts.sourceSans3(
+                                        style: GoogleFonts.roboto(
                                             fontSize: 12,
                                             fontWeight: FontWeight.w600,
                                             color: AppColors.blue))),
@@ -5983,14 +7639,14 @@ class ProfileScreen extends ConsumerWidget {
                                             CrossAxisAlignment.start,
                                         children: [
                                       Text('AVG SCORE',
-                                          style: GoogleFonts.sourceSans3(
+                                          style: GoogleFonts.roboto(
                                               fontSize: 9,
                                               fontWeight: FontWeight.w700,
                                               color: context.hintColor,
                                               letterSpacing: 1.5)),
                                       const SizedBox(height: 4),
                                       Text('${(avgPct * 100).round()}%',
-                                          style: GoogleFonts.playfairDisplay(
+                                          style: GoogleFonts.dmSans(
                                               fontSize: 28,
                                               fontWeight: FontWeight.w900,
                                               color: avgPct >= 0.8
@@ -6000,7 +7656,7 @@ class ProfileScreen extends ConsumerWidget {
                                                       : AppColors.red)),
                                       Text(
                                           'across ${results.length} quiz${results.length == 1 ? '' : 'zes'}',
-                                          style: GoogleFonts.sourceSans3(
+                                          style: GoogleFonts.roboto(
                                               fontSize: 10,
                                               color: context.hintColor)),
                                     ])),
@@ -6011,7 +7667,7 @@ class ProfileScreen extends ConsumerWidget {
                                           CrossAxisAlignment.end,
                                       children: [
                                         Text('TREND',
-                                            style: GoogleFonts.sourceSans3(
+                                            style: GoogleFonts.roboto(
                                                 fontSize: 9,
                                                 fontWeight: FontWeight.w700,
                                                 color: context.hintColor,
@@ -6035,7 +7691,7 @@ class ProfileScreen extends ConsumerWidget {
                                 crossAxisAlignment: CrossAxisAlignment.start,
                                 children: [
                               Text('THIS WEEK',
-                                  style: GoogleFonts.sourceSans3(
+                                  style: GoogleFonts.roboto(
                                       fontSize: 9,
                                       fontWeight: FontWeight.w700,
                                       color: context.hintColor,
@@ -6059,7 +7715,7 @@ class ProfileScreen extends ConsumerWidget {
                             style: Theme.of(context).textTheme.titleMedium),
                         const Spacer(),
                         Text('Global',
-                            style: GoogleFonts.sourceSans3(
+                            style: GoogleFonts.roboto(
                                 fontSize: 9,
                                 fontWeight: FontWeight.w700,
                                 color: AppColors.accent)),
@@ -6072,7 +7728,7 @@ class ProfileScreen extends ConsumerWidget {
                               size: 32, color: AppColors.accent),
                           const SizedBox(height: 8),
                           Text('Sign in to see the global leaderboard',
-                              style: GoogleFonts.sourceSans3(
+                              style: GoogleFonts.roboto(
                                   fontSize: 13,
                                   fontWeight: FontWeight.w600,
                                   color: context.subColor),
@@ -6088,7 +7744,7 @@ class ProfileScreen extends ConsumerWidget {
                                   color: AppColors.accent,
                                   borderRadius: BorderRadius.circular(12)),
                               child: Text('Sign In',
-                                  style: GoogleFonts.sourceSans3(
+                                  style: GoogleFonts.roboto(
                                       fontSize: 13,
                                       fontWeight: FontWeight.w700,
                                       color: Colors.white)),
@@ -6136,7 +7792,7 @@ class ProfileScreen extends ConsumerWidget {
                           error: (_, __) => BriefedCard(
                               child: Center(
                                   child: Text('Could not load leaderboard',
-                                      style: GoogleFonts.sourceSans3(
+                                      style: GoogleFonts.roboto(
                                           fontSize: 12,
                                           color: context.hintColor)))),
                           data: (entries) {
@@ -6145,7 +7801,7 @@ class ProfileScreen extends ConsumerWidget {
                                   child: Center(
                                       child: Text(
                                           'No scores yet — play a quiz!',
-                                          style: GoogleFonts.sourceSans3(
+                                          style: GoogleFonts.roboto(
                                               fontSize: 12,
                                               color: context.hintColor))));
                             }
@@ -6218,20 +7874,20 @@ class ProfileScreen extends ConsumerWidget {
                                       Text(
                                           e.key[0].toUpperCase() +
                                               e.key.substring(1),
-                                          style: GoogleFonts.sourceSans3(
+                                          style: GoogleFonts.roboto(
                                               fontSize: 12,
                                               fontWeight: FontWeight.w700,
                                               color: context.subColor)),
                                       const Spacer(),
                                       Text('${(stat.accuracy * 100).round()}%',
-                                          style: GoogleFonts.sourceSans3(
+                                          style: GoogleFonts.roboto(
                                               fontSize: 13,
                                               fontWeight: FontWeight.w800,
                                               color: color)),
                                     ]),
                                     const SizedBox(height: 2),
                                     Text(stat.label,
-                                        style: GoogleFonts.sourceSans3(
+                                        style: GoogleFonts.roboto(
                                             fontSize: 10,
                                             fontWeight: FontWeight.w600,
                                             color: context.hintColor)),
@@ -6292,7 +7948,7 @@ class ProfileScreen extends ConsumerWidget {
                                           CrossAxisAlignment.start,
                                       children: [
                                     Text('STREAK CALENDAR',
-                                        style: GoogleFonts.sourceSans3(
+                                        style: GoogleFonts.roboto(
                                             fontSize: 9,
                                             fontWeight: FontWeight.w800,
                                             color: context.hintColor,
@@ -6302,7 +7958,7 @@ class ProfileScreen extends ConsumerWidget {
                                         user.streak > 0
                                             ? '${user.streak} day flame is alive'
                                             : 'Start your flame today',
-                                        style: GoogleFonts.sourceSans3(
+                                        style: GoogleFonts.roboto(
                                             fontSize: 15,
                                             fontWeight: FontWeight.w800,
                                             color: context.textColor)),
@@ -6318,7 +7974,7 @@ class ProfileScreen extends ConsumerWidget {
                                           color: AppColors.accent
                                               .withValues(alpha: 0.22))),
                                   child: Text('$activeDays/35',
-                                      style: GoogleFonts.sourceSans3(
+                                      style: GoogleFonts.roboto(
                                           fontSize: 12,
                                           fontWeight: FontWeight.w900,
                                           color: AppColors.accent))),
@@ -6337,7 +7993,7 @@ class ProfileScreen extends ConsumerWidget {
                                 children: ['M', 'T', 'W', 'T', 'F', 'S', 'S']
                                     .map((d) => Expanded(
                                         child: Text(d,
-                                            style: GoogleFonts.sourceSans3(
+                                            style: GoogleFonts.roboto(
                                                 fontSize: 9,
                                                 fontWeight: FontWeight.w800,
                                                 color: context.hintColor),
@@ -6359,7 +8015,7 @@ class ProfileScreen extends ConsumerWidget {
                             const SizedBox(height: 12),
                             Row(children: [
                               Text('Less',
-                                  style: GoogleFonts.sourceSans3(
+                                  style: GoogleFonts.roboto(
                                       fontSize: 10, color: context.hintColor)),
                               const SizedBox(width: 6),
                               ...[0.18, 0.34, 0.52, 0.72].map((a) => Container(
@@ -6372,11 +8028,11 @@ class ProfileScreen extends ConsumerWidget {
                                       borderRadius:
                                           BorderRadius.circular(999)))),
                               Text('More',
-                                  style: GoogleFonts.sourceSans3(
+                                  style: GoogleFonts.roboto(
                                       fontSize: 10, color: context.hintColor)),
                               const Spacer(),
                               Text('Last 5 weeks',
-                                  style: GoogleFonts.sourceSans3(
+                                  style: GoogleFonts.roboto(
                                       fontSize: 10,
                                       fontWeight: FontWeight.w700,
                                       color: context.hintColor)),
@@ -6396,7 +8052,7 @@ class ProfileScreen extends ConsumerWidget {
                                           CrossAxisAlignment.start,
                                       children: [
                                     Text('BADGES',
-                                        style: GoogleFonts.sourceSans3(
+                                        style: GoogleFonts.roboto(
                                             fontSize: 9,
                                             fontWeight: FontWeight.w800,
                                             color: context.hintColor,
@@ -6404,7 +8060,7 @@ class ProfileScreen extends ConsumerWidget {
                                     const SizedBox(height: 2),
                                     Text(
                                         '${_earnedBadgeCount(user)} of 5 unlocked',
-                                        style: GoogleFonts.sourceSans3(
+                                        style: GoogleFonts.roboto(
                                             fontSize: 13,
                                             fontWeight: FontWeight.w800,
                                             color: context.textColor)),
@@ -6428,7 +8084,7 @@ class ProfileScreen extends ConsumerWidget {
                                             size: 14),
                                         const SizedBox(width: 5),
                                         Text('Milestones',
-                                            style: GoogleFonts.sourceSans3(
+                                            style: GoogleFonts.roboto(
                                                 fontSize: 11,
                                                 fontWeight: FontWeight.w800,
                                                 color: AppColors.gold)),
@@ -6498,7 +8154,7 @@ class ProfileScreen extends ConsumerWidget {
                                             CrossAxisAlignment.start,
                                         children: [
                                       Text('RECENT QUIZZES',
-                                          style: GoogleFonts.sourceSans3(
+                                          style: GoogleFonts.roboto(
                                               fontSize: 9,
                                               fontWeight: FontWeight.w800,
                                               color: context.hintColor,
@@ -6506,13 +8162,13 @@ class ProfileScreen extends ConsumerWidget {
                                       const SizedBox(height: 2),
                                       Text(
                                           'Last ${user.recentResults.take(5).length} attempts',
-                                          style: GoogleFonts.sourceSans3(
+                                          style: GoogleFonts.roboto(
                                               fontSize: 13,
                                               fontWeight: FontWeight.w800,
                                               color: context.textColor)),
                                     ])),
                                 Text('${(avgPct * 100).round()}% avg',
-                                    style: GoogleFonts.sourceSans3(
+                                    style: GoogleFonts.roboto(
                                         fontSize: 12,
                                         fontWeight: FontWeight.w800,
                                         color: AppColors.accent)),
@@ -6547,7 +8203,7 @@ class ProfileScreen extends ConsumerWidget {
         SizedBox(
             width: 28,
             child: Text(rankLabel,
-                style: GoogleFonts.sourceSans3(
+                style: GoogleFonts.roboto(
                     fontSize: 14,
                     color:
                         rankLabel == '🥇' ? AppColors.gold : context.hintColor),
@@ -6569,7 +8225,7 @@ class ProfileScreen extends ConsumerWidget {
             child:
                 Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
           Text(entry.isYou ? '${entry.name} (you)' : entry.name,
-              style: GoogleFonts.sourceSans3(
+              style: GoogleFonts.roboto(
                   fontSize: 13,
                   fontWeight: FontWeight.w700,
                   color: entry.isYou ? AppColors.accent : context.textColor)),
@@ -6578,18 +8234,18 @@ class ProfileScreen extends ConsumerWidget {
                 color: AppColors.orange, size: 11),
             const SizedBox(width: 3),
             Text('${entry.streak} day streak',
-                style: GoogleFonts.sourceSans3(
+                style: GoogleFonts.roboto(
                     fontSize: 10, color: context.hintColor))
           ]),
         ])),
         Column(crossAxisAlignment: CrossAxisAlignment.end, children: [
           Text(_fmt(entry.score),
-              style: GoogleFonts.sourceSans3(
+              style: GoogleFonts.roboto(
                   fontSize: 14,
                   fontWeight: FontWeight.w800,
                   color: entry.isYou ? AppColors.accent : context.textColor)),
           Text('pts',
-              style: GoogleFonts.sourceSans3(
+              style: GoogleFonts.roboto(
                   fontSize: 9, color: context.hintColor)),
         ]),
       ]),
@@ -6601,12 +8257,12 @@ class ProfileScreen extends ConsumerWidget {
     return Expanded(
         child: Column(children: [
       Text(value,
-          style: GoogleFonts.playfairDisplay(
+          style: GoogleFonts.dmSans(
               fontSize: 22, fontWeight: FontWeight.w900, color: color)),
       const SizedBox(height: 2),
       Text(label,
           style:
-              GoogleFonts.sourceSans3(fontSize: 10, color: context.hintColor),
+              GoogleFonts.roboto(fontSize: 10, color: context.hintColor),
           textAlign: TextAlign.center),
     ]));
   }
@@ -6623,10 +8279,10 @@ class ProfileScreen extends ConsumerWidget {
                 border: Border.all(color: color.withValues(alpha: 0.18))),
             child: Column(children: [
               Text(value,
-                  style: GoogleFonts.sourceSans3(
+                  style: GoogleFonts.roboto(
                       fontSize: 18, fontWeight: FontWeight.w900, color: color)),
               Text(label,
-                  style: GoogleFonts.sourceSans3(
+                  style: GoogleFonts.roboto(
                       fontSize: 9,
                       fontWeight: FontWeight.w700,
                       color: context.hintColor)),
@@ -6679,19 +8335,19 @@ class ProfileScreen extends ConsumerWidget {
                 Row(children: [
                   Expanded(
                       child: Text(label,
-                          style: GoogleFonts.sourceSans3(
+                          style: GoogleFonts.roboto(
                               fontSize: 13,
                               fontWeight: FontWeight.w900,
                               color: earned ? ctx.textColor : ctx.subColor))),
                   Text(earned ? 'Unlocked' : '$clamped/$target',
-                      style: GoogleFonts.sourceSans3(
+                      style: GoogleFonts.roboto(
                           fontSize: 10,
                           fontWeight: FontWeight.w800,
                           color: earned ? color : ctx.hintColor)),
                 ]),
                 const SizedBox(height: 2),
                 Text(description,
-                    style: GoogleFonts.sourceSans3(
+                    style: GoogleFonts.roboto(
                         fontSize: 10, color: ctx.hintColor, height: 1.25)),
                 const SizedBox(height: 7),
                 ClipRRect(
@@ -6792,7 +8448,7 @@ class _StreakCalendarTile extends StatelessWidget {
                       size: 13,
                       color: Colors.white)
                   : Text(label,
-                      style: GoogleFonts.sourceSans3(
+                      style: GoogleFonts.roboto(
                           fontSize: 9,
                           fontWeight: FontWeight.w700,
                           color: context.hintColor.withValues(alpha: 0.72)))),
@@ -6843,7 +8499,7 @@ class _RecentQuizRow extends StatelessWidget {
                     border: Border.all(color: color.withValues(alpha: 0.25))),
                 child: Center(
                     child: Text('${result.score}/${result.totalQuestions}',
-                        style: GoogleFonts.sourceSans3(
+                        style: GoogleFonts.roboto(
                             fontSize: 15,
                             fontWeight: FontWeight.w900,
                             color: color)))),
@@ -6855,19 +8511,19 @@ class _RecentQuizRow extends StatelessWidget {
                   Row(children: [
                     Expanded(
                         child: Text(result.performanceLabel,
-                            style: GoogleFonts.sourceSans3(
+                            style: GoogleFonts.roboto(
                                 fontSize: 14,
                                 fontWeight: FontWeight.w900,
                                 color: context.textColor))),
                     Text(result.percentageString,
-                        style: GoogleFonts.sourceSans3(
+                        style: GoogleFonts.roboto(
                             fontSize: 13,
                             fontWeight: FontWeight.w900,
                             color: color)),
                   ]),
                   const SizedBox(height: 3),
                   Text(_formatResultDate(result.date),
-                      style: GoogleFonts.sourceSans3(
+                      style: GoogleFonts.roboto(
                           fontSize: 10,
                           fontWeight: FontWeight.w700,
                           color: context.hintColor)),
@@ -6905,7 +8561,7 @@ class _RecentQuizRow extends StatelessWidget {
                                       .withValues(alpha: 0.1),
                                   borderRadius: BorderRadius.circular(999)),
                               child: Text(c[0].toUpperCase() + c.substring(1),
-                                  style: GoogleFonts.sourceSans3(
+                                  style: GoogleFonts.roboto(
                                       fontSize: 9,
                                       fontWeight: FontWeight.w800,
                                       color: AppColors.categoryColor(c)))))
@@ -6920,7 +8576,7 @@ class _RecentQuizRow extends StatelessWidget {
       Icon(icon, size: 12, color: color),
       const SizedBox(width: 3),
       Text(label,
-          style: GoogleFonts.sourceSans3(
+          style: GoogleFonts.roboto(
               fontSize: 10,
               fontWeight: FontWeight.w800,
               color: context.hintColor)),
@@ -7060,7 +8716,8 @@ class SettingsScreen extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final themeMode = ref.watch(themeProvider);
     final user = ref.watch(userProvider);
-    final authUser = ref.watch(authStateProvider).valueOrNull ?? AuthService.currentUser;
+    final authUser =
+        ref.watch(authStateProvider).valueOrNull ?? AuthService.currentUser;
     final isSignedIn = authUser != null && !authUser.isAnonymous;
     final authEmail = authUser?.email ?? authUser?.displayName;
     final hasPro = user.isPro && isSignedIn;
@@ -7094,7 +8751,7 @@ class SettingsScreen extends ConsumerWidget {
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                       Text('Theme',
-                          style: GoogleFonts.poppins(
+                          style: GoogleFonts.dmSans(
                               fontSize: 13,
                               fontWeight: FontWeight.w700,
                               color: context.textColor)),
@@ -7104,7 +8761,7 @@ class SettingsScreen extends ConsumerWidget {
                               : themeMode == ThemeMode.system
                                   ? 'System default'
                                   : 'Light mode',
-                          style: GoogleFonts.poppins(
+                          style: GoogleFonts.dmSans(
                               fontSize: 10, color: context.hintColor)),
                     ])),
                 Container(
@@ -7142,6 +8799,13 @@ class SettingsScreen extends ConsumerWidget {
                         onTap: () => _showCategoriesSheet(context, ref, user)),
                     Divider(height: 1, color: context.borderColor),
                     _SettingsTile(
+                        icon: Icons.public_rounded,
+                        color: AppColors.green,
+                        title: 'News Country',
+                        sub: '${_countryFlag(user.country)} ${_countryName(user.country)}',
+                        onTap: () => _showCountrySheet(context, ref, user)),
+                    Divider(height: 1, color: context.borderColor),
+                    _SettingsTile(
                         icon: Icons.notifications_rounded,
                         color: AppColors.accent,
                         title: 'Daily Reminder',
@@ -7165,7 +8829,7 @@ class SettingsScreen extends ConsumerWidget {
                         icon: Icons.lock_rounded,
                         color: AppColors.green,
                         title: 'Privacy',
-                        sub: 'Your data stays on-device',
+                        sub: 'Local storage, cloud sync, ads, and purchases',
                         onTap: () => _showPrivacySheet(context)),
                     Divider(height: 1, color: context.borderColor),
                     if (isSignedIn)
@@ -7206,7 +8870,7 @@ class SettingsScreen extends ConsumerWidget {
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
                           Text(hasPro ? 'Briefed Pro' : 'Upgrade to Pro',
-                              style: GoogleFonts.poppins(
+                              style: GoogleFonts.dmSans(
                                   fontSize: 13,
                                   fontWeight: FontWeight.w700,
                                   color: AppColors.gold)),
@@ -7214,7 +8878,7 @@ class SettingsScreen extends ConsumerWidget {
                               hasPro
                                   ? 'Active · Unlimited quiz replays'
                                   : '${ProPurchaseService.fallbackPriceLabel} · Lifetime access',
-                              style: GoogleFonts.poppins(
+                              style: GoogleFonts.dmSans(
                                   fontSize: 10, color: context.hintColor)),
                         ])),
                     const Icon(Icons.chevron_right_rounded, size: 18),
@@ -7247,14 +8911,14 @@ class SettingsScreen extends ConsumerWidget {
                                     color: ctx.borderColor,
                                     borderRadius: BorderRadius.circular(2)))),
                         Text('News Categories',
-                            style: GoogleFonts.poppins(
+                            style: GoogleFonts.dmSans(
                                 fontSize: 18,
                                 fontWeight: FontWeight.w800,
                                 color: ctx.textColor)),
                         const SizedBox(height: 4),
                         Text(
                             'Choose what topics appear in your quiz and briefing',
-                            style: GoogleFonts.poppins(
+                            style: GoogleFonts.dmSans(
                                 fontSize: 12, color: ctx.subColor)),
                         const SizedBox(height: 20),
                         GridView.count(
@@ -7300,7 +8964,7 @@ class SettingsScreen extends ConsumerWidget {
                                             color: on ? color : ctx.hintColor),
                                         const SizedBox(width: 8),
                                         Text(cat['label']!,
-                                            style: GoogleFonts.poppins(
+                                            style: GoogleFonts.dmSans(
                                                 fontSize: 12,
                                                 fontWeight: FontWeight.w700,
                                                 color: on
@@ -7325,6 +8989,46 @@ class SettingsScreen extends ConsumerWidget {
                             icon: Icons.check_rounded),
                       ]));
             }));
+  }
+
+  // ── Country helpers ───────────────────────────────────────────────────────
+
+  static String _countryFlag(String code) {
+    final match = AppConstants.allCountries
+        .firstWhere((c) => c['code'] == code, orElse: () => {});
+    return match['flag'] ?? '🌐';
+  }
+
+  static String _countryName(String code) {
+    final match = AppConstants.allCountries
+        .firstWhere((c) => c['code'] == code, orElse: () => {});
+    return match['name'] ?? code.toUpperCase();
+  }
+
+  void _showCountrySheet(
+      BuildContext context, WidgetRef ref, UserData user) {
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: context.cardColor,
+      shape: const RoundedRectangleBorder(
+          borderRadius: BorderRadius.vertical(top: Radius.circular(24))),
+      constraints: BoxConstraints(
+          maxHeight: MediaQuery.of(context).size.height * 0.85),
+      builder: (_) => _CountryPickerSheet(
+        current: user.country,
+        onSelect: (code) {
+          ref.read(userProvider.notifier).updateCountry(code);
+          StorageService.clearQuestionCache();
+          StorageService.clearArticleCache();
+          ref.read(newsProvider.notifier).load(
+                country: code,
+                categories: user.selectedCategories,
+                forceRefresh: true,
+              );
+        },
+      ),
+    );
   }
 
   void _showNotifSheet(BuildContext context, WidgetRef ref, UserData user) {
@@ -7389,13 +9093,13 @@ class SettingsScreen extends ConsumerWidget {
                                     color: ctx.borderColor,
                                     borderRadius: BorderRadius.circular(2)))),
                         Text('Daily Reminder',
-                            style: GoogleFonts.poppins(
+                            style: GoogleFonts.dmSans(
                                 fontSize: 18,
                                 fontWeight: FontWeight.w800,
                                 color: ctx.textColor)),
                         const SizedBox(height: 4),
                         Text("When should we remind you to take today's quiz?",
-                            style: GoogleFonts.poppins(
+                            style: GoogleFonts.dmSans(
                                 fontSize: 12, color: ctx.subColor)),
                         const SizedBox(height: 20),
                         ...options.map((opt) {
@@ -7447,7 +9151,7 @@ class SettingsScreen extends ConsumerWidget {
                                                     CrossAxisAlignment.start,
                                                 children: [
                                               Text(opt['label'] as String,
-                                                  style: GoogleFonts.poppins(
+                                                  style: GoogleFonts.dmSans(
                                                       fontSize: 14,
                                                       fontWeight:
                                                           FontWeight.w700,
@@ -7455,7 +9159,7 @@ class SettingsScreen extends ConsumerWidget {
                                                           ? ctx.textColor
                                                           : ctx.subColor)),
                                               Text(opt['sub'] as String,
-                                                  style: GoogleFonts.poppins(
+                                                  style: GoogleFonts.dmSans(
                                                       fontSize: 11,
                                                       color: ctx.hintColor)),
                                             ])),
@@ -7545,12 +9249,12 @@ class SettingsScreen extends ConsumerWidget {
                                                 _formatReminderTime(
                                                     selectedHour,
                                                     selectedMinute),
-                                                style: GoogleFonts.poppins(
+                                                style: GoogleFonts.dmSans(
                                                     fontSize: 14,
                                                     fontWeight: FontWeight.w700,
                                                     color: ctx.textColor)),
                                             Text('Choose your own time',
-                                                style: GoogleFonts.poppins(
+                                                style: GoogleFonts.dmSans(
                                                     fontSize: 11,
                                                     color: ctx.hintColor)),
                                           ])),
@@ -7580,16 +9284,16 @@ class SettingsScreen extends ConsumerWidget {
                 shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(20)),
                 title: Text('Edit Profile',
-                    style: GoogleFonts.poppins(
+                    style: GoogleFonts.dmSans(
                         fontWeight: FontWeight.w800, color: ctx.textColor)),
                 content: Column(mainAxisSize: MainAxisSize.min, children: [
                   TextField(
                       controller: ctrl,
                       autofocus: true,
-                      style: GoogleFonts.poppins(color: ctx.textColor),
+                      style: GoogleFonts.dmSans(color: ctx.textColor),
                       decoration: InputDecoration(
                           labelText: 'Your name',
-                          labelStyle: GoogleFonts.poppins(color: ctx.hintColor),
+                          labelStyle: GoogleFonts.dmSans(color: ctx.hintColor),
                           filled: true,
                           fillColor: ctx.inputBg,
                           border: OutlineInputBorder(
@@ -7604,7 +9308,7 @@ class SettingsScreen extends ConsumerWidget {
                   TextButton(
                       onPressed: () => Navigator.of(ctx).pop(),
                       child: Text('Cancel',
-                          style: GoogleFonts.poppins(color: ctx.hintColor))),
+                          style: GoogleFonts.dmSans(color: ctx.hintColor))),
                   TextButton(
                       onPressed: () {
                         final name = ctrl.text.trim();
@@ -7614,7 +9318,7 @@ class SettingsScreen extends ConsumerWidget {
                         Navigator.of(ctx).pop();
                       },
                       child: Text('Save',
-                          style: GoogleFonts.poppins(
+                          style: GoogleFonts.dmSans(
                               color: AppColors.accent,
                               fontWeight: FontWeight.w800))),
                 ]));
@@ -7623,80 +9327,124 @@ class SettingsScreen extends ConsumerWidget {
   void _showPrivacySheet(BuildContext context) {
     showModalBottomSheet(
         context: context,
+        isScrollControlled: true,
         backgroundColor: context.cardColor,
         shape: const RoundedRectangleBorder(
             borderRadius: BorderRadius.vertical(top: Radius.circular(24))),
-        builder: (ctx) => Padding(
-            padding: const EdgeInsets.fromLTRB(20, 8, 20, 32),
-            child: Column(
-                mainAxisSize: MainAxisSize.min,
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Center(
-                      child: Container(
-                          width: 40,
-                          height: 4,
-                          margin: const EdgeInsets.only(bottom: 20),
-                          decoration: BoxDecoration(
-                              color: ctx.borderColor,
-                              borderRadius: BorderRadius.circular(2)))),
-                  Text('Privacy',
-                      style: GoogleFonts.poppins(
-                          fontSize: 18,
-                          fontWeight: FontWeight.w800,
-                          color: ctx.textColor)),
-                  const SizedBox(height: 16),
-                  ...[
-                    (
-                      'Your data stays on-device',
-                      'All quiz scores, streaks, and preferences are stored locally. Nothing is sent to our servers.',
-                      Icons.phone_android_rounded,
-                      AppColors.green
-                    ),
-                    (
-                      'No account required',
-                      'Briefed works without an account. Your identity is never collected or stored.',
-                      Icons.person_off_rounded,
-                      AppColors.blue
-                    ),
-                    (
-                      'API usage',
-                      'We send news headlines (not personal data) to Groq/Gemini to generate quiz questions. No personal info included.',
-                      Icons.api_rounded,
-                      AppColors.purple
-                    ),
-                  ].map((item) => Padding(
-                      padding: const EdgeInsets.only(bottom: 14),
-                      child: Row(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Container(
-                                width: 36,
-                                height: 36,
-                                decoration: BoxDecoration(
-                                    color: item.$4.withValues(alpha: 0.12),
-                                    borderRadius: BorderRadius.circular(10)),
-                                child: Icon(item.$3, color: item.$4, size: 18)),
-                            const SizedBox(width: 12),
-                            Expanded(
-                                child: Column(
-                                    crossAxisAlignment:
-                                        CrossAxisAlignment.start,
-                                    children: [
-                                  Text(item.$1,
-                                      style: GoogleFonts.poppins(
-                                          fontSize: 13,
-                                          fontWeight: FontWeight.w700,
-                                          color: ctx.textColor)),
-                                  const SizedBox(height: 3),
-                                  Text(item.$2,
-                                      style: GoogleFonts.poppins(
-                                          fontSize: 11,
-                                          color: ctx.subColor,
-                                          height: 1.55)),
-                                ])),
-                          ]))),
-                ])));
+        builder: (ctx) => SafeArea(
+            child: SingleChildScrollView(
+                padding: EdgeInsets.fromLTRB(
+                    20, 8, 20, 32 + MediaQuery.of(ctx).viewInsets.bottom),
+                child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Center(
+                          child: Container(
+                              width: 40,
+                              height: 4,
+                              margin: const EdgeInsets.only(bottom: 20),
+                              decoration: BoxDecoration(
+                                  color: ctx.borderColor,
+                                  borderRadius: BorderRadius.circular(2)))),
+                      Text('Privacy',
+                          style: GoogleFonts.dmSans(
+                              fontSize: 18,
+                              fontWeight: FontWeight.w800,
+                              color: ctx.textColor)),
+                      const SizedBox(height: 6),
+                      Text(
+                          'Briefed stores some data on your device and uses trusted services to run accounts, sync, ads, purchases, and reminders.',
+                          style: GoogleFonts.dmSans(
+                              fontSize: 12, color: ctx.subColor, height: 1.55)),
+                      const SizedBox(height: 18),
+                      ...[
+                        (
+                          'Local app data',
+                          'Your name, categories, quiz history, streaks, scores, reminder time, theme, and cached quiz questions may be saved on this device.',
+                          Icons.phone_android_rounded,
+                          AppColors.green
+                        ),
+                        (
+                          'Accounts and sync',
+                          'If you sign in with email, Google, or continue as a guest, Firebase may store your user ID, email, display name, photo URL, progress, preferences, and leaderboard scores.',
+                          Icons.cloud_sync_rounded,
+                          AppColors.blue
+                        ),
+                        (
+                          'Ads and purchases',
+                          'Free users may see Google AdMob ads, which can use advertising identifiers or ad interaction data. Briefed Pro purchases are processed by Google Play Billing.',
+                          Icons.payments_rounded,
+                          AppColors.gold
+                        ),
+                        (
+                          'Notifications',
+                          'If you allow reminders, Briefed uses your selected reminder time and Android notification permission to schedule local daily quiz alerts.',
+                          Icons.notifications_rounded,
+                          AppColors.accent
+                        ),
+                        (
+                          'Content services',
+                          'Briefed uses news and AI/content services to fetch headlines and generate quiz content. We do not send your account details for quiz generation.',
+                          Icons.api_rounded,
+                          AppColors.purple
+                        ),
+                        (
+                          'Your choices',
+                          'You can sign out, disable notifications in the app or device settings, manage ad personalization in Google/device settings, and request account or data deletion by email.',
+                          Icons.privacy_tip_rounded,
+                          AppColors.red
+                        ),
+                      ].map((item) => Padding(
+                          padding: const EdgeInsets.only(bottom: 14),
+                          child: Row(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Container(
+                                    width: 36,
+                                    height: 36,
+                                    decoration: BoxDecoration(
+                                        color: item.$4.withValues(alpha: 0.12),
+                                        borderRadius:
+                                            BorderRadius.circular(10)),
+                                    child: Icon(item.$3,
+                                        color: item.$4, size: 18)),
+                                const SizedBox(width: 12),
+                                Expanded(
+                                    child: Column(
+                                        crossAxisAlignment:
+                                            CrossAxisAlignment.start,
+                                        children: [
+                                      Text(item.$1,
+                                          style: GoogleFonts.dmSans(
+                                              fontSize: 13,
+                                              fontWeight: FontWeight.w700,
+                                              color: ctx.textColor)),
+                                      const SizedBox(height: 3),
+                                      Text(item.$2,
+                                          style: GoogleFonts.dmSans(
+                                              fontSize: 11,
+                                              color: ctx.subColor,
+                                              height: 1.55)),
+                                    ])),
+                              ]))),
+                      const SizedBox(height: 4),
+                      AccentButton(
+                          text: 'Open Privacy Policy',
+                          onTap: () => _launchUrl(
+                              'https://sites.google.com/view/binay-briefed-contact/privacy-policy'),
+                          icon: Icons.open_in_new_rounded),
+                      const SizedBox(height: 10),
+                      Center(
+                          child: TextButton.icon(
+                              onPressed: () => _launchUrl(
+                                  'https://sites.google.com/view/binay-briefed-contact/data-deletion'),
+                              icon: const Icon(Icons.delete_outline_rounded,
+                                  size: 18),
+                              label: Text('Request Data Deletion',
+                                  style: GoogleFonts.dmSans(
+                                      fontWeight: FontWeight.w700)))),
+                    ]))));
   }
 
   void _showProActiveDialog(BuildContext context) {
@@ -7727,7 +9475,7 @@ class SettingsScreen extends ConsumerWidget {
             ),
             const SizedBox(height: 18),
             Text('You\'re a Pro!',
-                style: GoogleFonts.poppins(
+                style: GoogleFonts.dmSans(
                     fontSize: 22,
                     fontWeight: FontWeight.w900,
                     color: ctx.textColor)),
@@ -7735,10 +9483,8 @@ class SettingsScreen extends ConsumerWidget {
             Text(
               'Thanks for supporting Briefed.\nEnjoy unlimited replays, no ads,\nand all pro perks.',
               textAlign: TextAlign.center,
-              style: GoogleFonts.poppins(
-                  fontSize: 13,
-                  height: 1.55,
-                  color: ctx.hintColor),
+              style: GoogleFonts.dmSans(
+                  fontSize: 13, height: 1.55, color: ctx.hintColor),
             ),
             const SizedBox(height: 22),
             SizedBox(
@@ -7752,7 +9498,7 @@ class SettingsScreen extends ConsumerWidget {
                 ),
                 onPressed: () => Navigator.of(ctx).pop(),
                 child: Text('Enjoy Briefed Pro',
-                    style: GoogleFonts.poppins(
+                    style: GoogleFonts.dmSans(
                         fontSize: 14,
                         fontWeight: FontWeight.w800,
                         color: AppColors.gold)),
@@ -7799,12 +9545,12 @@ class SettingsScreen extends ConsumerWidget {
                       color: Colors.white, size: 30)),
               const SizedBox(height: 14),
               Text('Briefed Pro',
-                  style: GoogleFonts.poppins(
+                  style: GoogleFonts.dmSans(
                       fontSize: 22,
                       fontWeight: FontWeight.w900,
                       color: ctx.textColor)),
               Text(hasPro ? 'Active' : ProPurchaseService.fallbackPriceLabel,
-                  style: GoogleFonts.poppins(
+                  style: GoogleFonts.dmSans(
                       fontSize: 14,
                       color: AppColors.gold,
                       fontWeight: FontWeight.w700)),
@@ -7833,7 +9579,7 @@ class SettingsScreen extends ConsumerWidget {
                         child: Icon(f.$2, color: AppColors.gold, size: 16)),
                     const SizedBox(width: 12),
                     Text(f.$1,
-                        style: GoogleFonts.poppins(
+                        style: GoogleFonts.dmSans(
                             fontSize: 13,
                             fontWeight: FontWeight.w600,
                             color: ctx.textColor)),
@@ -7870,7 +9616,7 @@ class SettingsScreen extends ConsumerWidget {
                                   : !canActivatePro
                                       ? 'Sign in to Activate'
                                       : 'Buy Pro for A\$2.99',
-                              style: GoogleFonts.poppins(
+                              style: GoogleFonts.dmSans(
                                   fontSize: 15,
                                   fontWeight: FontWeight.w900,
                                   color: Colors.white))))),
@@ -7882,13 +9628,13 @@ class SettingsScreen extends ConsumerWidget {
                           ? 'One-time purchase through Google Play'
                           : 'Pro is tied to a signed-in account',
                   style:
-                      GoogleFonts.poppins(fontSize: 11, color: ctx.hintColor)),
+                      GoogleFonts.dmSans(fontSize: 11, color: ctx.hintColor)),
               if (canActivatePro && !hasPro) ...[
                 const SizedBox(height: 6),
                 GestureDetector(
                     onTap: () => _restoreProPurchase(context),
                     child: Text('Restore purchase',
-                        style: GoogleFonts.poppins(
+                        style: GoogleFonts.dmSans(
                             fontSize: 12,
                             fontWeight: FontWeight.w700,
                             color: AppColors.gold))),
@@ -7948,16 +9694,16 @@ class SettingsScreen extends ConsumerWidget {
                 shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(20)),
                 title: Text('Sign Out',
-                    style: GoogleFonts.poppins(
+                    style: GoogleFonts.dmSans(
                         fontWeight: FontWeight.w800, color: ctx.textColor)),
                 content: Text('Are you sure you want to sign out?',
                     style:
-                        GoogleFonts.poppins(fontSize: 13, color: ctx.subColor)),
+                        GoogleFonts.dmSans(fontSize: 13, color: ctx.subColor)),
                 actions: [
                   TextButton(
                       onPressed: () => Navigator.of(ctx).pop(),
                       child: Text('Cancel',
-                          style: GoogleFonts.poppins(color: ctx.hintColor))),
+                          style: GoogleFonts.dmSans(color: ctx.hintColor))),
                   TextButton(
                       onPressed: () async {
                         Navigator.of(ctx).pop();
@@ -7968,7 +9714,7 @@ class SettingsScreen extends ConsumerWidget {
                         nav.pushNamedAndRemoveUntil('/signin', (_) => false);
                       },
                       child: Text('Sign Out',
-                          style: GoogleFonts.poppins(
+                          style: GoogleFonts.dmSans(
                               color: AppColors.red,
                               fontWeight: FontWeight.w800))),
                 ]));
@@ -7982,11 +9728,168 @@ class _SectionLabel extends StatelessWidget {
   Widget build(BuildContext context) => Padding(
       padding: const EdgeInsets.only(bottom: 8),
       child: Text(text,
-          style: GoogleFonts.poppins(
+          style: GoogleFonts.dmSans(
               fontSize: 9,
               fontWeight: FontWeight.w700,
               color: context.hintColor,
               letterSpacing: 2)));
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// COUNTRY PICKER SHEET
+// ─────────────────────────────────────────────────────────────────────────────
+
+class _CountryPickerSheet extends StatefulWidget {
+  final String current;
+  final ValueChanged<String> onSelect;
+  const _CountryPickerSheet({required this.current, required this.onSelect});
+
+  @override
+  State<_CountryPickerSheet> createState() => _CountryPickerSheetState();
+}
+
+class _CountryPickerSheetState extends State<_CountryPickerSheet> {
+  final _search = TextEditingController();
+  List<Map<String, String>> _filtered = [];
+
+  static final _sorted = [
+    AppConstants.allCountries.firstWhere((c) => c['code'] == 'world'),
+    ...(AppConstants.allCountries.where((c) => c['code'] != 'world').toList()
+      ..sort((a, b) => a['name']!.compareTo(b['name']!))),
+  ];
+
+  @override
+  void initState() {
+    super.initState();
+    _filtered = _sorted;
+    _search.addListener(_onSearch);
+  }
+
+  void _onSearch() {
+    final q = _search.text.toLowerCase().trim();
+    setState(() {
+      _filtered = q.isEmpty
+          ? _sorted
+          : _sorted
+              .where((c) =>
+                  c['name']!.toLowerCase().contains(q) ||
+                  c['code']!.contains(q))
+              .toList();
+    });
+  }
+
+  @override
+  void dispose() {
+    _search.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: EdgeInsets.only(
+          bottom: MediaQuery.of(context).viewInsets.bottom),
+      child: Column(children: [
+        // drag handle
+        Container(
+            width: 40,
+            height: 4,
+            margin: const EdgeInsets.symmetric(vertical: 12),
+            decoration: BoxDecoration(
+                color: context.borderColor,
+                borderRadius: BorderRadius.circular(2))),
+        Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 20),
+          child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text('News Country',
+                    style: GoogleFonts.dmSans(
+                        fontSize: 18,
+                        fontWeight: FontWeight.w800,
+                        color: context.textColor)),
+                const SizedBox(height: 2),
+                Text('Your quiz and briefing will use news from this country',
+                    style: GoogleFonts.dmSans(
+                        fontSize: 12, color: context.subColor)),
+                const SizedBox(height: 14),
+                TextField(
+                  controller: _search,
+                  autofocus: false,
+                  style: GoogleFonts.dmSans(
+                      fontSize: 13, color: context.textColor),
+                  decoration: InputDecoration(
+                    hintText: 'Search countries…',
+                    hintStyle: GoogleFonts.dmSans(
+                        fontSize: 13, color: context.hintColor),
+                    prefixIcon:
+                        Icon(Icons.search_rounded, color: context.hintColor),
+                    filled: true,
+                    fillColor: context.inputBg,
+                    contentPadding: const EdgeInsets.symmetric(
+                        horizontal: 16, vertical: 12),
+                    border: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(14),
+                        borderSide: BorderSide.none),
+                  ),
+                ),
+                const SizedBox(height: 8),
+              ]),
+        ),
+        Expanded(
+          child: ListView.builder(
+            padding:
+                const EdgeInsets.symmetric(horizontal: 20, vertical: 4),
+            itemCount: _filtered.length,
+            itemBuilder: (ctx, i) {
+              final c = _filtered[i];
+              final isSelected = c['code'] == widget.current;
+              return InkWell(
+                borderRadius: BorderRadius.circular(12),
+                onTap: () {
+                  widget.onSelect(c['code']!);
+                  Navigator.of(context).pop();
+                },
+                child: Container(
+                  margin: const EdgeInsets.symmetric(vertical: 3),
+                  padding: const EdgeInsets.symmetric(
+                      horizontal: 14, vertical: 11),
+                  decoration: BoxDecoration(
+                    color: isSelected
+                        ? AppColors.accent.withValues(alpha: 0.08)
+                        : Colors.transparent,
+                    borderRadius: BorderRadius.circular(12),
+                    border: Border.all(
+                        color: isSelected
+                            ? AppColors.accent.withValues(alpha: 0.35)
+                            : Colors.transparent),
+                  ),
+                  child: Row(children: [
+                    Text(c['flag']!,
+                        style: const TextStyle(fontSize: 22)),
+                    const SizedBox(width: 12),
+                    Expanded(
+                        child: Text(c['name']!,
+                            style: GoogleFonts.dmSans(
+                                fontSize: 13,
+                                fontWeight: isSelected
+                                    ? FontWeight.w700
+                                    : FontWeight.w500,
+                                color: isSelected
+                                    ? context.textColor
+                                    : context.subColor))),
+                    if (isSelected)
+                      const Icon(Icons.check_circle_rounded,
+                          size: 18, color: AppColors.accent),
+                  ]),
+                ),
+              );
+            },
+          ),
+        ),
+      ]),
+    );
+  }
 }
 
 class _SettingsTile extends StatelessWidget {
@@ -8020,12 +9923,12 @@ class _SettingsTile extends StatelessWidget {
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                     Text(title,
-                        style: GoogleFonts.poppins(
+                        style: GoogleFonts.dmSans(
                             fontSize: 13,
                             fontWeight: FontWeight.w700,
                             color: context.textColor)),
                     Text(sub,
-                        style: GoogleFonts.poppins(
+                        style: GoogleFonts.dmSans(
                             fontSize: 10, color: context.hintColor)),
                   ])),
               Icon(Icons.chevron_right_rounded,
@@ -8153,7 +10056,9 @@ class _AuthSheetState extends ConsumerState<_AuthSheet> {
       return 'Please enter a valid email address.';
     }
     if (s.contains('network-request-failed')) return 'No internet connection.';
-    if (s.contains('cancelled') || s.contains('canceled')) return 'Sign in cancelled.';
+    if (s.contains('cancelled') || s.contains('canceled')) {
+      return 'Sign in cancelled.';
+    }
     return 'Error: $s';
   }
 
@@ -8207,7 +10112,7 @@ class _AuthSheetState extends ConsumerState<_AuthSheet> {
                     border: Border.all(
                         color: AppColors.red.withValues(alpha: 0.25))),
                 child: Text(_error!,
-                    style: GoogleFonts.poppins(
+                    style: GoogleFonts.dmSans(
                         fontSize: 12, color: AppColors.red))),
             const SizedBox(height: 14),
           ],
@@ -8236,7 +10141,7 @@ class _AuthSheetState extends ConsumerState<_AuthSheet> {
                               child: CircularProgressIndicator(
                                   color: Colors.white, strokeWidth: 2))
                           : Text(_isSignUp ? 'Create Account' : 'Sign In',
-                              style: GoogleFonts.poppins(
+                              style: GoogleFonts.dmSans(
                                   fontSize: 15,
                                   fontWeight: FontWeight.w800,
                                   color: Colors.white))))),
@@ -8247,7 +10152,7 @@ class _AuthSheetState extends ConsumerState<_AuthSheet> {
             Padding(
                 padding: const EdgeInsets.symmetric(horizontal: 12),
                 child: Text('or',
-                    style: GoogleFonts.poppins(
+                    style: GoogleFonts.dmSans(
                         fontSize: 11, color: context.hintColor))),
             Expanded(child: Divider(color: context.borderColor)),
           ]),
@@ -8266,10 +10171,10 @@ class _AuthSheetState extends ConsumerState<_AuthSheet> {
                   child: Row(
                       mainAxisAlignment: MainAxisAlignment.center,
                       children: [
-                        const _GoogleLogo(size: 20),
+                        const _GoogleLogo(size: 26),
                         const SizedBox(width: 10),
                         Text('Continue with Google',
-                            style: GoogleFonts.poppins(
+                            style: GoogleFonts.dmSans(
                                 fontSize: 14,
                                 fontWeight: FontWeight.w700,
                                 color: context.textColor)),
@@ -8299,7 +10204,7 @@ class _AuthSheetState extends ConsumerState<_AuthSheet> {
                       : []),
               child: Text(label,
                   textAlign: TextAlign.center,
-                  style: GoogleFonts.poppins(
+                  style: GoogleFonts.dmSans(
                       fontSize: 13,
                       fontWeight: FontWeight.w700,
                       color:
@@ -8311,11 +10216,11 @@ class _AuthSheetState extends ConsumerState<_AuthSheet> {
           controller: ctrl,
           obscureText: obscure,
           keyboardType: type,
-          style: GoogleFonts.poppins(color: context.textColor, fontSize: 14),
+          style: GoogleFonts.dmSans(color: context.textColor, fontSize: 14),
           decoration: InputDecoration(
               labelText: label,
               labelStyle:
-                  GoogleFonts.poppins(color: context.hintColor, fontSize: 13),
+                  GoogleFonts.dmSans(color: context.hintColor, fontSize: 13),
               prefixIcon: Icon(icon, color: context.hintColor, size: 18),
               filled: true,
               fillColor: context.inputBg,
@@ -8340,12 +10245,14 @@ class _GoogleLogo extends StatelessWidget {
     return SizedBox(
       width: size,
       height: size,
-      child: CustomPaint(painter: _GoogleGPainter()),
+      child: const CustomPaint(painter: _GoogleGPainter()),
     );
   }
 }
 
 class _GoogleGPainter extends CustomPainter {
+  const _GoogleGPainter();
+
   static const _blue = Color(0xFF4285F4);
   static const _red = Color(0xFFEA4335);
   static const _yellow = Color(0xFFFBBC05);
@@ -8353,57 +10260,82 @@ class _GoogleGPainter extends CustomPainter {
 
   @override
   void paint(Canvas canvas, Size s) {
-    final cx = s.width / 2;
-    final cy = s.height / 2;
-    // Stroke radius and width matching Google brand proportions
-    final r = s.width * 0.42;
-    final sw = s.width * 0.18;
-    final half = sw / 2;
+    final side = min(s.width, s.height);
+    const logoWidth = 533.5;
+    const logoHeight = 544.3;
+    final scale = min(side / logoWidth, side / logoHeight);
+    final dx = (s.width - logoWidth * scale) / 2;
+    final dy = (s.height - logoHeight * scale) / 2;
 
-    final arcPaint = Paint()
-      ..style = PaintingStyle.stroke
-      ..strokeWidth = sw
-      ..strokeCap = StrokeCap.butt;
+    canvas.save();
+    canvas.translate(dx, dy);
+    canvas.scale(scale);
 
-    final rect = Rect.fromCircle(center: Offset(cx, cy), radius: r);
+    final paint = Paint()..style = PaintingStyle.fill;
 
-    // Google G arc colour sequence (0 rad = 3-o'clock, clockwise positive).
-    // Gap occupies roughly -27° to +27° (right side) = -0.471 to +0.471 rad.
-    // Start just past the gap and paint clockwise:
-    //   Blue   : -27° → 90°  (upper-right quadrant)
-    //   Red    :  90° → 207° (upper-left + left)
-    //   Yellow : 207° → 317° (lower-left + bottom)
-    //   Green  : 317° → 333° (lower-right, short)
-    // then gap closes back to -27°.
-    const startRad = 0.471; // 27°
-    const blue1Sweep = (pi / 2 + startRad);        // -27° → 90°
-    const redSweep = (117.0 * pi / 180);           // 90° → 207°
-    const yellowSweep = (110.0 * pi / 180);        // 207° → 317°
-    const greenSweep = (16.0 * pi / 180);          // 317° → 333°
+    paint.color = _blue;
+    canvas.drawPath(_bluePath(), paint);
 
-    arcPaint.color = _blue;
-    canvas.drawArc(rect, -startRad, blue1Sweep, false, arcPaint);
+    paint.color = _green;
+    canvas.drawPath(_greenPath(), paint);
 
-    arcPaint.color = _red;
-    canvas.drawArc(rect, pi / 2, redSweep, false, arcPaint);
+    paint.color = _yellow;
+    canvas.drawPath(_yellowPath(), paint);
 
-    arcPaint.color = _yellow;
-    canvas.drawArc(rect, pi / 2 + redSweep, yellowSweep, false, arcPaint);
+    paint.color = _red;
+    canvas.drawPath(_redPath(), paint);
 
-    arcPaint.color = _green;
-    canvas.drawArc(rect, pi / 2 + redSweep + yellowSweep, greenSweep, false, arcPaint);
+    canvas.restore();
+  }
 
-    // Blue horizontal bar — from circle centre to right edge, vertically centred
-    final barLeft = cx;
-    final barRight = cx + r + half;
-    final barTop = cy - half;
-    final barBottom = cy + half;
-    canvas.drawRect(
-      Rect.fromLTRB(barLeft, barTop, barRight, barBottom),
-      Paint()
-        ..color = _blue
-        ..style = PaintingStyle.fill,
-    );
+  Path _bluePath() {
+    return Path()
+      ..moveTo(533.5, 278.4)
+      ..relativeCubicTo(0, -18.5, -1.5, -37.1, -4.7, -55.3)
+      ..lineTo(272.1, 223.1)
+      ..relativeLineTo(0, 104.8)
+      ..relativeLineTo(147, 0)
+      ..relativeCubicTo(-6.1, 33.8, -25.7, 63.7, -54.4, 82.7)
+      ..relativeLineTo(0, 68)
+      ..relativeLineTo(87.7, 0)
+      ..relativeCubicTo(51.5, -47.4, 81.1, -117.4, 81.1, -200.2)
+      ..close();
+  }
+
+  Path _greenPath() {
+    return Path()
+      ..moveTo(272.1, 544.3)
+      ..relativeCubicTo(73.4, 0, 135.3, -24.1, 180.4, -65.7)
+      ..relativeLineTo(-87.7, -68)
+      ..relativeCubicTo(-24.4, 16.6, -55.9, 26, -92.6, 26)
+      ..relativeCubicTo(-71, 0, -131.2, -47.9, -152.8, -112.3)
+      ..lineTo(28.9, 324.3)
+      ..relativeLineTo(0, 70.1)
+      ..relativeCubicTo(46.2, 91.9, 140.3, 149.9, 243.2, 149.9)
+      ..close();
+  }
+
+  Path _yellowPath() {
+    return Path()
+      ..moveTo(119.3, 324.3)
+      ..relativeCubicTo(-11.4, -33.8, -11.4, -70.4, 0, -104.2)
+      ..lineTo(119.3, 150)
+      ..lineTo(28.9, 150)
+      ..relativeCubicTo(-38.6, 76.9, -38.6, 167.5, 0, 244.4)
+      ..relativeLineTo(90.4, -70.1)
+      ..close();
+  }
+
+  Path _redPath() {
+    return Path()
+      ..moveTo(272.1, 107.7)
+      ..relativeCubicTo(38.8, -0.6, 76.3, 14, 104.4, 40.8)
+      ..relativeLineTo(77.7, -77.7)
+      ..cubicTo(405, 24.6, 339.7, -0.8, 272.1, 0)
+      ..cubicTo(169.2, 0, 75.1, 58, 28.9, 150)
+      ..relativeLineTo(90.4, 70.1)
+      ..relativeCubicTo(21.5, -64.5, 81.8, -112.4, 152.8, -112.4)
+      ..close();
   }
 
   @override

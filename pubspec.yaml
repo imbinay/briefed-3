@@ -1,6 +1,6 @@
 name: briefed
 description: Daily News Quiz - Stay Briefed. Stay Sharp.
-version: 1.0.5+6
+version: 1.0.8+9
 publish_to: 'none'
 
 environment:
@@ -18,6 +18,9 @@ dependencies:
 
   # HTTP
   http: ^1.2.1
+
+  # Crypto (MD5 for article IDs)
+  crypto: ^3.0.3
 
   # Local storage
   shared_preferences: ^2.2.3

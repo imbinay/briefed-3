@@ -15,6 +15,7 @@ import 'services/notification_service.dart';
 import 'services/pro_purchase_service.dart';
 import 'services/storage_service.dart';
 import 'screens/screens.dart';
+import 'features/quiz/screens/new_quiz_screens.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -126,6 +127,10 @@ class BriefedApp extends ConsumerWidget {
         '/home': (_) => const MainShell(),
         '/quiz': (_) => const QuizScreen(),
         '/result': (_) => const ResultScreen(),
+        '/quiz/select': (_) => const CategorySelectScreen(),
+        '/quiz/intro': (_) => const QuizIntroScreen(),
+        '/quiz/play': (_) => const NewQuizScreen(),
+        '/quiz/result': (_) => const NewResultScreen(),
         '/hot-take': (_) => const HotTakeScreen(),
         '/settings': (_) => const SettingsScreen(),
       },

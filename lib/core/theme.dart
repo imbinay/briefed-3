@@ -90,12 +90,11 @@ class AppTheme {
         backgroundColor: AppColors.lightBg,
         elevation: 0,
         scrolledUnderElevation: 0,
-        titleTextStyle: GoogleFonts.playfairDisplay(
+        titleTextStyle: GoogleFonts.dmSans(
           fontSize: 18,
           fontWeight: FontWeight.w800,
           color: AppColors.lightText,
           letterSpacing: -0.3,
-          wordSpacing: 1.5,
         ),
         iconTheme: const IconThemeData(color: AppColors.lightText),
       ),
@@ -132,12 +131,11 @@ class AppTheme {
         backgroundColor: AppColors.darkBg,
         elevation: 0,
         scrolledUnderElevation: 0,
-        titleTextStyle: GoogleFonts.playfairDisplay(
+        titleTextStyle: GoogleFonts.dmSans(
           fontSize: 18,
           fontWeight: FontWeight.w800,
           color: AppColors.darkText,
           letterSpacing: -0.3,
-          wordSpacing: 1.5,
         ),
         iconTheme: const IconThemeData(color: AppColors.darkText),
       ),
@@ -159,89 +157,74 @@ class AppTheme {
 
   static TextTheme _buildTextTheme(Color textColor) {
     return TextTheme(
-      // Playfair Display — editorial headlines
-      displayLarge: GoogleFonts.playfairDisplay(
+      // DM Sans — modern sans headlines (Google Sans substitute)
+      displayLarge: GoogleFonts.dmSans(
           fontSize: 57,
           fontWeight: FontWeight.w900,
           letterSpacing: -2,
-          wordSpacing: 2.0,
           color: textColor),
-      displayMedium: GoogleFonts.playfairDisplay(
+      displayMedium: GoogleFonts.dmSans(
           fontSize: 45,
           fontWeight: FontWeight.w900,
           letterSpacing: -1.5,
-          wordSpacing: 2.0,
           color: textColor),
-      displaySmall: GoogleFonts.playfairDisplay(
+      displaySmall: GoogleFonts.dmSans(
           fontSize: 36,
           fontWeight: FontWeight.w800,
           letterSpacing: -0.8,
-          wordSpacing: 1.5,
           color: textColor),
-      headlineLarge: GoogleFonts.playfairDisplay(
+      headlineLarge: GoogleFonts.dmSans(
           fontSize: 32,
           fontWeight: FontWeight.w800,
           letterSpacing: -0.5,
-          wordSpacing: 1.5,
           color: textColor),
-      headlineMedium: GoogleFonts.playfairDisplay(
+      headlineMedium: GoogleFonts.dmSans(
           fontSize: 28,
           fontWeight: FontWeight.w700,
           letterSpacing: -0.3,
-          wordSpacing: 1.5,
           color: textColor),
-      headlineSmall: GoogleFonts.playfairDisplay(
+      headlineSmall: GoogleFonts.dmSans(
           fontSize: 24,
           fontWeight: FontWeight.w700,
           letterSpacing: -0.2,
-          wordSpacing: 1.5,
           color: textColor),
-      titleLarge: GoogleFonts.playfairDisplay(
+      titleLarge: GoogleFonts.dmSans(
           fontSize: 22,
           fontWeight: FontWeight.w700,
           letterSpacing: -0.2,
-          wordSpacing: 1.5,
           color: textColor),
-      // Source Sans 3 — clean UI / body text
-      titleMedium: GoogleFonts.sourceSans3(
+      // Roboto — clean body / UI text
+      titleMedium: GoogleFonts.roboto(
           fontSize: 16,
           fontWeight: FontWeight.w700,
-          wordSpacing: 1.2,
           color: textColor),
-      titleSmall: GoogleFonts.sourceSans3(
+      titleSmall: GoogleFonts.roboto(
           fontSize: 14,
           fontWeight: FontWeight.w700,
-          wordSpacing: 1.2,
           color: textColor),
-      bodyLarge: GoogleFonts.sourceSans3(
+      bodyLarge: GoogleFonts.roboto(
           fontSize: 16,
           fontWeight: FontWeight.w400,
-          wordSpacing: 1.5,
           color: textColor),
-      bodyMedium: GoogleFonts.sourceSans3(
+      bodyMedium: GoogleFonts.roboto(
           fontSize: 14,
           fontWeight: FontWeight.w400,
-          wordSpacing: 1.5,
           color: textColor),
-      bodySmall: GoogleFonts.sourceSans3(
+      bodySmall: GoogleFonts.roboto(
           fontSize: 12,
           fontWeight: FontWeight.w400,
-          wordSpacing: 1.2,
           color: textColor),
-      labelLarge: GoogleFonts.sourceSans3(
+      labelLarge: GoogleFonts.roboto(
           fontSize: 14,
           fontWeight: FontWeight.w700,
-          wordSpacing: 1.2,
           color: textColor),
-      labelMedium: GoogleFonts.sourceSans3(
+      labelMedium: GoogleFonts.roboto(
           fontSize: 12,
           fontWeight: FontWeight.w600,
-          wordSpacing: 1.0,
           color: textColor),
-      labelSmall: GoogleFonts.sourceSans3(
+      labelSmall: GoogleFonts.roboto(
           fontSize: 10,
           fontWeight: FontWeight.w600,
-          wordSpacing: 1.0,
           color: textColor),
     );
   }
