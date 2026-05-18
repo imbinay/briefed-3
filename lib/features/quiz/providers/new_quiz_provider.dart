@@ -5,7 +5,6 @@ import '../../news/models/news_category.dart';
 import '../../news/providers/news_pipeline_provider.dart';
 import '../models/quiz_result.dart';
 import '../models/quiz_session.dart';
-import '../services/quiz_cache_service.dart';
 import '../services/quiz_generator_service.dart';
 
 class NewQuizNotifier extends StateNotifier<QuizSession> {
@@ -23,42 +22,48 @@ class NewQuizNotifier extends StateNotifier<QuizSession> {
   }
 
   Future<void> startQuiz(NewsCategory category,
-      {bool forceRefresh = false}) async {
+      {bool forceRefresh = false, bool isDailyMix = false}) async {
     _questionTimer?.cancel();
     _advanceTimer?.cancel();
-    state = QuizSession(category: category, status: NewQuizStatus.loading);
+    state = QuizSession(
+        category: category,
+        isDailyMix: isDailyMix,
+        status: NewQuizStatus.loading);
 
     try {
-      await QuizCacheService.invalidate(category); // TEMP: force cache miss
       final pipeline = _ref.read(newsPipelineProvider);
-      final articles = pipeline.getQuizStories(category);
-      if (articles.isEmpty) {
-        throw Exception(
-            'No quiz stories available for ${category.name}. Try refreshing the news feed.');
-      }
 
       final questions = await QuizGeneratorService.generate(
-        articles,
-        category,
+        pipeline,
         forceRefresh: forceRefresh,
+        category: isDailyMix ? null : category,
       );
       if (!mounted) return;
 
+      if (questions.isEmpty) {
+        state = state.copyWith(
+          status: NewQuizStatus.error,
+          error:
+              'Not enough news articles to build a quiz right now. Pull to refresh the news feed and try again.',
+        );
+        return;
+      }
+
       state = QuizSession(
         category: category,
+        isDailyMix: isDailyMix,
         questions: questions,
         answers: List.filled(questions.length, null),
         secondsTaken: List.filled(questions.length, 0),
         speedBonuses: List.filled(questions.length, 0),
-        timeLeft: 10,
+        timeLeft: 20,
         status: NewQuizStatus.active,
       );
       _startTimer();
     } catch (e) {
       dev.log('Quiz start failed: $e', name: 'Briefed/NewQuiz');
       if (!mounted) return;
-      state = state.copyWith(
-          status: NewQuizStatus.error, error: e.toString());
+      state = state.copyWith(status: NewQuizStatus.error, error: e.toString());
     }
   }
 
@@ -69,7 +74,7 @@ class NewQuizNotifier extends StateNotifier<QuizSession> {
 
     _questionTimer?.cancel();
 
-    final secondsTaken = 10 - state.timeLeft;
+    final secondsTaken = 20 - state.timeLeft;
     final q = state.currentQuestion!;
     final isCorrect = selectedIndex == q.correctAnswerIndex;
     final bonus = isCorrect ? QuizSession.speedBonusFor(secondsTaken) : 0;
@@ -92,8 +97,7 @@ class NewQuizNotifier extends StateNotifier<QuizSession> {
     );
 
     // Auto-advance after explanation window
-    _advanceTimer =
-        Timer(const Duration(milliseconds: 1800), () {
+    _advanceTimer = Timer(const Duration(milliseconds: 1800), () {
       if (mounted) _advance();
     });
   }
@@ -115,7 +119,7 @@ class NewQuizNotifier extends StateNotifier<QuizSession> {
     }
     state = state.copyWith(
       currentIndex: nextIndex,
-      timeLeft: 10,
+      timeLeft: 20,
       status: NewQuizStatus.active,
       revealingExplanation: false,
     );
@@ -173,7 +177,6 @@ class NewQuizNotifier extends StateNotifier<QuizSession> {
   }
 }
 
-final newQuizProvider =
-    StateNotifierProvider<NewQuizNotifier, QuizSession>(
+final newQuizProvider = StateNotifierProvider<NewQuizNotifier, QuizSession>(
   (ref) => NewQuizNotifier(ref),
 );

@@ -11,6 +11,24 @@ import 'quiz_ability_scorer.dart';
 class CurrentsNewsService {
   static const _tag = 'Briefed/Currents';
   static const _searchUrl = 'https://api.currentsapi.services/v2/search';
+  static const _latestNewsUrl =
+      'https://api.currentsapi.services/v2/latest-news';
+
+  // Set to true for the session once a 429 is received — avoids wasting
+  // ~4s per domain call (retry delay) when the daily quota is already gone.
+  static bool _rateLimited = false;
+
+  static void resetRateLimit() => _rateLimited = false;
+
+  static const Map<NewsCategory, String> _categoryFallbackMap = {
+    NewsCategory.world: 'general',
+    NewsCategory.politics: 'politics',
+    NewsCategory.sports: 'sport',
+    NewsCategory.technology: 'technology',
+    NewsCategory.business: 'finance',
+    NewsCategory.health: 'health',
+    NewsCategory.entertainment: 'entertainment',
+  };
 
   static const Map<NewsCategory, List<_DomainConfig>> _domainConfigs = {
     NewsCategory.world: [
@@ -48,6 +66,20 @@ class CurrentsNewsService {
       _DomainConfig('reuters.com', keywords: 'business'),
       _DomainConfig('afr.com'),
     ],
+    NewsCategory.health: [
+      _DomainConfig('theguardian.com', keywords: 'health'),
+      _DomainConfig('bbc.co.uk', keywords: 'health'),
+      _DomainConfig('abc.net.au', keywords: 'health'),
+      _DomainConfig('newscientist.com'),
+      _DomainConfig('theatlantic.com', keywords: 'health'),
+    ],
+    NewsCategory.entertainment: [
+      _DomainConfig('theguardian.com', category: 'culture'),
+      _DomainConfig('bbc.co.uk', keywords: 'entertainment'),
+      _DomainConfig('deadline.com'),
+      _DomainConfig('variety.com'),
+      _DomainConfig('hollywoodreporter.com'),
+    ],
   };
 
   static Future<List<RankedArticle>> fetchCategory(
@@ -57,18 +89,26 @@ class CurrentsNewsService {
       dev.log('CURRENTS_API_KEY not set — skipping', name: _tag);
       return [];
     }
+    if (_rateLimited) {
+      dev.log('Rate-limited for session — skipping Currents', name: _tag);
+      return [];
+    }
 
     final configs = _domainConfigs[category] ?? [];
     if (configs.isEmpty) return [];
 
-    // Fire all 5 domain calls in parallel
-    final results = await Future.wait(
-      configs.map((cfg) => _fetchDomain(key, cfg, category)),
-    );
+    // Stagger domain calls 200ms apart; abort the whole category on first 429
+    final results = <List<RankedArticle>>[];
+    for (final cfg in configs) {
+      if (_rateLimited) break;
+      await Future<void>.delayed(const Duration(milliseconds: 200));
+      results.add(await _fetchDomain(key, cfg, category));
+    }
 
     // Track per-domain counts for the test log
     final domainCounts = {
-      for (int i = 0; i < configs.length; i++) configs[i].domain: results[i].length,
+      for (int i = 0; i < configs.length; i++)
+        configs[i].domain: results[i].length,
     };
 
     final merged = results.expand((r) => r).toList();
@@ -89,7 +129,77 @@ class CurrentsNewsService {
     try {
       return await _doFetch(apiKey, cfg, category);
     } catch (e) {
+      if (e.toString().contains('HTTP 500')) {
+        dev.log('${cfg.domain} 500 → using category fallback', name: _tag);
+        return _fetchCategoryFallback(apiKey, category);
+      }
       dev.log('${cfg.domain} fetch failed: $e', name: _tag);
+      return [];
+    }
+  }
+
+  static Future<List<RankedArticle>> _fetchCategoryFallback(
+    String apiKey,
+    NewsCategory category,
+  ) async {
+    try {
+      final mappedCategory = _categoryFallbackMap[category] ?? 'general';
+      final approvedDomains =
+          (_domainConfigs[category] ?? []).map((c) => c.domain).toSet();
+
+      final params = {
+        'language': 'en',
+        'category': mappedCategory,
+        'country': 'gb,us,au',
+        'page_size': '20',
+        'apiKey': apiKey,
+      };
+
+      final uri = Uri.parse(_latestNewsUrl).replace(queryParameters: params);
+      final response = await http.get(uri).timeout(const Duration(seconds: 15));
+
+      if (response.statusCode != 200) return [];
+
+      final data = jsonDecode(response.body) as Map<String, dynamic>;
+      if ((data['status'] as String? ?? '') != 'ok') return [];
+
+      final news = data['news'] as List? ?? [];
+      final articles = <RankedArticle>[];
+
+      for (final item in news) {
+        final map = item as Map<String, dynamic>;
+        final url = (map['url'] as String? ?? '').trim();
+        if (url.isEmpty) continue;
+        final title = (map['title'] as String? ?? '').trim();
+        if (title.isEmpty) continue;
+
+        final domain = NewsSourceConfig.parseDomain(url);
+        if (!approvedDomains.contains(domain)) continue;
+
+        final imageRaw = map['image'] as String?;
+        final imageUrl =
+            (imageRaw?.startsWith('http') ?? false) ? imageRaw : null;
+
+        articles.add(RankedArticle(
+          id: RankedArticle.md5Id(url),
+          title: title,
+          summary: (map['description'] as String? ?? '').trim(),
+          url: url,
+          imageUrl: imageUrl,
+          sourceName: NewsSourceConfig.displayName(domain),
+          sourceDomain: domain,
+          publishedAt: _parseDate(map['published'] as String? ?? ''),
+          category: category,
+          sourceQualityScore: NewsSourceConfig.qualityScore(domain),
+          quizabilityScore: 0,
+          quizabilityPassed: false,
+          apiSource: ApiSource.currents,
+        ));
+      }
+
+      return articles;
+    } catch (e) {
+      dev.log('Category fallback failed: $e', name: _tag);
       return [];
     }
   }
@@ -103,7 +213,7 @@ class CurrentsNewsService {
       'apiKey': apiKey,
       'domain': cfg.domain,
       'language': 'en',
-      'page_size': '10',
+      'page_size': '20',
     };
     if (cfg.keywords != null) params['keywords'] = cfg.keywords!;
     if (cfg.category != null) params['category'] = cfg.category!;
@@ -113,15 +223,10 @@ class CurrentsNewsService {
 
     var response = await http.get(uri).timeout(const Duration(seconds: 15));
 
-    // Rate-limit handling: wait 2s and retry once
     if (response.statusCode == 429) {
-      dev.log('RATE LIMITED: ${cfg.domain} — retrying after 2s', name: _tag);
-      await Future<void>.delayed(const Duration(seconds: 2));
-      response = await http.get(uri).timeout(const Duration(seconds: 15));
-      if (response.statusCode == 429) {
-        dev.log('RATE LIMITED: ${cfg.domain} — skipping', name: _tag);
-        return [];
-      }
+      _rateLimited = true;
+      dev.log('RATE LIMITED — disabling Currents for this session', name: _tag);
+      return [];
     }
 
     if (response.statusCode != 200) {
@@ -178,8 +283,7 @@ class CurrentsNewsService {
   ) {
     // Dedup by ID for the log count (full dedup runs later in the pipeline)
     final seen = <String>{};
-    final deduped =
-        merged.where((a) => seen.add(a.id)).toList();
+    final deduped = merged.where((a) => seen.add(a.id)).toList();
 
     final scored = deduped.map(QuizAbilityScorer.score).toList();
     final quizable = scored.where((a) => a.quizabilityPassed).toList();

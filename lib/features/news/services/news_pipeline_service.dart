@@ -2,6 +2,7 @@ import 'dart:developer' as dev;
 import '../models/news_category.dart';
 import '../models/ranked_article.dart';
 import 'currents_news_service.dart';
+import 'firestore_news_service.dart';
 import 'guardian_news_service.dart';
 import 'newsdata_news_service.dart';
 import 'news_dedup_service.dart';
@@ -31,7 +32,7 @@ class NewsPipelineService {
     NewsCategory category, {
     bool forceRefresh = false,
   }) async {
-    // 1 — Serve cache immediately if fresh
+    // 1 — Serve local cache immediately if fresh
     if (!forceRefresh) {
       final cached = await NewsCacheService.load(category);
       if (cached != null && cached.isNotEmpty) {
@@ -39,7 +40,16 @@ class NewsPipelineService {
       }
     }
 
-    // 2 — Fetch PRIMARY (Currents) + SECONDARY (Guardian) in parallel
+    // 2 — Try Firestore server cache (populated by Cloud Function every 2h)
+    final serverArticles = await _safeFetch(
+        'Firestore/${category.name}',
+        () => FirestoreNewsService.fetchCategory(category));
+    if (serverArticles.isNotEmpty) {
+      await NewsCacheService.save(category, serverArticles);
+      return _buildResult(category, serverArticles, fromCache: true);
+    }
+
+    // 3 — Fetch PRIMARY (Currents) + SECONDARY (Guardian) in parallel
     final futures = await Future.wait([
       _safeFetch('Currents/${category.name}',
           () => CurrentsNewsService.fetchCategory(category)),
@@ -55,8 +65,11 @@ class NewsPipelineService {
     // 4 — Score quiz-ability
     var scored = deduped.map(QuizAbilityScorer.score).toList();
 
-    // 5 — Discard articles older than 24 hours
-    scored = scored.where((a) => !a.isOlderThan24Hours).toList();
+    // 5 — Discard articles older than 48 hours
+    scored = scored
+        .where((a) =>
+            DateTime.now().difference(a.publishedAt).inHours < 48)
+        .toList();
 
     // 6 — Check if fallback is needed (fewer than 5 quiz-able)
     final quizableCount = scored.where((a) => a.quizabilityPassed).length;
@@ -68,8 +81,12 @@ class NewsPipelineService {
           () => NewsdataNewsService.fetchCategory(category));
       if (fallback.isNotEmpty) {
         final scoredFallback = fallback.map(QuizAbilityScorer.score).toList();
-        final merged = NewsDedupService.deduplicate([...scored, ...scoredFallback]);
-        scored = merged.where((a) => !a.isOlderThan24Hours).toList();
+        final merged =
+            NewsDedupService.deduplicate([...scored, ...scoredFallback]);
+        scored = merged
+            .where((a) =>
+                DateTime.now().difference(a.publishedAt).inHours < 48)
+            .toList();
       }
     }
 
@@ -155,7 +172,7 @@ class NewsPipelineService {
 class CategoryResult {
   final NewsCategory category;
   final List<RankedArticle> display; // top 10
-  final List<RankedArticle> quiz;    // top 5 quiz-able
+  final List<RankedArticle> quiz; // top 5 quiz-able
   final bool fromCache;
 
   const CategoryResult({

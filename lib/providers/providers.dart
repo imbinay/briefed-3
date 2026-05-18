@@ -4,7 +4,8 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:in_app_purchase/in_app_purchase.dart' if (dart.library.js_interop) '../core/iap_stub.dart';
+import 'package:in_app_purchase/in_app_purchase.dart'
+    if (dart.library.js_interop) '../core/iap_stub.dart';
 import 'package:flutter/foundation.dart' show kIsWeb;
 import '../core/constants.dart';
 import '../models/models.dart';
@@ -15,6 +16,8 @@ import '../services/gemini_service.dart';
 import '../services/auth_service.dart';
 import '../services/notification_service.dart';
 import '../services/ad_service.dart';
+import '../features/xp/xp_service.dart';
+import '../features/xp/daily_tracker.dart';
 
 // ─────────────────────────────────────────────────────────────────────────────
 // THEME PROVIDER
@@ -31,7 +34,7 @@ class ThemeNotifier extends StateNotifier<ThemeMode> {
       case 'system':
         return ThemeMode.system;
       default:
-        return ThemeMode.light;
+        return ThemeMode.system;
     }
   }
 
@@ -164,15 +167,45 @@ class UserNotifier extends StateNotifier<UserData> {
   }
 
   Future<void> afterQuiz(QuizResult result) async {
-    if (!state.isPro && !kIsWeb) unawaited(NotificationService.scheduleQuizReady());
+    final isDailyMix = result.categories.length > 1;
 
-    final newStreak = await StorageService.updateStreakAfterQuiz();
+    // Streak, lastPlayedDate, and "quiz ready" notification only apply to the
+    // daily mix. Category quizzes earn XP and are tracked separately but must
+    // not advance the streak or gray out the main quiz card.
+    int newStreak = state.streak;
+    if (isDailyMix) {
+      if (!state.isPro && !kIsWeb) {
+        unawaited(NotificationService.scheduleQuizReady());
+      }
+      newStreak = await StorageService.updateStreakAfterQuiz();
+    }
+
     final newScore = state.knowledgeScore + result.pointsEarned;
     final newTotal = state.totalQuizzes + 1;
 
     await StorageService.setKnowledgeScore(newScore);
     await StorageService.setTotalQuizzes(newTotal);
     await StorageService.addQuizResult(result);
+
+    if (!isDailyMix) {
+      for (final cat in result.categories) {
+        await StorageService.setCategoryCompletion(
+          cat,
+          result.score,
+          result.totalQuestions,
+          result.pointsEarned,
+        );
+      }
+    }
+
+    final xpEarned = XpService.calculateQuizXp(
+      correct: result.score,
+      total: result.totalQuestions,
+      isDailyMix: isDailyMix,
+      streak: newStreak,
+    );
+    await XpService.addXp(xpEarned);
+    await DailyTracker.addXpEarnedToday(xpEarned);
 
     final history = StorageService.getQuizHistory();
 
@@ -182,7 +215,11 @@ class UserNotifier extends StateNotifier<UserData> {
           newStreak > state.longestStreak ? newStreak : state.longestStreak,
       knowledgeScore: newScore,
       totalQuizzes: newTotal,
-      lastPlayedDate: DateTime.now().toIso8601String().substring(0, 10),
+      // Only mark lastPlayedDate (which drives hasPlayedToday) for the daily
+      // mix. Category quiz completions are tracked via setCategoryCompletion.
+      lastPlayedDate: isDailyMix
+          ? DateTime.now().toIso8601String().substring(0, 10)
+          : state.lastPlayedDate,
       recentResults: history,
     );
 
@@ -322,9 +359,13 @@ class NewsNotifier extends StateNotifier<NewsState> {
     final kept = <NewsArticle>[];
     for (final article in articles) {
       final title = article.title.trim();
-      if (title.isEmpty) { continue; }
+      if (title.isEmpty) {
+        continue;
+      }
       final urlKey = _normalizeUrl(article.link);
-      if (urlKey.isNotEmpty && !seenUrls.add(urlKey)) { continue; }
+      if (urlKey.isNotEmpty && !seenUrls.add(urlKey)) {
+        continue;
+      }
       bool isDupe = false;
       for (final prev in kept) {
         if (_titlesOverlap(title, prev.title)) {
@@ -332,7 +373,9 @@ class NewsNotifier extends StateNotifier<NewsState> {
           break;
         }
       }
-      if (!isDupe) { kept.add(article); }
+      if (!isDupe) {
+        kept.add(article);
+      }
     }
     return kept;
   }
@@ -359,10 +402,41 @@ class NewsNotifier extends StateNotifier<NewsState> {
 
   static Set<String> _titleKeywords(String title) {
     const stop = {
-      'the', 'a', 'an', 'in', 'on', 'at', 'to', 'for', 'of', 'and',
-      'or', 'but', 'is', 'are', 'was', 'were', 'be', 'been', 'has',
-      'have', 'had', 'with', 'by', 'from', 'as', 'its', 'it', 'this',
-      'that', 'after', 'over', 'up', 'new', 'says', 'said',
+      'the',
+      'a',
+      'an',
+      'in',
+      'on',
+      'at',
+      'to',
+      'for',
+      'of',
+      'and',
+      'or',
+      'but',
+      'is',
+      'are',
+      'was',
+      'were',
+      'be',
+      'been',
+      'has',
+      'have',
+      'had',
+      'with',
+      'by',
+      'from',
+      'as',
+      'its',
+      'it',
+      'this',
+      'that',
+      'after',
+      'over',
+      'up',
+      'new',
+      'says',
+      'said',
     };
     return title
         .toLowerCase()
@@ -372,8 +446,8 @@ class NewsNotifier extends StateNotifier<NewsState> {
         .toSet();
   }
 
-  Future<void> refresh() =>
-      load(country: _lastCountry, categories: _lastCategories, forceRefresh: true);
+  Future<void> refresh() => load(
+      country: _lastCountry, categories: _lastCategories, forceRefresh: true);
 
   List<NewsArticle> get topStories => state.articles.take(4).toList();
 
@@ -758,10 +832,7 @@ class HotTakeNotifier extends StateNotifier<HotTakeState> {
     );
 
     try {
-      await FirebaseFirestore.instance
-          .collection('hot_takes')
-          .doc(docId)
-          .set({
+      await FirebaseFirestore.instance.collection('hot_takes').doc(docId).set({
         'question': state.question,
         vote: FieldValue.increment(1),
         'updatedAt': FieldValue.serverTimestamp(),
@@ -769,10 +840,7 @@ class HotTakeNotifier extends StateNotifier<HotTakeState> {
 
       final user = FirebaseAuth.instance.currentUser;
       if (user != null && !user.isAnonymous) {
-        await FirebaseFirestore.instance
-            .collection('users')
-            .doc(user.uid)
-            .set({
+        await FirebaseFirestore.instance.collection('users').doc(user.uid).set({
           'hotTakeVotes': {docId: vote},
         }, SetOptions(merge: true));
       }
@@ -888,6 +956,77 @@ final leaderboardProvider =
     return myEntry != null ? [myEntry] : [];
   }
 });
+
+Future<List<LeaderboardEntry>> _fetchScopedLeaderboard(
+  Ref ref,
+  CollectionReference<Map<String, dynamic>> collection,
+) async {
+  final authUser = ref.watch(authStateProvider).valueOrNull;
+  if (authUser == null || authUser.isAnonymous) return [];
+
+  try {
+    final snap =
+        await collection.orderBy('xp', descending: true).limit(10).get();
+    return snap.docs.map((doc) {
+      final data = doc.data();
+      final rawName = (data['displayName'] as String?) ?? '';
+      return LeaderboardEntry(
+        uid: doc.id,
+        name: rawName.trim().isEmpty ? 'Player' : rawName.trim(),
+        photoUrl: doc.id == authUser.uid
+            ? ((data['photoUrl'] as String?) ?? authUser.photoURL ?? '')
+            : ((data['photoUrl'] as String?) ?? ''),
+        score: (data['xp'] as num? ?? 0).toInt(),
+        streak: (data['streak'] as num? ?? 0).toInt(),
+        isYou: doc.id == authUser.uid,
+      );
+    }).toList();
+  } catch (e) {
+    dev.log('[Leaderboard] scoped fetch failed: $e', name: 'Briefed');
+    return [];
+  }
+}
+
+final mainQuizLeaderboardProvider =
+    FutureProvider.autoDispose<List<LeaderboardEntry>>((ref) {
+  final scoped = _fetchScopedLeaderboard(
+    ref,
+    FirebaseFirestore.instance
+        .collection('leaderboards')
+        .doc('main_quiz')
+        .collection('users'),
+  );
+  return scoped.then((entries) async {
+    if (entries.isNotEmpty) return entries;
+    return ref.watch(leaderboardProvider.future);
+  });
+});
+
+final categoryLeaderboardProvider =
+    FutureProvider.autoDispose.family<List<LeaderboardEntry>, String>(
+  (ref, category) {
+    return _fetchScopedLeaderboard(
+      ref,
+      FirebaseFirestore.instance
+          .collection('leaderboards')
+          .doc('categories')
+          .collection(category.toLowerCase()),
+    );
+  },
+);
+
+final gameLeaderboardProvider =
+    FutureProvider.autoDispose.family<List<LeaderboardEntry>, String>(
+  (ref, gameId) {
+    return _fetchScopedLeaderboard(
+      ref,
+      FirebaseFirestore.instance
+          .collection('leaderboards')
+          .doc('games')
+          .collection(gameId),
+    );
+  },
+);
 
 final dailyRankProvider = FutureProvider.autoDispose<String>((ref) async {
   final authUser = ref.watch(authStateProvider).valueOrNull;

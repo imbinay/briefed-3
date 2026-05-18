@@ -1,21 +1,83 @@
 import 'dart:developer' as dev;
-import '../../news/models/ranked_article.dart';
 import '../../news/models/news_category.dart';
+import '../../news/models/ranked_article.dart';
+import '../../news/providers/news_pipeline_provider.dart';
 import '../models/quiz_question.dart';
 import 'groq_question_service.dart';
-import 'image_fetch_service.dart';
 import 'quiz_cache_service.dart';
 
 class QuizGeneratorService {
   static const _tag = 'Briefed/QuizGen';
 
-  static const _difficultyOrder = {
-    QuestionDifficulty.easy: 0,
-    QuestionDifficulty.medium: 1,
-    QuestionDifficulty.hard: 2,
-    QuestionDifficulty.veryHard: 3,
-    QuestionDifficulty.expert: 4,
-  };
+  // Articles with these keywords in the title are skipped
+  static const _skipTitleKeywords = [
+    'celebrity',
+    'gossip',
+    'rumour',
+    'rumored',
+    'fashion',
+    'style',
+    'outfit',
+    'dressed',
+    'dating',
+    'relationship',
+    'breakup',
+    'divorce',
+    'reality tv',
+    'bachelor',
+    'bachelorette',
+    'according to sources',
+    'sources say',
+    'opinion:',
+    'analysis:',
+    'comment:',
+    'column:',
+    'opinion',
+    'opinions',
+    'editorial',
+    'commentary',
+    'environmental promise',
+    'watch:',
+    'listen:',
+    'podcast:',
+    'video:',
+    'horoscope',
+    'astrology',
+    'obituary',
+    'crossword',
+    'puzzle',
+    'recipe',
+    'weather',
+    'letter to the editor',
+    'advertorial',
+    'sponsored',
+    'quiz:',
+    'your daily',
+    'ronda rousey',
+    'wwe',
+    'ufc fighter',
+    'boxing match',
+    'kardashian',
+    'taylor swift',
+  ];
+
+  // Articles from these domains are skipped
+  static const _skipDomains = [
+    'tmz.com',
+    'pagesix.com',
+    'dailymail.co.uk',
+    'eonline.com',
+    'people.com',
+    'usmagazine.com',
+    'hollywoodlife.com',
+    'reddit.com',
+    'twitter.com',
+    'x.com',
+    'facebook.com',
+    'instagram.com',
+    'tiktok.com',
+    'youtube.com',
+  ];
 
   static const _difficultySlots = [
     QuestionDifficulty.easy,
@@ -25,64 +87,222 @@ class QuizGeneratorService {
     QuestionDifficulty.expert,
   ];
 
-  /// Generates up to 5 quiz questions sorted easy → expert.
+  static const _difficultyOrder = {
+    QuestionDifficulty.easy: 0,
+    QuestionDifficulty.medium: 1,
+    QuestionDifficulty.hard: 2,
+    QuestionDifficulty.veryHard: 3,
+    QuestionDifficulty.expert: 4,
+  };
+
+  static bool _shouldSkip(RankedArticle a) {
+    if (a.summary.length < 100) {
+      print(
+          'SKIPPED: ${a.title} — summary too short (${a.summary.length} chars)');
+      return true;
+    }
+    final title = a.title.toLowerCase();
+    final domain = a.sourceDomain.toLowerCase();
+    for (final d in _skipDomains) {
+      if (domain.contains(d)) {
+        print('SKIPPED: ${a.title} — domain blocked ($d)');
+        return true;
+      }
+    }
+    if (a.url.contains('/commentisfree/') || a.url.contains('/opinion/')) {
+      print('SKIPPED: ${a.title} — opinion URL');
+      return true;
+    }
+    for (final k in _skipTitleKeywords) {
+      if (title.contains(k)) {
+        print('SKIPPED: ${a.title} — title keyword ($k)');
+        return true;
+      }
+    }
+    return false;
+  }
+
+  /// Generates 5 quiz questions sorted easy → expert.
+  /// When [category] is null: daily mix — one article per category (existing behaviour).
+  /// When [category] is set: category quiz — up to 5 articles from that category only.
   /// Checks cache first; saves result to cache on fresh generation.
   static Future<List<QuizQuestion>> generate(
-    List<RankedArticle> quizArticles,
-    NewsCategory category, {
+    PipelineState pipeline, {
     bool forceRefresh = false,
+    NewsCategory? category,
   }) async {
-    // if (!forceRefresh) {
-    //   final cached = await QuizCacheService.load(category);
-    //   if (cached != null && cached.length >= 3) {
-    //     dev.log('${category.name}: serving cached quiz (${cached.length} Qs)', name: _tag);
-    //     return cached;
-    //   }
-    // }
-    print("=== BYPASSING CACHE - GENERATING FRESH ===");
+    final cacheCategory = category ?? NewsCategory.world;
 
-    final articles = quizArticles.take(5).toList();
-    if (articles.isEmpty) {
-      throw Exception('QUIZ ERROR: No quiz articles for ${category.name}');
+    if (!forceRefresh) {
+      final cached = await QuizCacheService.load(cacheCategory);
+      if (cached != null && cached.isNotEmpty) {
+        dev.log('Serving cached quiz (${cached.length} Qs)', name: _tag);
+        return cached;
+      }
     }
 
-    dev.log('${category.name}: generating ${articles.length} questions', name: _tag);
+    final articles = <RankedArticle>[];
+
+    if (category != null) {
+      // Category quiz — pick up to 5 articles from this category first
+      final pool = (pipeline.byCategory[category] ?? [])
+          .where((a) => a.quizabilityPassed && !_shouldSkip(a))
+          .toList();
+
+      if (pool.length < 3) {
+        // Not enough quiz-able articles — fall back to any non-skipped in category
+        final fallback = (pipeline.byCategory[category] ?? [])
+            .where((a) => !_shouldSkip(a))
+            .toList();
+        articles.addAll(fallback.take(5));
+      } else {
+        articles.addAll(pool.take(5));
+      }
+
+      // Still short? Pad with quiz-able articles from other categories
+      if (articles.length < 5) {
+        dev.log(
+          '${category.name}: only ${articles.length} articles — padding from other categories',
+          name: _tag,
+        );
+        final usedIds = articles.map((a) => a.id).toSet();
+        final extra = NewsCategory.values
+            .where((c) => c != category)
+            .expand((c) => pipeline.byCategory[c] ?? <RankedArticle>[])
+            .where((a) =>
+                a.quizabilityPassed &&
+                !_shouldSkip(a) &&
+                !usedIds.contains(a.id))
+            .take(5 - articles.length)
+            .toList();
+        articles.addAll(extra);
+        dev.log(
+            'Added ${extra.length} cross-category fallback articles', name: _tag);
+      }
+    } else {
+      // Daily mix — pick the best article from each category
+      for (final cat in NewsCategory.values) {
+        final pool = (pipeline.byCategory[cat] ?? [])
+            .where((a) => a.quizabilityPassed && !_shouldSkip(a))
+            .toList();
+
+        if (pool.isNotEmpty) {
+          articles.add(pool.first);
+          dev.log(
+            '✓ ${cat.name}: "${pool.first.title.substring(0, pool.first.title.length.clamp(0, 50))}"',
+            name: _tag,
+          );
+        } else {
+          // Fallback: any non-filtered article from this category
+          final fallback = (pipeline.byCategory[cat] ?? [])
+              .where((a) => !_shouldSkip(a))
+              .toList();
+          if (fallback.isNotEmpty) {
+            articles.add(fallback.first);
+            print('NO VALID ARTICLE for ${cat.name} using fallback');
+            dev.log('⚠ ${cat.name}: fallback to non-quiz article', name: _tag);
+          } else {
+            print('NO VALID ARTICLE for ${cat.name} using fallback');
+            dev.log('✗ ${cat.name}: no articles available', name: _tag);
+          }
+        }
+      }
+    }
+
+    if (articles.isEmpty) {
+      dev.log('No articles available for quiz', name: _tag);
+      return [];
+    }
+
+    dev.log('Generating ${articles.length} questions in parallel…', name: _tag);
 
     final futures = articles.map(_generateSafe).toList();
     final results = await Future.wait(futures);
     var questions = results.whereType<QuizQuestion>().toList();
 
-    if (questions.length < 3) {
-      dev.log('QUIZ ERROR: Only ${questions.length} questions generated — need at least 3',
-          name: _tag);
-      if (questions.isEmpty) {
-        throw Exception(
-            'QUIZ ERROR: Failed to generate any questions for ${category.name}');
+    // Not enough questions? Try additional fallback articles one by one
+    if (questions.length < 5) {
+      dev.log(
+        'Only ${questions.length} questions — trying extra fallback articles',
+        name: _tag,
+      );
+      final usedIds = articles.map((a) => a.id).toSet();
+      final fallbackPool = pipeline.byCategory.values
+          .expand((list) => list)
+          .where((a) =>
+              a.quizabilityPassed &&
+              !_shouldSkip(a) &&
+              !usedIds.contains(a.id))
+          .toList();
+
+      for (final fallback in fallbackPool) {
+        if (questions.length >= 5) break;
+        final q = await _generateSafe(fallback);
+        if (q != null) questions.add(q);
       }
-      return questions;
     }
 
-    // Enrich with Unsplash images for imageless articles
-    questions = await _enrichImages(questions);
+    if (questions.isEmpty) {
+      dev.log('No questions could be generated', name: _tag);
+      return [];
+    }
 
-    // Sort by difficulty
-    questions.sort((a, b) =>
-        (_difficultyOrder[a.difficulty] ?? 2)
-            .compareTo(_difficultyOrder[b.difficulty] ?? 2));
+    // Sort by AI-assigned difficulty
+    questions.sort((a, b) => (_difficultyOrder[a.difficulty] ?? 2)
+        .compareTo(_difficultyOrder[b.difficulty] ?? 2));
 
     if (questions.length > 5) questions = questions.take(5).toList();
 
-    // Guarantee difficulty progression (easy→medium→hard→veryHard→expert)
-    questions = _reassignDifficulties(questions);
+    // Guarantee difficulty progression easy → medium → hard → veryHard → expert
+    if (questions.length == 5) {
+      questions = List.generate(5, (i) {
+        final slot = _difficultySlots[i];
+        return questions[i].difficulty == slot
+            ? questions[i]
+            : questions[i].copyWith(difficulty: slot, points: slot.points);
+      });
+    }
 
-    // Image questions only at Q2, Q3, Q4; max 2
-    questions = _enforceImageSlots(questions);
+    // Exactly 1 image question, must be at index 1, 2, or 3 (Q2–Q4)
+    questions = _enforceImageSlot(questions);
 
-    // Rewrite questionText for image questions (who/what/where only)
-    questions = _applyImageQuestionText(questions);
+    // Remove questions about the same story (same opening words or same correct answer)
+    final seen = <String>{};
+    questions = questions.where((q) {
+      final words = q.questionText.toLowerCase().split(' ').take(5).join(' ');
+      if (seen.contains(words)) return false;
+      seen.add(words);
+      final answer = q.options[q.correctAnswerIndex].toLowerCase();
+      if (seen.contains('ans_$answer')) return false;
+      seen.add('ans_$answer');
+      return true;
+    }).toList();
 
-    await QuizCacheService.save(category, questions);
-    dev.log('${category.name}: quiz ready (${questions.length} Qs)', name: _tag);
+    if (category != null) {
+      print('=== CATEGORY QUIZ: ${category.name.toUpperCase()} ===');
+      print('Articles from ${category.name}: ${articles.length}');
+      for (final a in articles) {
+        print('  - ${a.title.substring(0, a.title.length.clamp(0, 50))}');
+      }
+    } else {
+      print('=== DAILY MIX QUIZ ===');
+      for (final a in articles) {
+        print(
+            '  - [${a.category.name}] ${a.title.substring(0, a.title.length.clamp(0, 40))}');
+      }
+    }
+    print('=== QUIZ GENERATION ===');
+    for (var i = 0; i < questions.length; i++) {
+      final q = questions[i];
+      print(
+          'Q${i + 1}: ${q.articleTitle} | ${q.category.name} | ${q.difficulty.name} | ${q.points}pts');
+      print('    Question: ${q.questionText}');
+      print('    Correct: ${q.options[q.correctAnswerIndex]}');
+      print('    Has image: ${q.hasImage}');
+    }
+    print('=== END ===');
+
+    await QuizCacheService.save(cacheCategory, questions);
     return questions;
   }
 
@@ -91,64 +311,41 @@ class QuizGeneratorService {
       return await GroqQuestionService.generateForArticle(article);
     } catch (e) {
       dev.log(
-          'QUIZ ERROR: Skipped "${article.title.substring(0, article.title.length.clamp(0, 40))}": $e',
-          name: _tag);
+        'Skipped "${article.title.substring(0, article.title.length.clamp(0, 40))}": $e',
+        name: _tag,
+      );
       return null;
     }
   }
 
-  static Future<List<QuizQuestion>> _enrichImages(List<QuizQuestion> questions) async {
-    final enriched = <QuizQuestion>[];
-    for (final q in questions) {
-      if (q.hasImage) {
-        enriched.add(q);
-        continue;
-      }
-      try {
-        final url = await ImageFetchService.fetchForQuery(q.articleTitle);
-        enriched.add(url != null ? q.copyWith(imageUrl: url, hasImage: true) : q);
-      } catch (e) {
-        dev.log('QUIZ ERROR: Unsplash fetch failed for "${q.articleTitle}": $e', name: _tag);
-        enriched.add(q);
+  /// Keeps at most 1 image question (Q2–Q4 only), modifies its questionText
+  /// to reference the image, and strips hasImage from all other questions.
+  static List<QuizQuestion> _enforceImageSlot(List<QuizQuestion> qs) {
+    int? chosen;
+    for (var i = 1; i <= 3 && i < qs.length; i++) {
+      final url = qs[i].imageUrl;
+      if (qs[i].hasImage &&
+          url != null &&
+          url.isNotEmpty &&
+          !url.toLowerCase().contains('none')) {
+        chosen = i;
+        break;
       }
     }
-    return enriched;
-  }
-
-  static List<QuizQuestion> _reassignDifficulties(List<QuizQuestion> qs) {
-    if (qs.length != 5) return qs;
-    return List.generate(5, (i) {
-      final slot = _difficultySlots[i];
-      return qs[i].difficulty == slot
-          ? qs[i]
-          : qs[i].copyWith(difficulty: slot, points: slot.points);
-    });
-  }
-
-  static List<QuizQuestion> _enforceImageSlots(List<QuizQuestion> qs) {
-    int imageCount = 0;
     return List.generate(qs.length, (i) {
       final q = qs[i];
-      if (!q.hasImage) return q;
-      // Q1 (i=0) and Q5 (i=4) never get images
-      if (i == 0 || i == 4) return q.copyWith(hasImage: false);
-      if (imageCount >= 2) return q.copyWith(hasImage: false);
-      imageCount++;
-      return q;
+      if (i == chosen) {
+        final newText = switch (q.questionType) {
+          QuestionType.who => 'Who is shown in this image?',
+          QuestionType.what ||
+          QuestionType.where =>
+            'What does this image show?',
+          QuestionType.which => 'Which country does this image relate to?',
+          _ => q.questionText,
+        };
+        return q.copyWith(questionText: newText, hasImage: true);
+      }
+      return q.hasImage ? q.copyWith(hasImage: false) : q;
     });
-  }
-
-  /// Rewrites questionText for image questions whose type is who/what/where.
-  static List<QuizQuestion> _applyImageQuestionText(List<QuizQuestion> qs) {
-    return qs.map((q) {
-      if (!q.hasImage) return q;
-      final newText = switch (q.questionType) {
-        QuestionType.who   => 'Who is pictured in this photo?',
-        QuestionType.what  => 'What event is shown in this image?',
-        QuestionType.where => 'Which country does this scene relate to?',
-        _                  => null,
-      };
-      return newText != null ? q.copyWith(questionText: newText) : q;
-    }).toList();
   }
 }

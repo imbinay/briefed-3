@@ -4,6 +4,7 @@ import 'package:http/http.dart' as http;
 import '../../../config/api_config.dart';
 import '../models/news_category.dart';
 import '../models/ranked_article.dart';
+
 class GuardianNewsService {
   static const _tag = 'Briefed/Guardian';
   static const _domain = 'theguardian.com';
@@ -16,19 +17,27 @@ class GuardianNewsService {
     NewsCategory.sports: 'sport',
     NewsCategory.technology: 'technology',
     NewsCategory.business: 'business',
+    NewsCategory.health: 'lifeandstyle',
+    NewsCategory.entertainment: 'culture',
   };
 
   static Future<List<RankedArticle>> fetchCategory(
       NewsCategory category) async {
-    final today = DateTime.now().toIso8601String().substring(0, 10);
+    // Use UTC and look back 2 days so early-morning fetches and non-UTC
+    // timezones never see an empty result set.
+    final fromDate = DateTime.now()
+        .toUtc()
+        .subtract(const Duration(days: 2))
+        .toIso8601String()
+        .substring(0, 10);
     final params = {
       'api-key': ApiConfig.guardianApiKey,
       'section': _sections[category]!,
       'show-fields': 'headline,trailText,thumbnail,shortUrl',
       'show-elements': 'image',
-      'page-size': '20',
+      'page-size': '30',
       'order-by': 'newest',
-      'from-date': today,
+      'from-date': fromDate,
     };
 
     final uri = Uri.parse('${ApiConfig.guardianBaseUrl}/search')
@@ -36,8 +45,7 @@ class GuardianNewsService {
 
     dev.log('GET ${category.name}', name: _tag);
 
-    final response =
-        await http.get(uri).timeout(const Duration(seconds: 10));
+    final response = await http.get(uri).timeout(const Duration(seconds: 10));
 
     if (response.statusCode != 200) {
       throw Exception('HTTP ${response.statusCode}');
@@ -101,7 +109,8 @@ class GuardianNewsService {
         final asset = a as Map<String, dynamic>;
         final file = asset['file'] as String? ?? '';
         if (file.isEmpty) continue;
-        final w = (asset['typeData']?['width'] as num? ?? 0).toInt();
+        final w =
+            int.tryParse(asset['typeData']?['width']?.toString() ?? '0') ?? 0;
         if (w > bestWidth) {
           bestWidth = w;
           best = file;
