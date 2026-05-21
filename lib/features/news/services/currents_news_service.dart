@@ -14,11 +14,25 @@ class CurrentsNewsService {
   static const _latestNewsUrl =
       'https://api.currentsapi.services/v2/latest-news';
 
-  // Set to true for the session once a 429 is received — avoids wasting
-  // ~4s per domain call (retry delay) when the daily quota is already gone.
+  // Set to true once a 429 is received. Auto-clears after 30 minutes so the
+  // next pipeline cycle can retry rather than staying blocked for the whole session.
   static bool _rateLimited = false;
+  static DateTime? _rateLimitedAt;
 
-  static void resetRateLimit() => _rateLimited = false;
+  static bool get isRateLimited {
+    if (_rateLimited && _rateLimitedAt != null) {
+      if (DateTime.now().difference(_rateLimitedAt!).inMinutes >= 30) {
+        _rateLimited = false;
+        _rateLimitedAt = null;
+      }
+    }
+    return _rateLimited;
+  }
+
+  static void resetRateLimit() {
+    _rateLimited = false;
+    _rateLimitedAt = null;
+  }
 
   static const Map<NewsCategory, String> _categoryFallbackMap = {
     NewsCategory.world: 'general',
@@ -89,8 +103,8 @@ class CurrentsNewsService {
       dev.log('CURRENTS_API_KEY not set — skipping', name: _tag);
       return [];
     }
-    if (_rateLimited) {
-      dev.log('Rate-limited for session — skipping Currents', name: _tag);
+    if (isRateLimited) {
+      dev.log('Rate-limited — skipping Currents (resets in ${30 - (DateTime.now().difference(_rateLimitedAt ?? DateTime.now()).inMinutes)}m)', name: _tag);
       return [];
     }
 
@@ -100,7 +114,7 @@ class CurrentsNewsService {
     // Stagger domain calls 200ms apart; abort the whole category on first 429
     final results = <List<RankedArticle>>[];
     for (final cfg in configs) {
-      if (_rateLimited) break;
+      if (isRateLimited) break;
       await Future<void>.delayed(const Duration(milliseconds: 200));
       results.add(await _fetchDomain(key, cfg, category));
     }
@@ -225,7 +239,8 @@ class CurrentsNewsService {
 
     if (response.statusCode == 429) {
       _rateLimited = true;
-      dev.log('RATE LIMITED — disabling Currents for this session', name: _tag);
+      _rateLimitedAt = DateTime.now();
+      dev.log('RATE LIMITED — Currents disabled for 30 minutes', name: _tag);
       return [];
     }
 

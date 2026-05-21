@@ -31,16 +31,15 @@ class NewsService {
     // For global / world queries, restrict to top-tier domains for quality.
     if (isWorld) params['prioritydomain'] = 'top';
 
-    final uri = Uri.parse(AppConstants.newsEndpoint)
-        .replace(queryParameters: params);
+    final uri =
+        Uri.parse(AppConstants.newsEndpoint).replace(queryParameters: params);
 
     dev.log(
       '[News] GET ${isWorld ? "world(global)" : country} | categories=$cat | size=${size.clamp(1, 10)}',
       name: 'Briefed',
     );
 
-    final response =
-        await http.get(uri).timeout(const Duration(seconds: 15));
+    final response = await http.get(uri).timeout(const Duration(seconds: 15));
 
     dev.log('[News] HTTP ${response.statusCode}', name: 'Briefed');
 

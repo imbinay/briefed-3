@@ -1,6 +1,9 @@
 import 'dart:async';
 import 'dart:developer' as dev;
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import '../../../providers/providers.dart';
+import '../../../services/auth_service.dart';
+import '../../../services/storage_service.dart';
 import '../../news/models/news_category.dart';
 import '../../news/providers/news_pipeline_provider.dart';
 import '../models/quiz_result.dart';
@@ -25,6 +28,25 @@ class NewQuizNotifier extends StateNotifier<QuizSession> {
       {bool forceRefresh = false, bool isDailyMix = false}) async {
     _questionTimer?.cancel();
     _advanceTimer?.cancel();
+
+    // Pro users can replay any category unlimited times
+    final user = _ref.read(userProvider);
+    final isPro =
+        user.isPro && AuthService.currentUser != null && !AuthService.isGuest;
+
+    // Block free users from replaying the same category on the same day
+    if (!isPro &&
+        !forceRefresh &&
+        StorageService.getCategoryCompletion(category.name) != null) {
+      state = QuizSession(
+        category: category,
+        isDailyMix: isDailyMix,
+        status: NewQuizStatus.error,
+        error: 'already_played_today',
+      );
+      return;
+    }
+
     state = QuizSession(
         category: category,
         isDailyMix: isDailyMix,
@@ -43,8 +65,7 @@ class NewQuizNotifier extends StateNotifier<QuizSession> {
       if (questions.isEmpty) {
         state = state.copyWith(
           status: NewQuizStatus.error,
-          error:
-              'Not enough news articles to build a quiz right now. Pull to refresh the news feed and try again.',
+          error: 'quiz_not_ready',
         );
         return;
       }

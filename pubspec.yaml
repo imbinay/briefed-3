@@ -1,6 +1,6 @@
 name: briefed
 description: Daily News Quiz - Stay Briefed. Stay Sharp.
-version: 1.0.8+9
+version: 1.1.0+10
 publish_to: 'none'
 
 environment:
@@ -78,3 +78,14 @@ flutter:
   uses-material-design: true
   assets:
     - assets/images/
+
+  fonts:
+    - family: BricolageGrotesque
+      fonts:
+        - asset: assets/fonts/BricolageGrotesque.ttf
+    - family: Manrope
+      fonts:
+        - asset: assets/fonts/Manrope.ttf
+    - family: JetBrainsMono
+      fonts:
+        - asset: assets/fonts/JetBrainsMono.ttf

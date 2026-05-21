@@ -80,6 +80,11 @@ class StorageService {
   static Future<void> setNotificationMinute(int minute) =>
       prefs.setInt(AppConstants.keyNotificationMinute, minute);
 
+  static int getDailyGoal() => prefs.getInt('dailyGoal') ?? 5;
+
+  static Future<void> setDailyGoal(int questions) =>
+      prefs.setInt('dailyGoal', questions);
+
   static String getUserCountry() =>
       prefs.getString(AppConstants.keyUserCountry) ??
       AppConstants.defaultCountry;
@@ -96,8 +101,15 @@ class StorageService {
   static String getLastPlayedDate() =>
       prefs.getString(AppConstants.keyLastPlayedDate) ?? '';
 
-  static Future<void> setLastPlayedDate(String date) =>
-      prefs.setString(AppConstants.keyLastPlayedDate, date);
+  static Future<void> setLastPlayedDate(String date) async {
+    await prefs.setString(AppConstants.keyLastPlayedDate, date);
+    await prefs.setInt('lastPlayedTimestampMs', DateTime.now().millisecondsSinceEpoch);
+  }
+
+  static DateTime? getLastPlayedTimestamp() {
+    final ms = prefs.getInt('lastPlayedTimestampMs');
+    return ms == null ? null : DateTime.fromMillisecondsSinceEpoch(ms);
+  }
 
   static bool hasBonusPlayedToday() {
     final today = DateTime.now().toIso8601String().substring(0, 10);
@@ -107,6 +119,36 @@ class StorageService {
   static Future<void> setBonusPlayedToday() {
     final today = DateTime.now().toIso8601String().substring(0, 10);
     return prefs.setString('bonus_played_date', today);
+  }
+
+  // ── PER-GAME DAILY PLAY COUNT (for interstitial gating) ──────────────────
+  // Key: game_plays_{gameId}_{yyyy-MM-dd}  Value: int count
+
+  static int getGamePlaysToday(String gameId) {
+    final today = DateTime.now().toIso8601String().substring(0, 10);
+    return prefs.getInt('game_plays_${gameId}_$today') ?? 0;
+  }
+
+  static Future<void> incrementGamePlaysToday(String gameId) {
+    final today = DateTime.now().toIso8601String().substring(0, 10);
+    final key = 'game_plays_${gameId}_$today';
+    return prefs.setInt(key, (prefs.getInt(key) ?? 0) + 1);
+  }
+
+  // ── PER-CATEGORY COMPLETION ───────────────────────────────────────────────
+  // Key: briefed_completed_{category}_{yyyy-MM-dd}
+  // Value: "{correct}/{total},{points}"
+
+  static String? getCategoryCompletion(String category) {
+    final today = DateTime.now().toIso8601String().substring(0, 10);
+    return prefs.getString('briefed_completed_${category}_$today');
+  }
+
+  static Future<void> setCategoryCompletion(
+      String category, int correct, int total, int points) {
+    final today = DateTime.now().toIso8601String().substring(0, 10);
+    return prefs.setString(
+        'briefed_completed_${category}_$today', '$correct/$total,$points');
   }
 
   static int getKnowledgeScore() =>
@@ -231,7 +273,7 @@ class StorageService {
 
   // ── CACHED QUESTIONS ──────────────────────────────────────────────────────
   // Bump this string any time you want to invalidate all existing caches.
-  static const String _cacheVersion = 'v2';
+  static const String _cacheVersion = 'v4';
   static const String _keyCacheVersion = '_quiz_cache_version';
 
   static List<Question>? getCachedQuestions() {

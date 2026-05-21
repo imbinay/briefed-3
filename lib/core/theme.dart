@@ -1,23 +1,31 @@
 import 'package:flutter/material.dart';
-import 'package:google_fonts/google_fonts.dart';
+
+class AppFonts {
+  static const String display = 'BricolageGrotesque';
+  static const String body = 'Manrope';
+  static const String mono = 'JetBrainsMono';
+}
 
 // ─────────────────────────────────────────────────────────────────────────────
 // BRIEFED — Theme System
 // ─────────────────────────────────────────────────────────────────────────────
 
 class AppColors {
-  // Accent — vibrant orange-red, works on both light and dark
-  static const Color accent = Color(0xFFFF4500);
-  static const Color accentDark = Color(0xFFCC3700);
-  static const Color accentLight = Color(0xFFFF6B35);
+  // Accent — premium orange identity
+  static const Color accent = Color(0xFFFF5A1F);
+  static const Color accentDark = Color(0xFFE13E00);
+  static const Color accentLight = Color(0xFFFF9A62);
+  static const Color ember = Color(0xFFFF7A2F);
+  static const Color cream = Color(0xFFFFF8F1);
+  static const Color warmSurface = Color(0xFFFFFCF8);
 
   // Semantic
-  static const Color green = Color(0xFF00C853);
-  static const Color red = Color(0xFFFF1744);
-  static const Color blue = Color(0xFF2979FF);
-  static const Color purple = Color(0xFF7C4DFF);
-  static const Color gold = Color(0xFFFFD600);
-  static const Color orange = Color(0xFFFF9100);
+  static const Color green = Color(0xFF2E7D32);
+  static const Color red = Color(0xFFD84315);
+  static const Color blue = Color(0xFF2196F3);
+  static const Color purple = Color(0xFF9C27B0);
+  static const Color gold = Color(0xFFFFB23F);
+  static const Color orange = Color(0xFFFF9800);
   static const Color teal = Color(0xFF00BCD4);
   static const Color pink = Color(0xFFE91E63);
 
@@ -25,51 +33,54 @@ class AppColors {
   static Color categoryColor(String category) {
     switch (category.toLowerCase()) {
       case 'world':
-        return blue;
+        return const Color(0xFF2196F3);
       case 'technology':
-        return teal;
       case 'tech':
-        return teal;
+        return const Color(0xFF00BCD4);
       case 'business':
-        return orange;
+        return const Color(0xFFFF9800);
       case 'science':
-        return purple;
+        return const Color(0xFF9C27B0);
       case 'sports':
-        return pink;
+        return const Color(0xFF4CAF50);
       case 'entertainment':
-        return gold;
+        return const Color(0xFFE91E63);
+      case 'politics':
+        return const Color(0xFF9C27B0);
+      case 'health':
+        return const Color(0xFF26A69A);
       default:
-        return blue;
+        return accent;
     }
   }
 
   static Color categoryBg(String category) {
-    return categoryColor(category).withValues(alpha: 0.12);
+    return categoryColor(category).withValues(alpha: 0.10);
   }
 
   // Light theme palette
-  static const Color lightBg = Color(0xFFF5F5F1);
-  static const Color lightBg2 = Color(0xFFEEEEE8);
-  static const Color lightCard = Color(0xFFFFFFFF);
-  static const Color lightText = Color(0xFF0D0D0D);
-  static const Color lightSub = Color(0x8C0D0D0D);
-  static const Color lightHint = Color(0x4D0D0D0D);
-  static const Color lightBorder = Color(0x120D0D0D);
-  static const Color lightBorder2 = Color(0x210D0D0D);
-  static const Color lightInputBg = Color(0xFFEFEFEB);
-  static const Color lightNavBg = Color(0xFFFFFFFF);
+  static const Color lightBg = Color(0xFFFFF7EF);
+  static const Color lightBg2 = Color(0xFFFFEFE2);
+  static const Color lightCard = Color(0xFFFFFCF8);
+  static const Color lightText = Color(0xFF21130D);
+  static const Color lightSub = Color(0xA621130D);
+  static const Color lightHint = Color(0x6621130D);
+  static const Color lightBorder = Color(0x0F8A3A00);
+  static const Color lightBorder2 = Color(0x1A8A3A00);
+  static const Color lightInputBg = Color(0xFFFFEFE5);
+  static const Color lightNavBg = Color(0xEFFFFCF8);
 
   // Dark theme palette
-  static const Color darkBg = Color(0xFF0D0D0D);
-  static const Color darkBg2 = Color(0xFF151515);
-  static const Color darkCard = Color(0xFF1C1C1C);
-  static const Color darkText = Color(0xFFF5F5F0);
-  static const Color darkSub = Color(0x8CF5F5F0);
-  static const Color darkHint = Color(0x47F5F5F0);
-  static const Color darkBorder = Color(0x12FFFFFF);
-  static const Color darkBorder2 = Color(0x21FFFFFF);
-  static const Color darkInputBg = Color(0xFF222222);
-  static const Color darkNavBg = Color(0xFF111111);
+  static const Color darkBg = Color(0xFF140B07);
+  static const Color darkBg2 = Color(0xFF21100A);
+  static const Color darkCard = Color(0xFF24140E);
+  static const Color darkText = Color(0xFFFFF6EE);
+  static const Color darkSub = Color(0xA6FFF6EE);
+  static const Color darkHint = Color(0x66FFF6EE);
+  static const Color darkBorder = Color(0x18FFB071);
+  static const Color darkBorder2 = Color(0x2BFFB071);
+  static const Color darkInputBg = Color(0xFF301A11);
+  static const Color darkNavBg = Color(0xE61B0E09);
 }
 
 class AppTheme {
@@ -86,24 +97,26 @@ class AppTheme {
       ),
       scaffoldBackgroundColor: AppColors.lightBg,
       textTheme: _buildTextTheme(AppColors.lightText),
-      appBarTheme: AppBarTheme(
-        backgroundColor: AppColors.lightBg,
+      appBarTheme: const AppBarTheme(
+        backgroundColor: Colors.transparent,
         elevation: 0,
         scrolledUnderElevation: 0,
-        titleTextStyle: GoogleFonts.dmSans(
+        titleTextStyle: TextStyle(
+          fontFamily: AppFonts.display,
           fontSize: 18,
           fontWeight: FontWeight.w800,
           color: AppColors.lightText,
           letterSpacing: -0.3,
+          height: 1.02,
         ),
-        iconTheme: const IconThemeData(color: AppColors.lightText),
+        iconTheme: IconThemeData(color: AppColors.lightText),
       ),
       cardTheme: CardThemeData(
         color: AppColors.lightCard,
         elevation: 0,
         shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(20),
-          side: const BorderSide(color: AppColors.lightBorder, width: 1),
+          borderRadius: BorderRadius.circular(24),
+          side: BorderSide.none,
         ),
       ),
       bottomNavigationBarTheme: const BottomNavigationBarThemeData(
@@ -127,24 +140,26 @@ class AppTheme {
       ),
       scaffoldBackgroundColor: AppColors.darkBg,
       textTheme: _buildTextTheme(AppColors.darkText),
-      appBarTheme: AppBarTheme(
-        backgroundColor: AppColors.darkBg,
+      appBarTheme: const AppBarTheme(
+        backgroundColor: Colors.transparent,
         elevation: 0,
         scrolledUnderElevation: 0,
-        titleTextStyle: GoogleFonts.dmSans(
+        titleTextStyle: TextStyle(
+          fontFamily: AppFonts.display,
           fontSize: 18,
           fontWeight: FontWeight.w800,
           color: AppColors.darkText,
           letterSpacing: -0.3,
+          height: 1.02,
         ),
-        iconTheme: const IconThemeData(color: AppColors.darkText),
+        iconTheme: IconThemeData(color: AppColors.darkText),
       ),
       cardTheme: CardThemeData(
         color: AppColors.darkCard,
         elevation: 0,
         shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(20),
-          side: const BorderSide(color: AppColors.darkBorder, width: 1),
+          borderRadius: BorderRadius.circular(24),
+          side: BorderSide.none,
         ),
       ),
       bottomNavigationBarTheme: const BottomNavigationBarThemeData(
@@ -157,72 +172,94 @@ class AppTheme {
 
   static TextTheme _buildTextTheme(Color textColor) {
     return TextTheme(
-      // DM Sans — modern sans headlines (Google Sans substitute)
-      displayLarge: GoogleFonts.dmSans(
+      // Bricolage Grotesque — display/headline style from the design handoff.
+      displayLarge: TextStyle(
+          fontFamily: AppFonts.display,
           fontSize: 57,
-          fontWeight: FontWeight.w900,
-          letterSpacing: -2,
+          fontWeight: FontWeight.w800,
+          letterSpacing: -1.1,
+          height: 1.02,
           color: textColor),
-      displayMedium: GoogleFonts.dmSans(
+      displayMedium: TextStyle(
+          fontFamily: AppFonts.display,
           fontSize: 45,
-          fontWeight: FontWeight.w900,
-          letterSpacing: -1.5,
+          fontWeight: FontWeight.w800,
+          letterSpacing: -0.9,
+          height: 1.02,
           color: textColor),
-      displaySmall: GoogleFonts.dmSans(
+      displaySmall: TextStyle(
+          fontFamily: AppFonts.display,
           fontSize: 36,
           fontWeight: FontWeight.w800,
-          letterSpacing: -0.8,
+          letterSpacing: -0.7,
+          height: 1.02,
           color: textColor),
-      headlineLarge: GoogleFonts.dmSans(
+      headlineLarge: TextStyle(
+          fontFamily: AppFonts.display,
           fontSize: 32,
           fontWeight: FontWeight.w800,
-          letterSpacing: -0.5,
+          letterSpacing: -0.64,
+          height: 1.02,
           color: textColor),
-      headlineMedium: GoogleFonts.dmSans(
+      headlineMedium: TextStyle(
+          fontFamily: AppFonts.display,
           fontSize: 28,
-          fontWeight: FontWeight.w700,
-          letterSpacing: -0.3,
+          fontWeight: FontWeight.w800,
+          letterSpacing: -0.56,
+          height: 1.02,
           color: textColor),
-      headlineSmall: GoogleFonts.dmSans(
+      headlineSmall: TextStyle(
+          fontFamily: AppFonts.display,
           fontSize: 24,
-          fontWeight: FontWeight.w700,
-          letterSpacing: -0.2,
+          fontWeight: FontWeight.w800,
+          letterSpacing: -0.48,
+          height: 1.02,
           color: textColor),
-      titleLarge: GoogleFonts.dmSans(
+      titleLarge: TextStyle(
+          fontFamily: AppFonts.display,
           fontSize: 22,
-          fontWeight: FontWeight.w700,
-          letterSpacing: -0.2,
+          fontWeight: FontWeight.w800,
+          letterSpacing: -0.44,
+          height: 1.02,
           color: textColor),
-      // Roboto — clean body / UI text
-      titleMedium: GoogleFonts.roboto(
+      // Manrope — body/UI style from the design handoff.
+      titleMedium: TextStyle(
+          fontFamily: AppFonts.body,
           fontSize: 16,
           fontWeight: FontWeight.w700,
           color: textColor),
-      titleSmall: GoogleFonts.roboto(
+      titleSmall: TextStyle(
+          fontFamily: AppFonts.body,
           fontSize: 14,
           fontWeight: FontWeight.w700,
           color: textColor),
-      bodyLarge: GoogleFonts.roboto(
+      bodyLarge: TextStyle(
+          fontFamily: AppFonts.body,
           fontSize: 16,
           fontWeight: FontWeight.w400,
           color: textColor),
-      bodyMedium: GoogleFonts.roboto(
+      bodyMedium: TextStyle(
+          fontFamily: AppFonts.body,
           fontSize: 14,
           fontWeight: FontWeight.w400,
           color: textColor),
-      bodySmall: GoogleFonts.roboto(
+      bodySmall: TextStyle(
+          fontFamily: AppFonts.body,
           fontSize: 12,
           fontWeight: FontWeight.w400,
           color: textColor),
-      labelLarge: GoogleFonts.roboto(
+      labelLarge: TextStyle(
+          fontFamily: AppFonts.body,
           fontSize: 14,
           fontWeight: FontWeight.w700,
           color: textColor),
-      labelMedium: GoogleFonts.roboto(
+      labelMedium: TextStyle(
+          fontFamily: AppFonts.body,
           fontSize: 12,
           fontWeight: FontWeight.w600,
           color: textColor),
-      labelSmall: GoogleFonts.roboto(
+      labelSmall: TextStyle(
+          fontFamily: AppFonts.body,
           fontSize: 10,
           fontWeight: FontWeight.w600,
           color: textColor),

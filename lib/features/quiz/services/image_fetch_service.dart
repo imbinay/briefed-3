@@ -12,16 +12,14 @@ class ImageFetchService {
 
     try {
       final words = query.trim().split(RegExp(r'\s+')).take(3).join(' ');
-      final uri =
-          Uri.parse('https://api.unsplash.com/search/photos').replace(
+      final uri = Uri.parse('https://api.unsplash.com/search/photos').replace(
         queryParameters: {
           'query': words,
           'per_page': '1',
           'client_id': key,
         },
       );
-      final response =
-          await http.get(uri).timeout(const Duration(seconds: 5));
+      final response = await http.get(uri).timeout(const Duration(seconds: 5));
       if (response.statusCode != 200) return null;
       final data = jsonDecode(response.body) as Map<String, dynamic>;
       final results = data['results'] as List? ?? [];

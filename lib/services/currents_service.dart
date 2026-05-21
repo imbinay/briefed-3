@@ -25,10 +25,10 @@ class CurrentsService {
     final uri = Uri.parse(AppConstants.currentsEndpoint)
         .replace(queryParameters: params);
 
-    dev.log('[Currents] GET country=${isWorld ? "world(global)" : country}', name: 'Briefed');
+    dev.log('[Currents] GET country=${isWorld ? "world(global)" : country}',
+        name: 'Briefed');
 
-    final response =
-        await http.get(uri).timeout(const Duration(seconds: 15));
+    final response = await http.get(uri).timeout(const Duration(seconds: 15));
 
     dev.log('[Currents] HTTP ${response.statusCode}', name: 'Briefed');
 
@@ -70,8 +70,7 @@ class CurrentsService {
   // Extract a readable label from the article URL (e.g. "Bbc" → "BBC").
   static String _domainLabel(String url) {
     try {
-      final host =
-          Uri.parse(url).host.replaceFirst(RegExp(r'^www\.'), '');
+      final host = Uri.parse(url).host.replaceFirst(RegExp(r'^www\.'), '');
       final name = host.split('.').reversed.skip(1).first;
       return name[0].toUpperCase() + name.substring(1);
     } catch (_) {
@@ -85,11 +84,21 @@ class CurrentsService {
         ? cat.map((c) => c.toString().toLowerCase()).toList()
         : [cat?.toString().toLowerCase() ?? ''];
     for (final c in raw) {
-      if (c.contains('tech') || c.contains('science')) { return 'technology'; }
-      if (c.contains('business') || c.contains('finance')) { return 'business'; }
-      if (c.contains('sport')) { return 'sports'; }
-      if (c.contains('entertainment')) { return 'entertainment'; }
-      if (c.contains('politic') || c.contains('world') || c.contains('general')) {
+      if (c.contains('tech') || c.contains('science')) {
+        return 'technology';
+      }
+      if (c.contains('business') || c.contains('finance')) {
+        return 'business';
+      }
+      if (c.contains('sport')) {
+        return 'sports';
+      }
+      if (c.contains('entertainment')) {
+        return 'entertainment';
+      }
+      if (c.contains('politic') ||
+          c.contains('world') ||
+          c.contains('general')) {
         return 'world';
       }
     }

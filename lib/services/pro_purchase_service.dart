@@ -1,8 +1,9 @@
-import 'package:in_app_purchase/in_app_purchase.dart' if (dart.library.js_interop) '../core/iap_stub.dart';
+import 'package:in_app_purchase/in_app_purchase.dart'
+    if (dart.library.js_interop) '../core/iap_stub.dart';
 
 class ProPurchaseService {
-  static const String proProductId = 'briefed_pro_lifetime';
-  static const String fallbackPriceLabel = 'A\$2.99 one-time';
+  static const String proProductId = 'briefed_pro_monthly';
+  static const String fallbackPriceLabel = 'A\$2.99/month';
 
   static final InAppPurchase _iap = InAppPurchase.instance;
 
@@ -29,7 +30,7 @@ class ProPurchaseService {
     }
     if (response.productDetails.isEmpty) {
       throw StateError(
-        'Pro one-time product is not configured yet. Create $proProductId in Play Console at A\$2.99.',
+        'Pro monthly subscription is not configured yet. Create $proProductId in Play Console at A\$2.99/month.',
       );
     }
     return response.productDetails.first;

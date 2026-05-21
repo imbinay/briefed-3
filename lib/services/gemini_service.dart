@@ -23,38 +23,26 @@ class GeminiException implements Exception {
 class GeminiService {
   // ── Prompt — includes descriptions for context-rich, analytical questions ─
   static const String _prompt = '''
-You are an expert news quiz writer for a mobile app. Your job is to turn a list of news articles into 5 outstanding quiz questions.
+You are a news quiz writer for a mobile app. Write 5 quiz questions from the articles provided.
 
 Output ONLY valid JSON. No markdown. No explanation. Start with { and end with }.
 
-STEP 1 — SELECT: From the articles provided, choose the 5 most globally significant, thought-provoking stories. Skip minor local events, celebrity gossip, or stories with too little context.
+QUESTION RULES:
+1. 12–18 words. Must be fully self-contained — a reader with NO context must understand exactly what is being asked.
+2. Always name the subject. BAD: "What was targeted?" GOOD: "What did hackers target in the US Treasury breach?"
+3. Start with Who / What / Which / Where / Why / How many.
+4. Each question must cover a DIFFERENT article — never two questions on the same story.
+5. The correct answer must be a specific verifiable fact from the article.
+6. Wrong options: plausible but wrong — real names, places, or numbers that fit the topic.
+7. Explanation: 2 sentences on why this story matters beyond the headline.
+8. story_summary: 2 sentences of background context.
 
-STEP 2 — WRITE one question per selected story following these rules:
+Difficulty:
+- easy: answer is stated in the headline or first sentence
+- hard: answer requires reading the full context or making an inference
 
-Question quality:
-- A great question makes the reader pause and think — it should feel like a genuine test of understanding, not a memory test
-- Frame questions as scenarios or implications: "Why did X happen?", "What does this signal about Y?", "Which group stands to gain most from Z?"
-- NEVER ask a question whose answer appears word-for-word in the headline or context
-- NEVER ask about exact dates, death tolls, or facts that age poorly
-- Vary the angle: causes, consequences, who benefits, what precedent it sets, what the alternatives were
-
-Wrong options:
-- Must be genuinely plausible — things a smart person could reasonably guess
-- Use common misconceptions, adjacent real-world facts, or plausible-but-wrong outcomes
-- Never use obviously absurd options
-
-Answer quality:
-- Correct answer must be clearly supported by the context snippet — not a guess
-- Mark difficulty "easy" if the answer is in the context; "hard" if it requires inference
-
-Explanation:
-- 2 sentences — reveal WHY it matters beyond the headline: the systemic cause, historical parallel, or future implication
-- Never restate the question or just confirm the answer
-
-STEP 3 — Spread questions across different stories. Do not write 2 questions about the same article.
-
-JSON format (one object per question):
-{"questions":[{"question":"...","options":["A","B","C","D"],"correct_index":0,"difficulty":"easy","category":"World","explanation":"2 sentences on the bigger picture.","story_summary":"2-3 sentences of full context.","source":"Source name"}]}
+JSON format:
+{"questions":[{"question":"self-contained question 12-18 words","options":["A","B","C","D"],"correct_index":0,"difficulty":"easy","category":"World","explanation":"2 sentences.","story_summary":"2 sentences.","source":"Source name"}]}
 ''';
 
   // ─────────────────────────────────────────────────────────────────────────
@@ -71,26 +59,23 @@ JSON format (one object per question):
     final isCategoryQuiz = categoryFilter != null;
 
     // 1. Return cache if fresh (only for daily quiz)
-    // TEMP: cache bypass disabled
-    // if (!forceRefresh && !bonusRound && !isCategoryQuiz) {
-    //   final cached = StorageService.getCachedQuestions();
-    //   if (cached != null && cached.length == AppConstants.questionsPerQuiz) {
-    //     dev.log('[Quiz] Returning ${cached.length} cached questions',
-    //         name: 'Briefed');
-    //     return cached;
-    //   }
-    // } else if (forceRefresh && !bonusRound && !isCategoryQuiz) {
-    //   await StorageService.clearQuestionCache();
-    //   dev.log('[Quiz] Cache cleared', name: 'Briefed');
-    // }
-    print("=== BYPASSING CACHE - GENERATING FRESH ===");
-    print("=== articles count: ${articles.length} ===");
+    if (!forceRefresh && !bonusRound && !isCategoryQuiz) {
+      final cached = StorageService.getCachedQuestions();
+      if (cached != null && cached.length == AppConstants.questionsPerQuiz) {
+        dev.log('[Quiz] Returning ${cached.length} cached questions',
+            name: 'Briefed');
+        return cached;
+      }
+    } else if (forceRefresh && !bonusRound && !isCategoryQuiz) {
+      await StorageService.clearQuestionCache();
+      dev.log('[Quiz] Cache cleared', name: 'Briefed');
+    }
 
     List<NewsArticle> sourceArticles;
     if (isCategoryQuiz) {
       final filtered = articles
-          .where((a) =>
-              a.category.toLowerCase() == categoryFilter.toLowerCase())
+          .where(
+              (a) => a.category.toLowerCase() == categoryFilter.toLowerCase())
           .toList();
       sourceArticles = _quizArticles(filtered.isNotEmpty ? filtered : articles);
       dev.log(
@@ -124,7 +109,8 @@ JSON format (one object per question):
     final count = sourceArticles.take(15).length;
     final String userMsg;
     if (isCategoryQuiz) {
-      final label = categoryFilter[0].toUpperCase() + categoryFilter.substring(1);
+      final label =
+          categoryFilter[0].toUpperCase() + categoryFilter.substring(1);
       userMsg =
           'Here are $count $label news articles. Select the 5 most interesting and write one question per story:\n\n$headlines\n\nReturn only JSON.';
     } else if (bonusRound) {
@@ -140,12 +126,15 @@ JSON format (one object per question):
     if (groqKey.isNotEmpty && groqKey != 'YOUR_GROQ_API_KEY') {
       dev.log('[Quiz] Trying Groq...', name: 'Briefed');
       try {
-        final qs = await _callGroq(userMsg);
-        if (qs.length == AppConstants.questionsPerQuiz) {
-          if (!bonusRound && !isCategoryQuiz) await StorageService.cacheQuestions(qs);
-          dev.log('[Quiz] Groq success — ${qs.length} questions',
+        final qs = _dedup(await _callGroq(userMsg));
+        if (qs.length >= 3) {
+          final result = qs.take(AppConstants.questionsPerQuiz).toList();
+          if (!bonusRound && !isCategoryQuiz) {
+            await StorageService.cacheQuestions(result);
+          }
+          dev.log('[Quiz] Groq success — ${result.length} questions',
               name: 'Briefed');
-          return qs;
+          return result;
         }
       } catch (e) {
         dev.log('[Quiz] Groq failed: $e — trying Gemini...', name: 'Briefed');
@@ -159,12 +148,15 @@ JSON format (one object per question):
     if (geminiKey.isNotEmpty && geminiKey != 'YOUR_NEW_GEMINI_API_KEY') {
       dev.log('[Quiz] Trying Gemini...', name: 'Briefed');
       try {
-        final qs = await _callGemini(userMsg);
-        if (qs.length == AppConstants.questionsPerQuiz) {
-          if (!bonusRound && !isCategoryQuiz) await StorageService.cacheQuestions(qs);
-          dev.log('[Quiz] Gemini success — ${qs.length} questions',
+        final qs = _dedup(await _callGemini(userMsg));
+        if (qs.length >= 3) {
+          final result = qs.take(AppConstants.questionsPerQuiz).toList();
+          if (!bonusRound && !isCategoryQuiz) {
+            await StorageService.cacheQuestions(result);
+          }
+          dev.log('[Quiz] Gemini success — ${result.length} questions',
               name: 'Briefed');
-          return qs;
+          return result;
         }
       } catch (e) {
         dev.log('[Quiz] Gemini failed: $e', name: 'Briefed');
@@ -226,8 +218,11 @@ JSON format (one object per question):
     var score = 0;
 
     // Articles with a description give the AI real context to write good questions.
-    if (article.description.trim().length > 60) { score += 10; }
-    else if (article.description.trim().isNotEmpty) { score += 4; }
+    if (article.description.trim().length > 60) {
+      score += 10;
+    } else if (article.description.trim().isNotEmpty) {
+      score += 4;
+    }
 
     if (category.contains('world')) score += 12;
     if (category.contains('science')) score += 10;
@@ -403,9 +398,11 @@ JSON format (one object per question):
     try {
       response = await http
           .post(
-            Uri.parse(
-                '${AppConstants.geminiEndpoint}?key=${AppConstants.geminiApiKey}'),
-            headers: {'Content-Type': 'application/json'},
+            Uri.parse(AppConstants.geminiEndpoint),
+            headers: {
+              'Content-Type': 'application/json',
+              'x-goog-api-key': AppConstants.geminiApiKey,
+            },
             body: body,
           )
           .timeout(const Duration(seconds: 25));
@@ -487,6 +484,13 @@ JSON format (one object per question):
   // ─────────────────────────────────────────────────────────────────────────
   // MOCK FALLBACK
   // ─────────────────────────────────────────────────────────────────────────
+
+  static List<Question> _dedup(List<Question> questions) {
+    final seen = <String>{};
+    return questions
+        .where((q) => seen.add(q.question.toLowerCase().trim()))
+        .toList();
+  }
 
   static List<Question> mockQuestions(
       {bool bonusRound = false, int? replaySeed}) {

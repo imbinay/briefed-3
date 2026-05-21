@@ -6,15 +6,16 @@ import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'firebase_options.dart';
-import 'package:in_app_purchase/in_app_purchase.dart' if (dart.library.js_interop) 'core/iap_stub.dart';
+import 'package:in_app_purchase/in_app_purchase.dart'
+    if (dart.library.js_interop) 'core/iap_stub.dart';
 import 'core/theme.dart';
 import 'providers/providers.dart';
-import 'services/ad_service.dart';
 import 'services/auth_service.dart';
 import 'services/notification_service.dart';
 import 'services/pro_purchase_service.dart';
 import 'services/storage_service.dart';
 import 'screens/screens.dart';
+import 'screens/onboarding_screen.dart';
 import 'features/quiz/screens/new_quiz_screens.dart';
 
 void main() async {
@@ -41,12 +42,6 @@ void main() async {
   );
   await AuthService.initGoogleSignIn();
   await StorageService.init();
-  await AdService.init();
-  final signedInPro = StorageService.getIsPro() &&
-      AuthService.currentUser != null &&
-      !AuthService.isGuest;
-  AdService.configure(adsEnabled: !signedInPro);
-  AdService.preload();
   if (!kIsWeb) {
     await NotificationService.scheduleDailyReminder(
       hour: StorageService.getNotificationHour(),
@@ -122,10 +117,11 @@ class BriefedApp extends ConsumerWidget {
       initialRoute: '/splash',
       routes: {
         '/splash': (_) => const SplashScreen(),
+        '/welcome': (_) => const WelcomeScreen(),
         '/signin': (_) => const SignInScreen(),
         '/onboarding': (_) => const OnboardingScreen(),
         '/home': (_) => const MainShell(),
-        '/quiz': (_) => const QuizScreen(),
+        '/quiz': (_) => const CategorySelectScreen(),
         '/result': (_) => const ResultScreen(),
         '/quiz/select': (_) => const CategorySelectScreen(),
         '/quiz/intro': (_) => const QuizIntroScreen(),

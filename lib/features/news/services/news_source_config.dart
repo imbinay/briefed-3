@@ -5,30 +5,90 @@ class NewsSourceConfig {
 
   static const Map<NewsCategory, Set<String>> approvedSources = {
     NewsCategory.world: {
-      'bbc.co.uk', 'reuters.com', 'apnews.com', 'theguardian.com',
-      'aljazeera.com', 'abc.net.au', 'france24.com', 'dw.com',
-      'theconversation.com', 'foreignpolicy.com',
+      'bbc.co.uk',
+      'reuters.com',
+      'apnews.com',
+      'theguardian.com',
+      'aljazeera.com',
+      'abc.net.au',
+      'france24.com',
+      'dw.com',
+      'theconversation.com',
+      'foreignpolicy.com',
     },
     NewsCategory.politics: {
-      'bbc.co.uk', 'abc.net.au', 'theguardian.com', 'smh.com.au',
-      'theaustralian.com.au', 'theage.com.au', 'politico.com',
-      'thehill.com', 'apnews.com', 'reuters.com', 'crikey.com.au',
+      'bbc.co.uk',
+      'abc.net.au',
+      'theguardian.com',
+      'smh.com.au',
+      'theaustralian.com.au',
+      'theage.com.au',
+      'politico.com',
+      'thehill.com',
+      'apnews.com',
+      'reuters.com',
+      'crikey.com.au',
       'theconversation.com',
     },
     NewsCategory.sports: {
-      'espn.com', 'bbc.co.uk', 'foxsports.com.au', 'theguardian.com',
-      'skysports.com', 'theathletic.com', 'afl.com.au', 'cricket.com.au',
-      'sportingnews.com', 'abc.net.au',
+      'espn.com',
+      'bbc.co.uk',
+      'foxsports.com.au',
+      'theguardian.com',
+      'skysports.com',
+      'theathletic.com',
+      'afl.com.au',
+      'cricket.com.au',
+      'sportingnews.com',
+      'abc.net.au',
     },
     NewsCategory.technology: {
-      'theverge.com', 'techcrunch.com', 'arstechnica.com', 'wired.com',
-      'engadget.com', 'technologyreview.com', '9to5google.com', '9to5mac.com',
-      'theguardian.com', 'abc.net.au',
+      'theverge.com',
+      'techcrunch.com',
+      'arstechnica.com',
+      'wired.com',
+      'engadget.com',
+      'technologyreview.com',
+      '9to5google.com',
+      '9to5mac.com',
+      'theguardian.com',
+      'abc.net.au',
     },
     NewsCategory.business: {
-      'ft.com', 'bloomberg.com', 'cnbc.com', 'afr.com', 'wsj.com',
-      'forbes.com', 'businessinsider.com', 'theguardian.com',
-      'reuters.com', 'abc.net.au',
+      'ft.com',
+      'bloomberg.com',
+      'cnbc.com',
+      'afr.com',
+      'wsj.com',
+      'forbes.com',
+      'businessinsider.com',
+      'theguardian.com',
+      'reuters.com',
+      'abc.net.au',
+    },
+    NewsCategory.health: {
+      'theguardian.com',
+      'bbc.co.uk',
+      'abc.net.au',
+      'newscientist.com',
+      'theatlantic.com',
+      'reuters.com',
+      'apnews.com',
+      'sciencedaily.com',
+      'healthline.com',
+      'medicalnewstoday.com',
+    },
+    NewsCategory.entertainment: {
+      'theguardian.com',
+      'bbc.co.uk',
+      'deadline.com',
+      'variety.com',
+      'hollywoodreporter.com',
+      'rollingstone.com',
+      'pitchfork.com',
+      'ew.com',
+      'vulture.com',
+      'theatlantic.com',
     },
   };
 
@@ -42,11 +102,17 @@ class NewsSourceConfig {
     'espn.com': 80, 'techcrunch.com': 80, 'theverge.com': 80,
     'arstechnica.com': 80, 'abc.net.au': 80, 'afr.com': 80,
     'theathletic.com': 80, 'politico.com': 80,
+    'newscientist.com': 80, 'theatlantic.com': 80,
+    'deadline.com': 80, 'variety.com': 80,
     // Tier 3 — 60
     'wired.com': 60, 'cnbc.com': 60, 'smh.com.au': 60,
     'theage.com.au': 60, 'foxsports.com.au': 60, 'wsj.com': 60,
     'aljazeera.com': 60, 'france24.com': 60, 'engadget.com': 60,
     'forbes.com': 60, 'theconversation.com': 60,
+    'hollywoodreporter.com': 60, 'rollingstone.com': 60,
+    'sciencedaily.com': 60, 'healthline.com': 60,
+    'medicalnewstoday.com': 60, 'pitchfork.com': 60,
+    'ew.com': 60, 'vulture.com': 60,
   };
 
   static int qualityScore(String domain) =>
@@ -93,15 +159,25 @@ class NewsSourceConfig {
     'foreignpolicy.com': 'Foreign Policy',
     'crikey.com.au': 'Crikey',
     'theaustralian.com.au': 'The Australian',
+    'newscientist.com': 'New Scientist',
+    'theatlantic.com': 'The Atlantic',
+    'sciencedaily.com': 'Science Daily',
+    'healthline.com': 'Healthline',
+    'medicalnewstoday.com': 'Medical News Today',
+    'deadline.com': 'Deadline',
+    'variety.com': 'Variety',
+    'hollywoodreporter.com': 'The Hollywood Reporter',
+    'rollingstone.com': 'Rolling Stone',
+    'pitchfork.com': 'Pitchfork',
+    'ew.com': 'Entertainment Weekly',
+    'vulture.com': 'Vulture',
   };
 
   static String displayName(String domain) {
     if (_displayNames.containsKey(domain)) return _displayNames[domain]!;
     // Capitalise domain name as fallback
     final base = domain.split('.').first;
-    return base.isEmpty
-        ? domain
-        : base[0].toUpperCase() + base.substring(1);
+    return base.isEmpty ? domain : base[0].toUpperCase() + base.substring(1);
   }
 
   static bool isApproved(String domain, NewsCategory category) =>

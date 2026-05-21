@@ -7,13 +7,9 @@ class ApiConfig {
       String.fromEnvironment('NEWSDATA_API_KEY');
   static const String unsplashAccessKey =
       String.fromEnvironment('UNSPLASH_ACCESS_KEY');
-  static const String groqApiKey =
-      String.fromEnvironment('GROQ_API_KEY');
+  static const String groqApiKey = String.fromEnvironment('GROQ_API_KEY');
 
-  static const String currentsBaseUrl =
-      'https://api.currentsapi.services/v1';
-  static const String guardianBaseUrl =
-      'https://content.guardianapis.com';
-  static const String newsdataBaseUrl =
-      'https://newsdata.io/api/1';
+  static const String currentsBaseUrl = 'https://api.currentsapi.services/v1';
+  static const String guardianBaseUrl = 'https://content.guardianapis.com';
+  static const String newsdataBaseUrl = 'https://newsdata.io/api/1';
 }

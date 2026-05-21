@@ -23,6 +23,7 @@ class AdService {
   static Future<void> showInterstitial({VoidCallback? then}) async {
     then?.call();
   }
+
   static Future<void> loadRewarded() async {}
   static bool get rewardedReady => false;
   static bool get rewardedLoading => false;

@@ -2,13 +2,13 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:google_fonts/google_fonts.dart';
 import 'package:share_plus/share_plus.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'package:screenshot/screenshot.dart';
 import 'package:confetti/confetti.dart';
 import 'dart:async';
 import 'dart:math';
+import 'dart:ui';
 import 'dart:typed_data';
 import 'package:audioplayers/audioplayers.dart';
 
@@ -26,6 +26,10 @@ import '../widgets/widgets.dart';
 import '../features/news/models/ranked_article.dart';
 import '../features/news/models/news_category.dart';
 import '../features/news/providers/news_pipeline_provider.dart';
+import 'home_screen.dart';
+import 'today_screen.dart';
+import '../services/game_results_service.dart';
+import '../features/xp/xp_service.dart';
 
 // STATIC GAME DATA
 
@@ -1355,12 +1359,16 @@ IconData _iconForCat(String id) {
   switch (id) {
     case 'world':
       return Icons.language_rounded;
+    case 'politics':
+      return Icons.account_balance_rounded;
     case 'tech':
       return Icons.memory_rounded;
     case 'business':
       return Icons.trending_up_rounded;
     case 'sports':
       return Icons.sports_soccer_rounded;
+    case 'health':
+      return Icons.favorite_rounded;
     case 'entertainment':
       return Icons.star_rounded;
     default:
@@ -1391,10 +1399,10 @@ class MainShell extends ConsumerStatefulWidget {
 
 class _MainShellState extends ConsumerState<MainShell> {
   final _pages = const [
-    HomeScreen(),
-    BriefingScreen(),
+    TodayScreen(),
     GamesScreen(),
-    ProfileScreen()
+    BriefingScreen(),
+    ProfileScreen(),
   ];
   @override
   void initState() {
@@ -1435,46 +1443,72 @@ class _MainShellState extends ConsumerState<MainShell> {
   Widget _buildMobileShell(int tab) {
     return Scaffold(
       body: IndexedStack(index: tab, children: _pages),
-      bottomNavigationBar: Container(
-        decoration: BoxDecoration(
-            color: context.isDark ? AppColors.darkNavBg : AppColors.lightNavBg,
-            border: Border(top: BorderSide(color: context.borderColor))),
-        child: SafeArea(
-            top: false,
-            child: Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                child: Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceAround,
-                    children: [
-                      _NavItem(
-                          icon: Icons.home_rounded,
-                          label: 'Home',
-                          index: 0,
-                          current: tab,
-                          onTap: (i) =>
-                              ref.read(selectedTabProvider.notifier).state = i),
-                      _NavItem(
-                          icon: Icons.article_rounded,
-                          label: 'Briefing',
-                          index: 1,
-                          current: tab,
-                          onTap: (i) =>
-                              ref.read(selectedTabProvider.notifier).state = i),
-                      _NavItem(
-                          icon: Icons.games_rounded,
-                          label: 'Games',
-                          index: 2,
-                          current: tab,
-                          onTap: (i) =>
-                              ref.read(selectedTabProvider.notifier).state = i),
-                      _NavItem(
-                          icon: Icons.person_rounded,
-                          label: 'Profile',
-                          index: 3,
-                          current: tab,
-                          onTap: (i) =>
-                              ref.read(selectedTabProvider.notifier).state = i),
-                    ]))),
+      extendBody: true,
+      bottomNavigationBar: Padding(
+        padding: const EdgeInsets.fromLTRB(16, 0, 16, 10),
+        child: ClipRRect(
+          borderRadius: BorderRadius.circular(28),
+          child: BackdropFilter(
+            filter: ImageFilter.blur(sigmaX: 18, sigmaY: 18),
+            child: Container(
+              decoration: BoxDecoration(
+                color: context.isDark
+                    ? const Color(0xFF171717).withValues(alpha: 0.76)
+                    : Colors.white.withValues(alpha: 0.76),
+                borderRadius: BorderRadius.circular(28),
+                boxShadow: [
+                  BoxShadow(
+                    color: AppColors.accent
+                        .withValues(alpha: context.isDark ? 0.12 : 0.18),
+                    blurRadius: 34,
+                    offset: const Offset(0, 14),
+                  ),
+                ],
+              ),
+              child: SafeArea(
+                  top: false,
+                  child: Padding(
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 8, vertical: 8),
+                      child: Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceAround,
+                          children: [
+                            _NavItem(
+                                icon: Icons.home_rounded,
+                                label: 'Today',
+                                index: 0,
+                                current: tab,
+                                onTap: (i) => ref
+                                    .read(selectedTabProvider.notifier)
+                                    .state = i),
+                            _NavItem(
+                                icon: Icons.sports_esports_rounded,
+                                label: 'Play',
+                                index: 1,
+                                current: tab,
+                                onTap: (i) => ref
+                                    .read(selectedTabProvider.notifier)
+                                    .state = i),
+                            _NavItem(
+                                icon: Icons.explore_rounded,
+                                label: 'Explore',
+                                index: 2,
+                                current: tab,
+                                onTap: (i) => ref
+                                    .read(selectedTabProvider.notifier)
+                                    .state = i),
+                            _NavItem(
+                                icon: Icons.person_rounded,
+                                label: 'Profile',
+                                index: 3,
+                                current: tab,
+                                onTap: (i) => ref
+                                    .read(selectedTabProvider.notifier)
+                                    .state = i),
+                          ]))),
+            ),
+          ),
+        ),
       ),
     );
   }
@@ -1533,8 +1567,8 @@ class _WebShellBody extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     if (tab == 0) return DesktopHomePage(showRightSidebar: isDesktop);
     final content = switch (tab) {
-      1 => const DesktopBriefingPage(),
-      2 => const DesktopGamesPage(),
+      1 => const DesktopGamesPage(),
+      2 => const DesktopBriefingPage(),
       3 => const _DesktopProfilePage(),
       _ => DesktopHomePage(showRightSidebar: isDesktop),
     };
@@ -1568,8 +1602,20 @@ class WebTopNav extends ConsumerWidget {
     ];
     return Container(
       decoration: BoxDecoration(
-        color: context.cardColor,
-        border: Border(bottom: BorderSide(color: context.borderColor)),
+        color:
+            context.cardColor.withValues(alpha: context.isDark ? 0.82 : 0.86),
+        border: Border(
+          bottom: BorderSide(
+              color:
+                  Colors.white.withValues(alpha: context.isDark ? 0.04 : 0.62)),
+        ),
+        boxShadow: [
+          BoxShadow(
+            color: AppColors.accent.withValues(alpha: 0.08),
+            blurRadius: 24,
+            offset: const Offset(0, 10),
+          ),
+        ],
       ),
       child: SafeArea(
         bottom: false,
@@ -1582,16 +1628,20 @@ class WebTopNav extends ConsumerWidget {
                 text: TextSpan(children: [
                   TextSpan(
                     text: 'Briefed',
-                    style: GoogleFonts.dmSans(
+                    style: TextStyle(
+                      fontFamily: AppFonts.display,
+                      height: 1.02,
                       fontSize: 26,
                       fontWeight: FontWeight.w900,
                       color: context.textColor,
                       letterSpacing: -0.4,
                     ),
                   ),
-                  TextSpan(
+                  const TextSpan(
                     text: '.',
-                    style: GoogleFonts.dmSans(
+                    style: TextStyle(
+                      fontFamily: AppFonts.display,
+                      height: 1.02,
                       fontSize: 26,
                       fontWeight: FontWeight.w900,
                       color: AppColors.accent,
@@ -1654,7 +1704,7 @@ class _TopNavButton extends StatelessWidget {
     final bg = filled
         ? AppColors.accent
         : selected
-            ? AppColors.accent.withValues(alpha: 0.1)
+            ? AppColors.accent.withValues(alpha: 0.12)
             : Colors.transparent;
     return TextButton(
       onPressed: onTap,
@@ -1666,11 +1716,14 @@ class _TopNavButton extends StatelessWidget {
                 ? AppColors.accent
                 : context.subColor,
         padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(999)),
       ),
       child: Text(
         label,
-        style: GoogleFonts.dmSans(fontSize: 13, fontWeight: FontWeight.w800),
+        style: const TextStyle(
+            fontFamily: AppFonts.body,
+            fontSize: 13,
+            fontWeight: FontWeight.w800),
       ),
     );
   }
@@ -1716,7 +1769,7 @@ class DesktopHomePage extends ConsumerWidget {
       _WebSectionTitle(
         title: 'Latest Briefing',
         action: 'View briefing',
-        onTap: () => ref.read(selectedTabProvider.notifier).state = 1,
+        onTap: () => ref.read(selectedTabProvider.notifier).state = 2,
       ),
       const SizedBox(height: 12),
       NewsCardGrid(articles: latest.isEmpty ? articles : latest),
@@ -1764,9 +1817,10 @@ class _DesktopHeroSection extends StatelessWidget {
       final copy = Padding(
         padding: const EdgeInsets.all(28),
         child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-          Text(
+          const Text(
             'TODAY ON BRIEFED',
-            style: GoogleFonts.dmSans(
+            style: TextStyle(
+              fontFamily: AppFonts.body,
               fontSize: 11,
               fontWeight: FontWeight.w900,
               color: AppColors.accent,
@@ -1778,7 +1832,8 @@ class _DesktopHeroSection extends StatelessWidget {
             article?.title ?? 'Your daily news briefing, sharpened.',
             maxLines: 5,
             overflow: TextOverflow.ellipsis,
-            style: GoogleFonts.dmSans(
+            style: TextStyle(
+              fontFamily: AppFonts.display,
               fontSize: 42,
               fontWeight: FontWeight.w900,
               height: 1.05,
@@ -1791,7 +1846,8 @@ class _DesktopHeroSection extends StatelessWidget {
                 'Catch up on the headlines, test yourself with the daily quiz, and play fast news games from one clean desktop hub.',
             maxLines: 4,
             overflow: TextOverflow.ellipsis,
-            style: GoogleFonts.roboto(
+            style: TextStyle(
+              fontFamily: AppFonts.body,
               fontSize: 17,
               height: 1.45,
               color: context.subColor,
@@ -1881,7 +1937,8 @@ class _MetaPill extends StatelessWidget {
         const SizedBox(width: 6),
         Text(
           label,
-          style: GoogleFonts.dmSans(
+          style: TextStyle(
+            fontFamily: AppFonts.body,
             fontSize: 11,
             fontWeight: FontWeight.w700,
             color: context.subColor,
@@ -1903,27 +1960,7 @@ class WebAdPlaceholder extends StatelessWidget {
   });
 
   @override
-  Widget build(BuildContext context) {
-    return Container(
-      height: height,
-      width: double.infinity,
-      alignment: Alignment.center,
-      decoration: BoxDecoration(
-        color: context.inputBg,
-        borderRadius: BorderRadius.circular(8),
-        border: Border.all(color: context.border2Color),
-      ),
-      child: Text(
-        label.toUpperCase(),
-        style: GoogleFonts.dmSans(
-          fontSize: 10,
-          fontWeight: FontWeight.w800,
-          letterSpacing: 1.4,
-          color: context.hintColor,
-        ),
-      ),
-    );
-  }
+  Widget build(BuildContext context) => const SizedBox.shrink();
 }
 
 class PlayStoreDownloadCard extends StatelessWidget {
@@ -1949,7 +1986,8 @@ class PlayStoreDownloadCard extends StatelessWidget {
           Expanded(
             child: Text(
               'Get the full experience on Android',
-              style: GoogleFonts.dmSans(
+              style: TextStyle(
+                fontFamily: AppFonts.body,
                 fontSize: 15,
                 fontWeight: FontWeight.w900,
                 height: 1.25,
@@ -1972,10 +2010,12 @@ class PlayStoreDownloadCard extends StatelessWidget {
                 color: Colors.black,
                 borderRadius: BorderRadius.circular(8),
               ),
-              child: Text(
+              child: const Text(
                 'GET IT ON Google Play',
-                style: GoogleFonts.dmSans(
-                    color: Colors.white, fontWeight: FontWeight.w800),
+                style: TextStyle(
+                    fontFamily: AppFonts.body,
+                    color: Colors.white,
+                    fontWeight: FontWeight.w800),
               ),
             ),
           ),
@@ -2065,8 +2105,7 @@ class _WebNewsCard extends StatelessWidget {
                 ),
               ),
               child: Icon(Icons.article_rounded,
-                  size: 63,
-                  color: Colors.white.withValues(alpha: 0.38)),
+                  size: 63, color: Colors.white.withValues(alpha: 0.38)),
             );
             return hasImage
                 ? Image.network(article.imageUrl!,
@@ -2088,8 +2127,10 @@ class _WebNewsCard extends StatelessWidget {
                     article.timeAgo,
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
-                    style: GoogleFonts.dmSans(
-                        fontSize: 10, color: context.hintColor),
+                    style: TextStyle(
+                        fontFamily: AppFonts.body,
+                        fontSize: 10,
+                        color: context.hintColor),
                   ),
                 ),
               ]),
@@ -2098,7 +2139,8 @@ class _WebNewsCard extends StatelessWidget {
                 article.title,
                 maxLines: 3,
                 overflow: TextOverflow.ellipsis,
-                style: GoogleFonts.dmSans(
+                style: TextStyle(
+                  fontFamily: AppFonts.body,
                   fontSize: 15,
                   fontWeight: FontWeight.w800,
                   height: 1.28,
@@ -2110,7 +2152,8 @@ class _WebNewsCard extends StatelessWidget {
                 'Source: ${article.sourceName}',
                 maxLines: 1,
                 overflow: TextOverflow.ellipsis,
-                style: GoogleFonts.dmSans(
+                style: TextStyle(
+                  fontFamily: AppFonts.body,
                   fontSize: 11,
                   fontWeight: FontWeight.w700,
                   color: context.subColor,
@@ -2130,11 +2173,12 @@ class QuizPanel extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final user = ref.watch(userProvider);
-    return _QuizHeroCard(
+    return QuizHeroCard(
       user: user,
       latestResult:
           user.recentResults.isEmpty ? null : user.recentResults.first,
-      onTap: () => Navigator.of(context).pushNamed('/quiz'),
+      onStartQuiz: () => Navigator.of(context).pushNamed('/quiz'),
+      onPlayRealOrFake: () => ref.read(selectedTabProvider.notifier).state = 1,
     );
   }
 }
@@ -2179,6 +2223,38 @@ class GamesGrid extends StatelessWidget {
         onTap: () => Navigator.of(context).push(
             MaterialPageRoute(builder: (_) => const OldestToLatestGame())),
       ),
+      _GameCard(
+        gradient: const LinearGradient(
+          colors: [Color(0xFF00BCD4), Color(0xFF00796B)],
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+        ),
+        icon: Icons.compare_arrows_rounded,
+        title: 'Headline Match',
+        description:
+            'Match the brief to the right headline. Five quick questions from a 100+ item bank.',
+        tag: 'MATCH',
+        tagColor: AppColors.teal,
+        stats: const ['5 questions', '100+ bank'],
+        onTap: () => Navigator.of(context)
+            .push(MaterialPageRoute(builder: (_) => const HeadlineMatchGame())),
+      ),
+      _GameCard(
+        gradient: const LinearGradient(
+          colors: [Color(0xFFFF5722), Color(0xFFC62828)],
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+        ),
+        icon: Icons.travel_explore_rounded,
+        title: 'Source Sleuth',
+        description:
+            'Read the clue and identify the most likely news desk. Five rounds, rotating daily.',
+        tag: 'SLEUTH',
+        tagColor: AppColors.accent,
+        stats: const ['5 questions', 'Daily mix'],
+        onTap: () => Navigator.of(context)
+            .push(MaterialPageRoute(builder: (_) => const SourceSleuthGame())),
+      ),
     ];
     if (compact) {
       return Column(children: [
@@ -2192,6 +2268,12 @@ class GamesGrid extends StatelessWidget {
         Expanded(child: cards[0]),
         const SizedBox(width: 14),
         Expanded(child: cards[1]),
+      ]),
+      const SizedBox(height: 14),
+      Row(children: [
+        Expanded(child: cards[2]),
+        const SizedBox(width: 14),
+        Expanded(child: cards[3]),
       ]),
     ]);
   }
@@ -2265,7 +2347,8 @@ class _SidebarCard extends StatelessWidget {
       child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
         Text(
           title,
-          style: GoogleFonts.dmSans(
+          style: TextStyle(
+            fontFamily: AppFonts.body,
             fontSize: 14,
             fontWeight: FontWeight.w900,
             color: context.textColor,
@@ -2305,15 +2388,19 @@ class _SidebarMetric extends StatelessWidget {
           const SizedBox(height: 8),
           Text(
             value,
-            style: GoogleFonts.dmSans(
+            style: TextStyle(
+              fontFamily: AppFonts.display,
+              height: 1.02,
               fontSize: 22,
               fontWeight: FontWeight.w900,
               color: context.textColor,
             ),
           ),
           Text(label,
-              style:
-                  GoogleFonts.dmSans(fontSize: 11, color: context.subColor)),
+              style: TextStyle(
+                  fontFamily: AppFonts.body,
+                  fontSize: 11,
+                  color: context.subColor)),
         ]),
       ),
     );
@@ -2335,7 +2422,8 @@ class DesktopBriefingPage extends ConsumerWidget {
       const SizedBox(height: 6),
       Text(
         'Latest headlines grouped for desktop reading.',
-        style: GoogleFonts.dmSans(fontSize: 14, color: context.subColor),
+        style: TextStyle(
+            fontFamily: AppFonts.body, fontSize: 14, color: context.subColor),
       ),
       const SizedBox(height: 18),
       if (news.isLoading)
@@ -2356,7 +2444,8 @@ class DesktopGamesPage extends StatelessWidget {
       const SizedBox(height: 6),
       Text(
         'Quick news games to sharpen your mind.',
-        style: GoogleFonts.dmSans(fontSize: 14, color: context.subColor),
+        style: TextStyle(
+            fontFamily: AppFonts.body, fontSize: 14, color: context.subColor),
       ),
       const SizedBox(height: 18),
       const GamesGrid(),
@@ -2381,15 +2470,18 @@ class DesktopGamesPage extends StatelessWidget {
                 Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
               Text(
                 'More games coming soon',
-                style: GoogleFonts.dmSans(
+                style: TextStyle(
+                    fontFamily: AppFonts.body,
                     fontSize: 14,
                     fontWeight: FontWeight.w800,
                     color: context.textColor),
               ),
               Text(
                 'Flash Headlines, News Connections and more',
-                style:
-                    GoogleFonts.dmSans(fontSize: 12, color: context.subColor),
+                style: TextStyle(
+                    fontFamily: AppFonts.body,
+                    fontSize: 12,
+                    color: context.subColor),
               ),
             ]),
           ),
@@ -2427,7 +2519,9 @@ class _WebSectionTitle extends StatelessWidget {
       Expanded(
         child: Text(
           title,
-          style: GoogleFonts.dmSans(
+          style: TextStyle(
+            fontFamily: AppFonts.display,
+            height: 1.02,
             fontSize: 30,
             fontWeight: FontWeight.w900,
             color: context.textColor,
@@ -2439,7 +2533,8 @@ class _WebSectionTitle extends StatelessWidget {
           onPressed: onTap,
           child: Text(
             action!,
-            style: GoogleFonts.dmSans(
+            style: const TextStyle(
+              fontFamily: AppFonts.body,
               fontSize: 13,
               fontWeight: FontWeight.w800,
               color: AppColors.accent,
@@ -2450,7 +2545,7 @@ class _WebSectionTitle extends StatelessWidget {
   }
 }
 
-class _NavItem extends StatelessWidget {
+class _NavItem extends StatefulWidget {
   final IconData icon;
   final String label;
   final int index, current;
@@ -2461,30 +2556,162 @@ class _NavItem extends StatelessWidget {
       required this.index,
       required this.current,
       required this.onTap});
+
+  @override
+  State<_NavItem> createState() => _NavItemState();
+}
+
+class _NavItemState extends State<_NavItem> {
+  bool _pressed = false;
+
   @override
   Widget build(BuildContext context) {
-    final on = current == index;
+    final on = widget.current == widget.index;
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+
+    final bgColor = on
+        ? AppColors.accent
+        : isDark
+            ? const Color(0xFF2A1A0E)
+            : const Color(0xFFF0E0D0);
+
+    final shadowColor = on
+        ? const Color(0xFFB83400)
+        : isDark
+            ? const Color(0xFF120804)
+            : const Color(0xFFCCA882);
+
     return GestureDetector(
-        onTap: () => onTap(index),
-        behavior: HitTestBehavior.opaque,
+      onTapDown: (_) => setState(() => _pressed = true),
+      onTapUp: (_) {
+        setState(() => _pressed = false);
+        widget.onTap(widget.index);
+      },
+      onTapCancel: () => setState(() => _pressed = false),
+      behavior: HitTestBehavior.opaque,
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 100),
+        curve: Curves.easeOut,
+        transform: Matrix4.translationValues(0, _pressed ? 4 : 0, 0),
+        padding: EdgeInsets.fromLTRB(on ? 16 : 12, 8, on ? 16 : 12, 8),
+        decoration: BoxDecoration(
+          color: bgColor,
+          borderRadius: BorderRadius.circular(18),
+          boxShadow: [
+            BoxShadow(
+              color: shadowColor,
+              blurRadius: 0,
+              offset: Offset(0, _pressed ? 0 : 4),
+            ),
+          ],
+        ),
+        child: Row(mainAxisSize: MainAxisSize.min, children: [
+          Icon(
+            widget.icon,
+            size: 22,
+            color: on ? Colors.white : const Color(0xFF9C7A60),
+          ),
+          if (on) ...[
+            const SizedBox(width: 8),
+            Text(
+              widget.label,
+              style: const TextStyle(
+                fontFamily: AppFonts.body,
+                fontSize: 12,
+                fontWeight: FontWeight.w800,
+                color: Colors.white,
+              ),
+            ),
+          ],
+        ]),
+      ),
+    );
+  }
+}
+
+// ── Duolingo-style tab chip used in the Explore tab bar ───────────────────────
+
+class _TabChip extends StatefulWidget {
+  final String label;
+  final bool selected;
+  final Color color;
+  final VoidCallback onTap;
+
+  const _TabChip({
+    required this.label,
+    required this.selected,
+    required this.color,
+    required this.onTap,
+  });
+
+  @override
+  State<_TabChip> createState() => _TabChipState();
+}
+
+class _TabChipState extends State<_TabChip> {
+  bool _pressed = false;
+
+  Color _shadow(Color c) {
+    final hsl = HSLColor.fromColor(c);
+    return hsl.withLightness((hsl.lightness * 0.58).clamp(0.0, 1.0)).toColor();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final c = widget.color;
+    final sel = widget.selected;
+    final isDark = context.isDark;
+
+    final unselBg =
+        isDark ? const Color(0xFF252525) : const Color(0xFFF0EEEc);
+    final unselShadow =
+        isDark ? const Color(0xFF111111) : const Color(0xFFCECBCA);
+
+    return GestureDetector(
+      onTapDown: (_) => setState(() => _pressed = true),
+      onTapUp: (_) {
+        setState(() => _pressed = false);
+        widget.onTap();
+      },
+      onTapCancel: () => setState(() => _pressed = false),
+      child: Container(
+        margin: const EdgeInsets.only(right: 8),
         child: AnimatedContainer(
-            duration: const Duration(milliseconds: 200),
-            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 5),
-            decoration: BoxDecoration(
-                color: on
-                    ? AppColors.accent.withValues(alpha: 0.12)
-                    : Colors.transparent,
-                borderRadius: BorderRadius.circular(12)),
-            child: Column(mainAxisSize: MainAxisSize.min, children: [
-              Icon(icon,
-                  size: 22, color: on ? AppColors.accent : context.hintColor),
-              const SizedBox(height: 3),
-              Text(label,
-                  style: GoogleFonts.dmSans(
-                      fontSize: 10,
-                      fontWeight: FontWeight.w700,
-                      color: on ? AppColors.accent : context.hintColor)),
-            ])));
+          duration: const Duration(milliseconds: 90),
+          curve: Curves.easeOut,
+          transform: Matrix4.translationValues(0, _pressed ? 3 : 0, 0),
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+          decoration: BoxDecoration(
+            color: sel ? c : unselBg,
+            borderRadius: BorderRadius.circular(14),
+            border: sel
+                ? null
+                : Border.all(
+                    color: isDark
+                        ? const Color(0xFF333333)
+                        : const Color(0xFFE0DEDD),
+                    width: 1.5,
+                  ),
+            boxShadow: [
+              BoxShadow(
+                color: sel ? _shadow(c) : unselShadow,
+                blurRadius: 0,
+                offset: Offset(0, _pressed ? 0 : 3),
+              ),
+            ],
+          ),
+          child: Text(
+            widget.label,
+            style: TextStyle(
+              fontFamily: AppFonts.body,
+              fontSize: 13,
+              fontWeight: FontWeight.w800,
+              color: sel ? Colors.white : context.subColor,
+            ),
+          ),
+        ),
+      ),
+    );
   }
 }
 
@@ -2512,12 +2739,10 @@ class _SplashScreenState extends State<SplashScreen>
     Future.delayed(const Duration(milliseconds: 2200), () {
       if (!mounted) return;
       final user = AuthService.currentUser;
-      if (user == null) {
-        Navigator.of(context).pushReplacementNamed('/signin');
-      } else if (StorageService.isOnboardingDone()) {
+      if (user != null && StorageService.isOnboardingDone()) {
         Navigator.of(context).pushReplacementNamed('/home');
       } else {
-        Navigator.of(context).pushReplacementNamed('/onboarding');
+        Navigator.of(context).pushReplacementNamed('/welcome');
       }
     });
   }
@@ -2555,15 +2780,18 @@ class _SplashScreenState extends State<SplashScreen>
                               child: Icon(Icons.newspaper_rounded,
                                   color: AppColors.accent, size: 42)))),
                   const SizedBox(height: 20),
-                  Text('Briefed.',
-                      style: GoogleFonts.dmSans(
+                  const Text('Briefed.',
+                      style: TextStyle(
+                          fontFamily: AppFonts.display,
+                          height: 1.02,
                           fontSize: 38,
                           fontWeight: FontWeight.w900,
                           color: Colors.white,
                           letterSpacing: -1.5)),
                   const SizedBox(height: 6),
                   Text('STAY SHARP',
-                      style: GoogleFonts.dmSans(
+                      style: TextStyle(
+                          fontFamily: AppFonts.body,
                           fontSize: 11,
                           fontWeight: FontWeight.w600,
                           color: Colors.white.withValues(alpha: 0.7),
@@ -2729,14 +2957,18 @@ class _SignInScreenState extends ConsumerState<SignInScreen> {
                           text: TextSpan(children: [
                         TextSpan(
                             text: 'Briefed',
-                            style: GoogleFonts.dmSans(
+                            style: TextStyle(
+                                fontFamily: AppFonts.display,
+                                height: 1.02,
                                 fontSize: 36,
                                 fontWeight: FontWeight.w900,
                                 color: context.textColor,
                                 letterSpacing: -1.2)),
-                        TextSpan(
+                        const TextSpan(
                             text: '.',
-                            style: GoogleFonts.dmSans(
+                            style: TextStyle(
+                                fontFamily: AppFonts.display,
+                                height: 1.02,
                                 fontSize: 36,
                                 fontWeight: FontWeight.w900,
                                 color: AppColors.accent,
@@ -2744,8 +2976,10 @@ class _SignInScreenState extends ConsumerState<SignInScreen> {
                       ])),
                       const SizedBox(height: 6),
                       Text('Stay sharp. Stay informed.',
-                          style: GoogleFonts.roboto(
-                              fontSize: 14, color: context.hintColor)),
+                          style: TextStyle(
+                              fontFamily: AppFonts.body,
+                              fontSize: 14,
+                              color: context.hintColor)),
                     ])),
                     const SizedBox(height: 48),
 
@@ -2764,7 +2998,8 @@ class _SignInScreenState extends ConsumerState<SignInScreen> {
                               const _GoogleLogo(size: 28),
                               const SizedBox(width: 12),
                               Text('Continue with Google',
-                                  style: GoogleFonts.roboto(
+                                  style: TextStyle(
+                                      fontFamily: AppFonts.body,
                                       fontSize: 15,
                                       fontWeight: FontWeight.w700,
                                       color: context.textColor)),
@@ -2784,14 +3019,15 @@ class _SignInScreenState extends ConsumerState<SignInScreen> {
                           decoration: BoxDecoration(
                               color: AppColors.accent,
                               borderRadius: BorderRadius.circular(16)),
-                          child: Row(
+                          child: const Row(
                               mainAxisAlignment: MainAxisAlignment.center,
                               children: [
-                                const Icon(Icons.email_rounded,
+                                Icon(Icons.email_rounded,
                                     color: Colors.white, size: 20),
-                                const SizedBox(width: 10),
+                                SizedBox(width: 10),
                                 Text('Continue with Email',
-                                    style: GoogleFonts.roboto(
+                                    style: TextStyle(
+                                        fontFamily: AppFonts.body,
                                         fontSize: 15,
                                         fontWeight: FontWeight.w700,
                                         color: Colors.white)),
@@ -2828,7 +3064,9 @@ class _SignInScreenState extends ConsumerState<SignInScreen> {
                                                       BorderRadius.circular(
                                                           10)),
                                               child: Text('Sign In',
-                                                  style: GoogleFonts.roboto(
+                                                  style: TextStyle(
+                                                      fontFamily:
+                                                          AppFonts.display,
                                                       fontSize: 13,
                                                       fontWeight:
                                                           FontWeight.w700,
@@ -2855,7 +3093,9 @@ class _SignInScreenState extends ConsumerState<SignInScreen> {
                                                       BorderRadius.circular(
                                                           10)),
                                               child: Text('Create Account',
-                                                  style: GoogleFonts.roboto(
+                                                  style: TextStyle(
+                                                      fontFamily:
+                                                          AppFonts.display,
                                                       fontSize: 13,
                                                       fontWeight:
                                                           FontWeight.w700,
@@ -2889,7 +3129,8 @@ class _SignInScreenState extends ConsumerState<SignInScreen> {
                                     }),
                                 child: Center(
                                     child: Text('Back',
-                                        style: GoogleFonts.roboto(
+                                        style: TextStyle(
+                                            fontFamily: AppFonts.body,
                                             fontSize: 12,
                                             color: context.hintColor)))),
                           ])),
@@ -2905,8 +3146,10 @@ class _SignInScreenState extends ConsumerState<SignInScreen> {
                               border: Border.all(
                                   color: AppColors.red.withValues(alpha: 0.2))),
                           child: Text(_error!,
-                              style: GoogleFonts.roboto(
-                                  fontSize: 12, color: AppColors.red))),
+                              style: const TextStyle(
+                                  fontFamily: AppFonts.body,
+                                  fontSize: 12,
+                                  color: AppColors.red))),
                     ],
 
                     // ── Loading ───────────────────────────────────────────────────────────
@@ -2924,7 +3167,8 @@ class _SignInScreenState extends ConsumerState<SignInScreen> {
                         child: GestureDetector(
                       onTap: _loading ? null : _continueAsGuest,
                       child: Text('Continue as Guest',
-                          style: GoogleFonts.roboto(
+                          style: TextStyle(
+                              fontFamily: AppFonts.body,
                               fontSize: 13,
                               color: context.hintColor,
                               decoration: TextDecoration.underline,
@@ -2941,11 +3185,12 @@ class _SignInScreenState extends ConsumerState<SignInScreen> {
       controller: ctrl,
       keyboardType: type,
       obscureText: obscure,
-      style: GoogleFonts.roboto(fontSize: 14, color: context.textColor),
+      style: TextStyle(
+          fontFamily: AppFonts.body, fontSize: 14, color: context.textColor),
       decoration: InputDecoration(
         hintText: hint,
-        hintStyle:
-            GoogleFonts.roboto(color: context.hintColor, fontSize: 14),
+        hintStyle: TextStyle(
+            fontFamily: AppFonts.body, color: context.hintColor, fontSize: 14),
         prefixIcon: Icon(icon, size: 18, color: context.hintColor),
         filled: true,
         fillColor: context.inputBg,
@@ -2958,1269 +3203,8 @@ class _SignInScreenState extends ConsumerState<SignInScreen> {
     );
   }
 }
-
-// ONBOARDING
-
-class OnboardingScreen extends ConsumerStatefulWidget {
-  const OnboardingScreen({super.key});
-  @override
-  ConsumerState<OnboardingScreen> createState() => _OnboardingScreenState();
-}
-
-class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
-  int _step = 0;
-  final List<String> _selected = ['world', 'tech', 'business'];
-  String _selectedCountry = AppConstants.defaultCountry;
-  final _countrySearch = TextEditingController();
-  List<Map<String, String>> _filteredCountries = [];
-  int _notifHour = 8;
-  int _notifMinute = 0;
-
-  static final _sortedCountries = [
-    AppConstants.allCountries.firstWhere((c) => c['code'] == 'world'),
-    ...(AppConstants.allCountries.where((c) => c['code'] != 'world').toList()
-      ..sort((a, b) => a['name']!.compareTo(b['name']!))),
-  ];
-  final List<Map<String, dynamic>> _notifOptions = [
-    {
-      'label': '7:00 AM',
-      'sub': 'Early bird',
-      'icon': Icons.wb_sunny_outlined,
-      'hour': 7,
-      'minute': 0
-    },
-    {
-      'label': '8:30 AM',
-      'sub': 'Morning',
-      'icon': Icons.light_mode_outlined,
-      'hour': 8,
-      'minute': 30
-    },
-    {
-      'label': '12:00 PM',
-      'sub': 'Lunch break',
-      'icon': Icons.lunch_dining_outlined,
-      'hour': 12,
-      'minute': 0
-    },
-    {
-      'label': '6:00 PM',
-      'sub': 'Evening',
-      'icon': Icons.wb_twilight_outlined,
-      'hour': 18,
-      'minute': 0
-    },
-    {
-      'label': '9:00 PM',
-      'sub': 'Night owl',
-      'icon': Icons.nightlight_outlined,
-      'hour': 21,
-      'minute': 0
-    },
-  ];
-  @override
-  void initState() {
-    super.initState();
-    _filteredCountries = _sortedCountries;
-    _countrySearch.addListener(_onCountrySearch);
-  }
-
-  void _onCountrySearch() {
-    final q = _countrySearch.text.toLowerCase().trim();
-    setState(() {
-      _filteredCountries = q.isEmpty
-          ? _sortedCountries
-          : _sortedCountries
-              .where((c) =>
-                  c['name']!.toLowerCase().contains(q) ||
-                  c['code']!.contains(q))
-              .toList();
-    });
-  }
-
-  @override
-  void dispose() {
-    _countrySearch.dispose();
-    super.dispose();
-  }
-
-  Future<void> _finish() async {
-    await StorageService.setOnboardingDone();
-    await StorageService.setSelectedCategories(_selected);
-    await StorageService.setUserCountry(_selectedCountry);
-    ref.read(userProvider.notifier).updateCategories(_selected);
-    ref.read(userProvider.notifier).updateCountry(_selectedCountry);
-    ref
-        .read(userProvider.notifier)
-        .updateNotificationTime(_notifHour, _notifMinute);
-    if (mounted) Navigator.of(context).pushReplacementNamed('/home');
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-        backgroundColor: context.bgColor,
-        body: SafeArea(
-            child: Padding(
-                padding: const EdgeInsets.all(20),
-                child: Column(children: [
-                  Row(
-                      children: List.generate(
-                          4,
-                          (i) => Expanded(
-                              child: Container(
-                                  margin: EdgeInsets.only(right: i < 3 ? 4 : 0),
-                                  height: 3,
-                                  decoration: BoxDecoration(
-                                      color: i <= _step
-                                          ? AppColors.accent
-                                          : context.borderColor,
-                                      borderRadius:
-                                          BorderRadius.circular(3)))))),
-                  const SizedBox(height: 28),
-                  Text('0${_step + 1} / 04',
-                      style: GoogleFonts.dmSans(
-                          fontSize: 10,
-                          fontWeight: FontWeight.w700,
-                          color: context.hintColor,
-                          letterSpacing: 2)),
-                  const SizedBox(height: 8),
-                  if (_step == 0) ..._buildStep0(),
-                  if (_step == 1) ..._buildCountryStep(),
-                  if (_step == 2) ..._buildStep1(),
-                  if (_step == 3) ..._buildStep2(),
-                ]))));
-  }
-
-  List<Widget> _buildStep0() => [
-        Align(
-            alignment: Alignment.centerLeft,
-            child:
-                Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-              Text('What do you',
-                  style: Theme.of(context).textTheme.headlineLarge),
-              RichText(
-                  text: TextSpan(children: [
-                TextSpan(
-                    text: 'care about',
-                    style: Theme.of(context).textTheme.headlineLarge),
-                TextSpan(
-                    text: '?',
-                    style: Theme.of(context)
-                        .textTheme
-                        .headlineLarge
-                        ?.copyWith(color: AppColors.accent)),
-              ])),
-              const SizedBox(height: 6),
-              Text('Pick 2 or more topics',
-                  style: Theme.of(context)
-                      .textTheme
-                      .bodyMedium
-                      ?.copyWith(color: context.subColor)),
-            ])),
-        const SizedBox(height: 28),
-        Expanded(
-            child: GridView.builder(
-                gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-                    crossAxisCount: 2,
-                    mainAxisSpacing: 10,
-                    crossAxisSpacing: 10,
-                    childAspectRatio: 1.6),
-                itemCount: AppConstants.allCategories.length,
-                itemBuilder: (context, i) {
-                  final cat = AppConstants.allCategories[i];
-                  final id = cat['id']!;
-                  final on = _selected.contains(id);
-                  final color = AppColors.categoryColor(cat['label']!);
-                  return GestureDetector(
-                      onTap: () => setState(() {
-                            if (on) {
-                              if (_selected.length > 1) _selected.remove(id);
-                            } else {
-                              _selected.add(id);
-                            }
-                          }),
-                      child: AnimatedContainer(
-                          duration: const Duration(milliseconds: 180),
-                          padding: const EdgeInsets.all(14),
-                          decoration: BoxDecoration(
-                              color: on
-                                  ? color.withValues(alpha: 0.1)
-                                  : context.cardColor,
-                              borderRadius: BorderRadius.circular(18),
-                              border: Border.all(
-                                  color: on
-                                      ? color.withValues(alpha: 0.4)
-                                      : context.borderColor),
-                              boxShadow: [
-                                BoxShadow(
-                                    color: Colors.black.withValues(
-                                        alpha: context.isDark ? 0.2 : 0.04),
-                                    blurRadius: 8,
-                                    offset: const Offset(0, 2))
-                              ]),
-                          child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                              children: [
-                                Row(
-                                    mainAxisAlignment:
-                                        MainAxisAlignment.spaceBetween,
-                                    children: [
-                                      Container(
-                                          width: 34,
-                                          height: 34,
-                                          decoration: BoxDecoration(
-                                              color: on
-                                                  ? color.withValues(alpha: 0.2)
-                                                  : context.inputBg,
-                                              borderRadius:
-                                                  BorderRadius.circular(10)),
-                                          child: Icon(_iconForCat(id),
-                                              size: 16,
-                                              color: on
-                                                  ? color
-                                                  : context.hintColor)),
-                                      if (on)
-                                        Container(
-                                            width: 18,
-                                            height: 18,
-                                            decoration: BoxDecoration(
-                                                color: color,
-                                                shape: BoxShape.circle),
-                                            child: const Icon(
-                                                Icons.check_rounded,
-                                                color: Colors.white,
-                                                size: 12)),
-                                    ]),
-                                Text(cat['label']!,
-                                    style: GoogleFonts.dmSans(
-                                        fontSize: 13,
-                                        fontWeight: FontWeight.w700,
-                                        color: on
-                                            ? context.textColor
-                                            : context.subColor)),
-                              ])));
-                })),
-        const SizedBox(height: 16),
-        AccentButton(
-            text: 'Continue',
-            onTap: () => setState(() => _step = 1),
-            icon: Icons.arrow_forward_rounded),
-      ];
-  List<Widget> _buildCountryStep() => [
-        Align(
-            alignment: Alignment.centerLeft,
-            child:
-                Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-              Text('Where are',
-                  style: Theme.of(context).textTheme.headlineLarge),
-              RichText(
-                  text: TextSpan(children: [
-                TextSpan(
-                    text: 'you based',
-                    style: Theme.of(context).textTheme.headlineLarge),
-                TextSpan(
-                    text: '?',
-                    style: Theme.of(context)
-                        .textTheme
-                        .headlineLarge
-                        ?.copyWith(color: AppColors.accent)),
-              ])),
-              const SizedBox(height: 6),
-              Text('Your quiz and news will match your country',
-                  style: Theme.of(context)
-                      .textTheme
-                      .bodyMedium
-                      ?.copyWith(color: context.subColor)),
-            ])),
-        const SizedBox(height: 16),
-        TextField(
-            controller: _countrySearch,
-            style:
-                GoogleFonts.dmSans(fontSize: 13, color: context.textColor),
-            decoration: InputDecoration(
-                hintText: 'Search countries…',
-                hintStyle: GoogleFonts.dmSans(
-                    fontSize: 13, color: context.hintColor),
-                prefixIcon:
-                    Icon(Icons.search_rounded, color: context.hintColor),
-                filled: true,
-                fillColor: context.inputBg,
-                contentPadding: const EdgeInsets.symmetric(
-                    horizontal: 16, vertical: 12),
-                border: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(14),
-                    borderSide: BorderSide.none))),
-        const SizedBox(height: 8),
-        Expanded(
-            child: ListView.builder(
-                padding: const EdgeInsets.only(bottom: 8),
-                itemCount: _filteredCountries.length,
-                itemBuilder: (ctx, i) {
-                  final c = _filteredCountries[i];
-                  final isSelected = c['code'] == _selectedCountry;
-                  return GestureDetector(
-                      onTap: () =>
-                          setState(() => _selectedCountry = c['code']!),
-                      child: AnimatedContainer(
-                          duration: const Duration(milliseconds: 150),
-                          margin: const EdgeInsets.symmetric(vertical: 3),
-                          padding: const EdgeInsets.symmetric(
-                              horizontal: 14, vertical: 11),
-                          decoration: BoxDecoration(
-                              color: isSelected
-                                  ? AppColors.accent.withValues(alpha: 0.08)
-                                  : context.cardColor,
-                              borderRadius: BorderRadius.circular(12),
-                              border: Border.all(
-                                  color: isSelected
-                                      ? AppColors.accent
-                                          .withValues(alpha: 0.35)
-                                      : context.borderColor)),
-                          child: Row(children: [
-                            Text(c['flag']!,
-                                style: const TextStyle(fontSize: 22)),
-                            const SizedBox(width: 12),
-                            Expanded(
-                                child: Text(c['name']!,
-                                    style: GoogleFonts.dmSans(
-                                        fontSize: 13,
-                                        fontWeight: isSelected
-                                            ? FontWeight.w700
-                                            : FontWeight.w500,
-                                        color: isSelected
-                                            ? context.textColor
-                                            : context.subColor))),
-                            if (isSelected)
-                              const Icon(Icons.check_circle_rounded,
-                                  size: 18, color: AppColors.accent),
-                          ])));
-                })),
-        const SizedBox(height: 16),
-        AccentButton(
-            text: 'Continue',
-            onTap: () => setState(() => _step = 2),
-            icon: Icons.arrow_forward_rounded),
-      ];
-
-  List<Widget> _buildStep1() => [
-        Align(
-            alignment: Alignment.centerLeft,
-            child:
-                Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-              Text('When should',
-                  style: Theme.of(context).textTheme.headlineLarge),
-              RichText(
-                  text: TextSpan(children: [
-                TextSpan(
-                    text: 'we remind',
-                    style: Theme.of(context).textTheme.headlineLarge),
-                TextSpan(
-                    text: ' you?',
-                    style: Theme.of(context)
-                        .textTheme
-                        .headlineLarge
-                        ?.copyWith(color: AppColors.accent)),
-              ])),
-              const SizedBox(height: 6),
-              Text("We'll ping you when today's quiz drops",
-                  style: Theme.of(context)
-                      .textTheme
-                      .bodyMedium
-                      ?.copyWith(color: context.subColor)),
-            ])),
-        const SizedBox(height: 24),
-        Expanded(
-            child: ListView.separated(
-                itemCount: _notifOptions.length + 1,
-                separatorBuilder: (_, __) => const SizedBox(height: 8),
-                itemBuilder: (context, i) {
-                  final isCustom = i == _notifOptions.length;
-                  final opt = isCustom ? null : _notifOptions[i];
-                  final on = isCustom
-                      ? !_notifOptions.any((o) =>
-                          _notifHour == o['hour'] &&
-                          _notifMinute == o['minute'])
-                      : _notifHour == opt!['hour'] &&
-                          _notifMinute == opt['minute'];
-                  return GestureDetector(
-                      onTap: () async {
-                        if (isCustom) {
-                          final picked = await showTimePicker(
-                              context: context,
-                              initialTime: TimeOfDay(
-                                  hour: _notifHour, minute: _notifMinute));
-                          if (picked != null && mounted) {
-                            setState(() {
-                              _notifHour = picked.hour;
-                              _notifMinute = picked.minute;
-                            });
-                          }
-                        } else {
-                          setState(() {
-                            _notifHour = opt!['hour'] as int;
-                            _notifMinute = opt['minute'] as int;
-                          });
-                        }
-                      },
-                      child: AnimatedContainer(
-                          duration: const Duration(milliseconds: 180),
-                          padding: const EdgeInsets.all(14),
-                          decoration: BoxDecoration(
-                              color: on
-                                  ? AppColors.accent.withValues(alpha: 0.08)
-                                  : context.cardColor,
-                              borderRadius: BorderRadius.circular(16),
-                              border: Border.all(
-                                  color: on
-                                      ? AppColors.accent.withValues(alpha: 0.4)
-                                      : context.borderColor)),
-                          child: Row(children: [
-                            Container(
-                                width: 42,
-                                height: 42,
-                                decoration: BoxDecoration(
-                                    color: on
-                                        ? AppColors.accent
-                                            .withValues(alpha: 0.15)
-                                        : context.inputBg,
-                                    borderRadius: BorderRadius.circular(13)),
-                                child: Icon(
-                                    isCustom
-                                        ? Icons.edit_calendar_rounded
-                                        : opt!['icon'] as IconData,
-                                    color: on
-                                        ? AppColors.accent
-                                        : context.hintColor,
-                                    size: 20)),
-                            const SizedBox(width: 14),
-                            Expanded(
-                                child: Column(
-                                    crossAxisAlignment:
-                                        CrossAxisAlignment.start,
-                                    children: [
-                                  Text(
-                                      isCustom
-                                          ? _formatReminderTime(
-                                              _notifHour, _notifMinute)
-                                          : opt!['label'] as String,
-                                      style: GoogleFonts.dmSans(
-                                          fontSize: 15,
-                                          fontWeight: FontWeight.w700,
-                                          color: on
-                                              ? context.textColor
-                                              : context.subColor)),
-                                  Text(
-                                      isCustom
-                                          ? 'Choose your own time'
-                                          : opt!['sub'] as String,
-                                      style: GoogleFonts.dmSans(
-                                          fontSize: 11,
-                                          color: context.hintColor)),
-                                ])),
-                            AnimatedContainer(
-                                duration: const Duration(milliseconds: 180),
-                                width: 22,
-                                height: 22,
-                                decoration: BoxDecoration(
-                                    shape: BoxShape.circle,
-                                    color: on
-                                        ? AppColors.accent
-                                        : Colors.transparent,
-                                    border: Border.all(
-                                        color: on
-                                            ? AppColors.accent
-                                            : context.hintColor,
-                                        width: 2)),
-                                child: on
-                                    ? const Icon(Icons.check_rounded,
-                                        color: Colors.white, size: 13)
-                                    : null),
-                          ])));
-                })),
-        const SizedBox(height: 16),
-        AccentButton(
-            text: 'Continue',
-            onTap: () => setState(() => _step = 3),
-            icon: Icons.arrow_forward_rounded),
-      ];
-  List<Widget> _buildStep2() => [
-        const Spacer(),
-        Center(
-            child: Column(children: [
-          Container(
-              width: 80,
-              height: 80,
-              decoration: BoxDecoration(
-                  gradient: const LinearGradient(
-                      colors: [AppColors.accent, AppColors.purple],
-                      begin: Alignment.topLeft,
-                      end: Alignment.bottomRight),
-                  borderRadius: BorderRadius.circular(24),
-                  boxShadow: [
-                    BoxShadow(
-                        color: AppColors.accent.withValues(alpha: 0.35),
-                        blurRadius: 28,
-                        offset: const Offset(0, 8))
-                  ]),
-              child: const Icon(Icons.bolt_rounded,
-                  color: Colors.white, size: 38)),
-          const SizedBox(height: 20),
-          Text("You're ready.",
-              style: Theme.of(context).textTheme.headlineLarge),
-          const SizedBox(height: 10),
-          Text('Stay informed. Beat your friends.\nGrow smarter every day.',
-              style: Theme.of(context)
-                  .textTheme
-                  .bodyMedium
-                  ?.copyWith(color: context.subColor, height: 1.6),
-              textAlign: TextAlign.center),
-        ])),
-        const Spacer(),
-        AccentButton(
-            text: "Let's Go!",
-            onTap: _finish,
-            icon: Icons.rocket_launch_rounded),
-        const SizedBox(height: 10),
-        Center(
-            child: Text('No account needed · All progress saved locally',
-                style: GoogleFonts.dmSans(
-                    fontSize: 10, color: context.hintColor))),
-      ];
-}
-
-// HOME SCREEN
-
-class HomeScreen extends ConsumerWidget {
-  const HomeScreen({super.key});
-  @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final user = ref.watch(userProvider);
-    return Scaffold(
-        backgroundColor: context.bgColor,
-        body: SafeArea(
-            child: SingleChildScrollView(
-                padding: const EdgeInsets.all(20),
-                child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Row(children: [
-                        Expanded(
-                            child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                              Text(_greeting(),
-                                  style: GoogleFonts.dmSans(
-                                      fontSize: 9,
-                                      fontWeight: FontWeight.w700,
-                                      color: context.hintColor,
-                                      letterSpacing: 2)),
-                              const SizedBox(height: 2),
-                              RichText(
-                                  text: TextSpan(children: [
-                                TextSpan(
-                                    text: user.name.split(' ').first,
-                                    style: GoogleFonts.dmSans(
-                                        fontSize: 32,
-                                        fontWeight: FontWeight.w800,
-                                        color: context.textColor,
-                                        letterSpacing: -0.8)),
-                                TextSpan(
-                                    text: '.',
-                                    style: GoogleFonts.dmSans(
-                                        fontSize: 32,
-                                        fontWeight: FontWeight.w800,
-                                        color: AppColors.accent)),
-                              ])),
-                            ])),
-                        BriefedCard(
-                            padding: const EdgeInsets.symmetric(
-                                horizontal: 12, vertical: 8),
-                            child:
-                                Row(mainAxisSize: MainAxisSize.min, children: [
-                              const Icon(Icons.local_fire_department_rounded,
-                                  color: AppColors.accent, size: 16),
-                              const SizedBox(width: 5),
-                              Text('${user.streak}',
-                                  style: GoogleFonts.dmSans(
-                                      fontSize: 16,
-                                      fontWeight: FontWeight.w900,
-                                      color: context.textColor)),
-                              const SizedBox(width: 3),
-                              Text('days',
-                                  style: GoogleFonts.dmSans(
-                                      fontSize: 9, color: context.hintColor)),
-                            ])),
-                      ]),
-                      const SizedBox(height: 12),
-                      BriefedCard(
-                          padding: const EdgeInsets.symmetric(
-                              horizontal: 14, vertical: 9),
-                          child: Row(mainAxisSize: MainAxisSize.min, children: [
-                            const Icon(Icons.bolt_rounded,
-                                color: AppColors.gold, size: 16),
-                            const SizedBox(width: 6),
-                            Text('${_fmt(user.knowledgeScore)} pts',
-                                style: GoogleFonts.dmSans(
-                                    fontSize: 13,
-                                    fontWeight: FontWeight.w800,
-                                    color: context.textColor)),
-                            Container(
-                                margin:
-                                    const EdgeInsets.symmetric(horizontal: 10),
-                                width: 1,
-                                height: 14,
-                                color: context.borderColor),
-                            Text(user.globalRankLabel,
-                                style: GoogleFonts.dmSans(
-                                    fontSize: 12,
-                                    fontWeight: FontWeight.w700,
-                                    color: AppColors.gold)),
-                          ])),
-                      const SizedBox(height: 18),
-                      _QuizHeroCard(
-                          user: user,
-                          latestResult: user.recentResults.isEmpty
-                              ? null
-                              : user.recentResults.first,
-                          onTap: () =>
-                              Navigator.of(context).pushNamed('/quiz')),
-                      const SizedBox(height: 14),
-                      const _CategoryQuizRow(),
-                      const SizedBox(height: 14),
-                      _DidYouKnowCard(),
-                      const SizedBox(height: 14),
-                      const Center(child: BriefedBannerAd()),
-                      const SizedBox(height: 8),
-                    ]))));
-  }
-
-  String _greeting() {
-    final h = DateTime.now().hour;
-    if (h < 12) return 'GOOD MORNING';
-    if (h < 17) return 'GOOD AFTERNOON';
-    return 'GOOD EVENING';
-  }
-}
-
-class _QuizHeroCard extends StatefulWidget {
-  final UserData user;
-  final QuizResult? latestResult;
-  final VoidCallback onTap;
-  const _QuizHeroCard(
-      {required this.user, required this.latestResult, required this.onTap});
-  @override
-  State<_QuizHeroCard> createState() => _QuizHeroCardState();
-}
-
-class _QuizHeroCardState extends State<_QuizHeroCard> {
-  late Timer _timer;
-  late Duration _remaining;
-  bool _loadingRewardAd = false;
-
-  @override
-  void initState() {
-    super.initState();
-    _remaining = _calcRemaining();
-    _timer = Timer.periodic(const Duration(seconds: 1), (_) {
-      if (mounted) setState(() => _remaining = _calcRemaining());
-    });
-    final isPro = widget.user.isPro &&
-        AuthService.currentUser != null &&
-        !AuthService.isGuest;
-    if (!isPro &&
-        widget.user.hasPlayedToday &&
-        !StorageService.hasBonusPlayedToday()) {
-      unawaited(AdService.loadRewarded());
-    }
-  }
-
-  @override
-  void dispose() {
-    _timer.cancel();
-    super.dispose();
-  }
-
-  Duration _calcRemaining() {
-    final now = DateTime.now();
-    return DateTime(now.year, now.month, now.day + 1).difference(now);
-  }
-
-  String _nextQuizIn() {
-    final h = _remaining.inHours;
-    final m = _remaining.inMinutes % 60;
-    final s = _remaining.inSeconds % 60;
-    return '${h.toString().padLeft(2, '0')}h ${m.toString().padLeft(2, '0')}m ${s.toString().padLeft(2, '0')}s';
-  }
-
-  Future<void> _onTap() async {
-    // Not yet played today — normal flow
-    if (!widget.user.hasPlayedToday) {
-      widget.onTap();
-      return;
-    }
-    if (widget.user.isPro &&
-        AuthService.currentUser != null &&
-        !AuthService.isGuest) {
-      Navigator.of(context).pushNamed('/quiz', arguments: {
-        'forceRefresh': true,
-        'bonusRound': true,
-        'replaySeed': DateTime.now().microsecondsSinceEpoch,
-      });
-      return;
-    }
-    if (StorageService.hasBonusPlayedToday() || _loadingRewardAd) return;
-
-    setState(() => _loadingRewardAd = true);
-    final earned = await AdService.showRewardedAndWait(
-      allowDebugFallback: true,
-    );
-    if (!mounted) return;
-    setState(() => _loadingRewardAd = false);
-    if (!earned) return;
-
-    await StorageService.setBonusPlayedToday();
-    if (!mounted) return;
-    Navigator.of(context).pushNamed('/quiz', arguments: {
-      'forceRefresh': true,
-      'bonusRound': true,
-      'replaySeed': DateTime.now().microsecondsSinceEpoch,
-    });
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    final played = widget.user.hasPlayedToday;
-    final bonusUsed = played && StorageService.hasBonusPlayedToday();
-    final isPro = widget.user.isPro &&
-        AuthService.currentUser != null &&
-        !AuthService.isGuest;
-    final canProReplay = played && isPro;
-    final canWatchAd = played && !isPro && !bonusUsed;
-
-    final gradientColors = !played || canProReplay
-        ? [AppColors.accent, AppColors.accentDark]
-        : [const Color(0xFF888888), const Color(0xFF555555)];
-    final shadowColor =
-        !played || canProReplay ? AppColors.accent : Colors.grey;
-
-    return GestureDetector(
-        onTap: _onTap,
-        child: Container(
-            decoration: BoxDecoration(
-                gradient: LinearGradient(
-                    colors: gradientColors,
-                    begin: Alignment.topLeft,
-                    end: Alignment.bottomRight),
-                borderRadius: BorderRadius.circular(28),
-                boxShadow: [
-                  BoxShadow(
-                      color: shadowColor.withValues(alpha: 0.35),
-                      blurRadius: 24,
-                      offset: const Offset(0, 8))
-                ]),
-            padding: const EdgeInsets.all(22),
-            child:
-                Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-              Row(children: [
-                _badge('5 Questions'),
-                const SizedBox(width: 8),
-                _badge('~2 mins'),
-                const SizedBox(width: 8),
-                _badge(isPro && played
-                    ? 'PRO'
-                    : played
-                        ? '✓ Done today'
-                        : 'NEW')
-              ]),
-              const SizedBox(height: 12),
-              Text('TODAY\'S TOPICS',
-                  style: GoogleFonts.dmSans(
-                      fontSize: 10,
-                      fontWeight: FontWeight.w700,
-                      color: Colors.white.withValues(alpha: 0.7),
-                      letterSpacing: 1.5)),
-              const SizedBox(height: 6),
-              Wrap(
-                  spacing: 6,
-                  runSpacing: 6,
-                  children: widget.user.selectedCategories.take(3).map((cat) {
-                    final label = AppConstants.allCategories.firstWhere(
-                        (c) => c['id'] == cat,
-                        orElse: () => {'label': cat})['label']!;
-                    return Container(
-                        padding: const EdgeInsets.symmetric(
-                            horizontal: 12, vertical: 5),
-                        decoration: BoxDecoration(
-                            color: Colors.white.withValues(alpha: 0.18),
-                            borderRadius: BorderRadius.circular(999)),
-                        child: Text(label,
-                            style: GoogleFonts.dmSans(
-                                fontSize: 11,
-                                fontWeight: FontWeight.w700,
-                                color: Colors.white)));
-                  }).toList()),
-              const SizedBox(height: 14),
-              Text(
-                  played
-                      ? isPro
-                          ? 'Play another fresh quiz'
-                          : "You've completed today's quiz!"
-                      : "How well do you know what happened today?",
-                  style: GoogleFonts.dmSans(
-                      fontSize: 20,
-                      fontWeight: FontWeight.w900,
-                      color: Colors.white,
-                      letterSpacing: -0.5,
-                      height: 1.25)),
-              const SizedBox(height: 4),
-              Text(
-                  !played
-                      ? '3 easy · 2 hard · Fresh quiz every morning'
-                      : canProReplay
-                          ? 'Unlimited Pro replays with fresh questions'
-                          : canWatchAd
-                              ? _loadingRewardAd
-                                  ? 'Preparing your bonus ad...'
-                                  : 'Earn a bonus round by watching a short ad'
-                              : 'New quiz available in ${_nextQuizIn()}',
-                  style: GoogleFonts.dmSans(
-                      fontSize: 12,
-                      color: Colors.white.withValues(alpha: 0.7))),
-              const SizedBox(height: 16),
-              if (!played)
-                Container(
-                    width: double.infinity,
-                    padding: const EdgeInsets.symmetric(vertical: 13),
-                    decoration: BoxDecoration(
-                        color: Colors.white,
-                        borderRadius: BorderRadius.circular(16),
-                        boxShadow: [
-                          BoxShadow(
-                              color: Colors.black.withValues(alpha: 0.12),
-                              blurRadius: 14,
-                              offset: const Offset(0, 4))
-                        ]),
-                    child: Row(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: [
-                          const Icon(Icons.play_arrow_rounded,
-                              color: AppColors.accent, size: 20),
-                          const SizedBox(width: 6),
-                          Text("Start Today's Quiz",
-                              style: GoogleFonts.dmSans(
-                                  fontSize: 15,
-                                  fontWeight: FontWeight.w900,
-                                  color: AppColors.accent)),
-                        ]))
-              else if (canProReplay)
-                Container(
-                    width: double.infinity,
-                    padding: const EdgeInsets.symmetric(vertical: 13),
-                    decoration: BoxDecoration(
-                        color: Colors.white,
-                        borderRadius: BorderRadius.circular(16),
-                        boxShadow: [
-                          BoxShadow(
-                              color: Colors.black.withValues(alpha: 0.12),
-                              blurRadius: 14,
-                              offset: const Offset(0, 4))
-                        ]),
-                    child: Row(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: [
-                          const Icon(Icons.replay_rounded,
-                              color: AppColors.accent, size: 20),
-                          const SizedBox(width: 6),
-                          Text('Play Fresh Replay',
-                              style: GoogleFonts.dmSans(
-                                  fontSize: 15,
-                                  fontWeight: FontWeight.w900,
-                                  color: AppColors.accent)),
-                        ]))
-              else if (canWatchAd)
-                Container(
-                    width: double.infinity,
-                    padding: const EdgeInsets.symmetric(vertical: 13),
-                    decoration: BoxDecoration(
-                        color: AppColors.accent,
-                        borderRadius: BorderRadius.circular(16),
-                        border: Border.all(
-                            color: Colors.white.withValues(alpha: 0.18),
-                            width: 1.5)),
-                    child: Row(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: [
-                          _loadingRewardAd
-                              ? const SizedBox(
-                                  width: 18,
-                                  height: 18,
-                                  child: CircularProgressIndicator(
-                                      strokeWidth: 2,
-                                      valueColor:
-                                          AlwaysStoppedAnimation(Colors.white)))
-                              : const Icon(Icons.play_circle_outline_rounded,
-                                  color: Colors.white, size: 20),
-                          const SizedBox(width: 6),
-                          Text(
-                              _loadingRewardAd
-                                  ? 'Preparing Ad'
-                                  : 'Watch Ad · Play Again',
-                              style: GoogleFonts.dmSans(
-                                  fontSize: 15,
-                                  fontWeight: FontWeight.w900,
-                                  color: Colors.white)),
-                          const SizedBox(width: 8),
-                          Container(
-                              padding: const EdgeInsets.symmetric(
-                                  horizontal: 6, vertical: 2),
-                              decoration: BoxDecoration(
-                                  color: Colors.amber,
-                                  borderRadius: BorderRadius.circular(6)),
-                              child: Text('AD',
-                                  style: GoogleFonts.dmSans(
-                                      fontSize: 9,
-                                      fontWeight: FontWeight.w900,
-                                      color: Colors.black))),
-                        ]))
-              else
-                Container(
-                    width: double.infinity,
-                    padding: const EdgeInsets.symmetric(vertical: 11),
-                    decoration: BoxDecoration(
-                        color: Colors.white.withValues(alpha: 0.08),
-                        borderRadius: BorderRadius.circular(16)),
-                    child: Column(mainAxisSize: MainAxisSize.min, children: [
-                      Row(
-                          mainAxisAlignment: MainAxisAlignment.center,
-                          children: [
-                            const Icon(Icons.lock_clock,
-                                color: Colors.white54, size: 16),
-                            const SizedBox(width: 6),
-                            Text('Come back tomorrow',
-                                style: GoogleFonts.dmSans(
-                                    fontSize: 14,
-                                    fontWeight: FontWeight.w700,
-                                    color: Colors.white54)),
-                          ]),
-                      const SizedBox(height: 2),
-                      Text(_nextQuizIn(),
-                          style: GoogleFonts.dmSans(
-                              fontSize: 11,
-                              color: Colors.white38,
-                              fontWeight: FontWeight.w600)),
-                    ])),
-              if (widget.latestResult != null) ...[
-                const SizedBox(height: 12),
-                Container(
-                    width: double.infinity,
-                    padding:
-                        const EdgeInsets.symmetric(horizontal: 12, vertical: 9),
-                    decoration: BoxDecoration(
-                        color: Colors.white.withValues(alpha: 0.12),
-                        borderRadius: BorderRadius.circular(14),
-                        border: Border.all(
-                            color: Colors.white.withValues(alpha: 0.16))),
-                    child: Row(children: [
-                      const Icon(Icons.history_rounded,
-                          color: Colors.white, size: 15),
-                      const SizedBox(width: 7),
-                      Expanded(
-                          child: Text(
-                              'Last score: ${widget.latestResult!.score}/${widget.latestResult!.totalQuestions} · ${widget.latestResult!.performanceLabel}',
-                              style: GoogleFonts.dmSans(
-                                  fontSize: 11,
-                                  fontWeight: FontWeight.w700,
-                                  color:
-                                      Colors.white.withValues(alpha: 0.82)))),
-                    ])),
-              ],
-            ])));
-  }
-
-  Widget _badge(String t) => Container(
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
-      decoration: BoxDecoration(
-          color: Colors.white.withValues(alpha: 0.2),
-          borderRadius: BorderRadius.circular(999)),
-      child: Text(t,
-          style: GoogleFonts.dmSans(
-              fontSize: 9, fontWeight: FontWeight.w800, color: Colors.white)));
-}
-
-// ─────────────────────────────────────────────────────────────────────────────
-// CATEGORY QUIZ ROW
-// Category quiz chips — tap to go straight into the quiz.
-// Interstitial ad fires after the quiz completes (same as daily quiz).
-// ─────────────────────────────────────────────────────────────────────────────
-
-class _CategoryQuizRow extends ConsumerStatefulWidget {
-  const _CategoryQuizRow();
-  @override
-  ConsumerState<_CategoryQuizRow> createState() => _CategoryQuizRowState();
-}
-
-class _CategoryQuizRowState extends ConsumerState<_CategoryQuizRow> {
-  void _onChipTap(String catId) {
-    Navigator.of(context).pushNamed('/quiz', arguments: {
-      'categoryFilter': catId,
-    });
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    final user = ref.watch(userProvider);
-    final articles = ref.watch(newsProvider).articles;
-
-    final cats = AppConstants.allCategories
-        .where((c) => user.selectedCategories.contains(c['id']))
-        .toList();
-
-    if (cats.isEmpty) return const SizedBox.shrink();
-
-    return Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-      Padding(
-        padding: const EdgeInsets.only(left: 2, bottom: 10),
-        child: Text('Quiz by Topic',
-            style: GoogleFonts.dmSans(
-                fontSize: 13,
-                fontWeight: FontWeight.w800,
-                color: context.textColor)),
-      ),
-      SizedBox(
-        height: 44,
-        child: ListView.separated(
-          scrollDirection: Axis.horizontal,
-          padding: const EdgeInsets.symmetric(horizontal: 2),
-          itemCount: cats.length,
-          separatorBuilder: (_, __) => const SizedBox(width: 8),
-          itemBuilder: (ctx, i) {
-            final cat = cats[i];
-            final id = cat['id']!;
-            final label = cat['label']!;
-            final color = AppColors.categoryColor(label);
-            final hasArticles =
-                articles.any((a) => a.category.toLowerCase() == id);
-
-            return GestureDetector(
-              onTap: hasArticles ? () => _onChipTap(id) : null,
-              child: AnimatedContainer(
-                duration: const Duration(milliseconds: 150),
-                padding:
-                    const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
-                decoration: BoxDecoration(
-                  color: hasArticles
-                      ? color.withValues(alpha: 0.10)
-                      : context.inputBg,
-                  borderRadius: BorderRadius.circular(22),
-                  border: Border.all(
-                      color: hasArticles
-                          ? color.withValues(alpha: 0.35)
-                          : context.borderColor),
-                ),
-                child: Row(mainAxisSize: MainAxisSize.min, children: [
-                  Icon(_iconForCat(id),
-                      size: 14,
-                      color: hasArticles ? color : context.hintColor),
-                  const SizedBox(width: 6),
-                  Text(label,
-                      style: GoogleFonts.dmSans(
-                          fontSize: 12,
-                          fontWeight: FontWeight.w700,
-                          color: hasArticles
-                              ? context.textColor
-                              : context.hintColor)),
-                ]),
-              ),
-            );
-          },
-        ),
-      ),
-    ]);
-  }
-}
-
-class _DidYouKnowCard extends ConsumerStatefulWidget {
-  @override
-  ConsumerState<_DidYouKnowCard> createState() => _DidYouKnowCardState();
-}
-
-class _DidYouKnowCardState extends ConsumerState<_DidYouKnowCard> {
-  final _ctrl = PageController();
-  int _page = 0;
-
-  @override
-  void dispose() {
-    _ctrl.dispose();
-    super.dispose();
-  }
-
-  @override
-  Widget build(
-    BuildContext context,
-  ) {
-    final news = ref.watch(newsProvider);
-    if (news.isLoading) {
-      return const ClipRRect(
-        borderRadius: BorderRadius.all(Radius.circular(22)),
-        child:
-            ShimmerBox(width: double.infinity, height: 220, borderRadius: 22),
-      );
-    }
-    if (news.articles.isEmpty) return const SizedBox.shrink();
-
-    // Pick up to 5 articles spread across the feed for variety
-    final articles = news.articles.length <= 5
-        ? news.articles
-        : [0, 1, 2, 3, 4]
-            .map((i) => news.articles[(i * news.articles.length ~/ 5)
-                .clamp(0, news.articles.length - 1)])
-            .toList();
-
-    return ClipRRect(
-      borderRadius: BorderRadius.circular(22),
-      child: Container(
-        decoration: const BoxDecoration(
-          gradient: LinearGradient(
-            colors: [Color(0xFF6A0DAD), Color(0xFF3B0FAB), Color(0xFF1565C0)],
-            begin: Alignment.topLeft,
-            end: Alignment.bottomRight,
-          ),
-        ),
-        child: Stack(children: [
-          // Decorative large quote mark
-          Positioned(
-              top: -8,
-              left: 12,
-              child: Text('"',
-                  style: GoogleFonts.dmSans(
-                    fontSize: 120,
-                    fontWeight: FontWeight.w900,
-                    color: Colors.white.withValues(alpha: 0.08),
-                    height: 1,
-                  ))),
-
-          // Main content
-          Column(mainAxisSize: MainAxisSize.min, children: [
-            SizedBox(
-              height: 180,
-              child: PageView.builder(
-                controller: _ctrl,
-                itemCount: articles.length,
-                onPageChanged: (i) => setState(() => _page = i),
-                itemBuilder: (context, i) {
-                  final a = articles[i];
-                  return Padding(
-                    padding: const EdgeInsets.fromLTRB(20, 20, 20, 8),
-                    child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Row(children: [
-                            Container(
-                              padding: const EdgeInsets.symmetric(
-                                  horizontal: 8, vertical: 3),
-                              decoration: BoxDecoration(
-                                color: Colors.white.withValues(alpha: 0.15),
-                                borderRadius: BorderRadius.circular(6),
-                              ),
-                              child: Row(
-                                  mainAxisSize: MainAxisSize.min,
-                                  children: [
-                                    const Icon(Icons.lightbulb_rounded,
-                                        color: Colors.white, size: 10),
-                                    const SizedBox(width: 4),
-                                    Text('DID YOU KNOW',
-                                        style: GoogleFonts.roboto(
-                                          fontSize: 9,
-                                          fontWeight: FontWeight.w700,
-                                          color: Colors.white,
-                                          letterSpacing: 1.2,
-                                        )),
-                                  ]),
-                            ),
-                            const Spacer(),
-                            // Share
-                            GestureDetector(
-                              onTap: () =>
-                                  Share.share('${a.title}\n\nvia Briefed'),
-                              child: Container(
-                                padding: const EdgeInsets.all(6),
-                                decoration: BoxDecoration(
-                                  color: Colors.white.withValues(alpha: 0.12),
-                                  borderRadius: BorderRadius.circular(8),
-                                ),
-                                child: const Icon(Icons.share_rounded,
-                                    color: Colors.white, size: 14),
-                              ),
-                            ),
-                          ]),
-                          const SizedBox(height: 14),
-                          Text(
-                            a.title,
-                            style: GoogleFonts.dmSans(
-                              fontSize: 16,
-                              fontWeight: FontWeight.w700,
-                              color: Colors.white,
-                              height: 1.5,
-                            ),
-                            maxLines: 4,
-                            overflow: TextOverflow.ellipsis,
-                          ),
-                        ]),
-                  );
-                },
-              ),
-            ),
-
-            // Source + dots
-            Padding(
-              padding: const EdgeInsets.fromLTRB(20, 0, 20, 16),
-              child: Row(children: [
-                Container(
-                  padding:
-                      const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-                  decoration: BoxDecoration(
-                    color: Colors.white.withValues(alpha: 0.12),
-                    borderRadius: BorderRadius.circular(6),
-                  ),
-                  child: Text(
-                    'Source: ${articles[_page].sourceName}',
-                    style: GoogleFonts.roboto(
-                        fontSize: 10,
-                        fontWeight: FontWeight.w600,
-                        color: Colors.white.withValues(alpha: 0.8)),
-                  ),
-                ),
-                const Spacer(),
-                // Page dots
-                Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: List.generate(
-                      articles.length,
-                      (i) => AnimatedContainer(
-                        duration: const Duration(milliseconds: 250),
-                        margin: const EdgeInsets.only(left: 4),
-                        width: i == _page ? 16 : 5,
-                        height: 5,
-                        decoration: BoxDecoration(
-                          color: i == _page
-                              ? Colors.white
-                              : Colors.white.withValues(alpha: 0.35),
-                          borderRadius: BorderRadius.circular(3),
-                        ),
-                      ),
-                    )),
-              ]),
-            ),
-          ]),
-        ]),
-      ),
-    );
-  }
-}
-
-// BRIEFING SCREEN
+// HOME SCREEN — see lib/screens/home_screen.dart
+// BRIEFING SCREEN (Explore tab)
 
 class BriefingScreen extends ConsumerStatefulWidget {
   const BriefingScreen({super.key});
@@ -4229,43 +3213,203 @@ class BriefingScreen extends ConsumerStatefulWidget {
 }
 
 class _BriefingScreenState extends ConsumerState<BriefingScreen>
-    with SingleTickerProviderStateMixin {
+    with TickerProviderStateMixin {
   static const _tabs = [
-    'For You', 'World', 'Politics', 'Sports', 'Technology', 'Business'
+    'For You',
+    'Politics',
+    'Sports',
+    'Technology',
+    'Business',
+    'Health',
+    'Entertainment',
   ];
-  late final TabController _tabCtrl;
+  late TabController _tabController;
+  late PageController _pageController;
   final ScrollController _tabScroll = ScrollController();
+  int _selectedTab = 0;
+
+  static const _catOrder = [
+    NewsCategory.world,
+    NewsCategory.politics,
+    NewsCategory.sports,
+    NewsCategory.technology,
+    NewsCategory.business,
+    NewsCategory.health,
+    NewsCategory.entertainment,
+  ];
 
   @override
   void initState() {
     super.initState();
-    _tabCtrl = TabController(length: _tabs.length, vsync: this);
-    _tabCtrl.addListener(_onTabChange);
+    _tabController = TabController(length: _tabs.length, vsync: this);
+    _pageController = PageController();
+    _tabController.addListener(_onTabChanged);
   }
 
-  void _onTabChange() {
-    if (mounted) {
-      setState(() {});
-      WidgetsBinding.instance
-          .addPostFrameCallback((_) => _scrollTabIntoView(_tabCtrl.index));
-    }
-  }
-
-  void _scrollTabIntoView(int i) {
-    if (!_tabScroll.hasClients) return;
-    const itemW = 100.0;
-    final screenW = MediaQuery.of(context).size.width;
-    final target = (i * itemW) - (screenW / 2 - itemW / 2);
-    _tabScroll.animateTo(target.clamp(0.0, _tabScroll.position.maxScrollExtent),
-        duration: const Duration(milliseconds: 200), curve: Curves.easeOut);
+  void _onTabChanged() {
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!_tabScroll.hasClients) return;
+      const itemW = 110.0;
+      final screenW = MediaQuery.of(context).size.width;
+      final target = (_selectedTab * itemW) - (screenW / 2 - itemW / 2);
+      _tabScroll.animateTo(
+        target.clamp(0.0, _tabScroll.position.maxScrollExtent),
+        duration: const Duration(milliseconds: 200),
+        curve: Curves.easeOut,
+      );
+    });
   }
 
   @override
   void dispose() {
-    _tabCtrl.removeListener(_onTabChange);
-    _tabCtrl.dispose();
+    _tabController.removeListener(_onTabChanged);
+    _tabController.dispose();
+    _pageController.dispose();
     _tabScroll.dispose();
     super.dispose();
+  }
+
+  static Color _catColor(NewsCategory cat) {
+    switch (cat) {
+      case NewsCategory.world:
+        return const Color(0xFF2196F3);
+      case NewsCategory.politics:
+        return const Color(0xFF9C27B0);
+      case NewsCategory.sports:
+        return const Color(0xFF4CAF50);
+      case NewsCategory.technology:
+        return const Color(0xFF00BCD4);
+      case NewsCategory.business:
+        return const Color(0xFFFF9800);
+      case NewsCategory.health:
+        return const Color(0xFF26A69A);
+      case NewsCategory.entertainment:
+        return const Color(0xFFE91E63);
+    }
+  }
+
+  static IconData _catIcon(NewsCategory cat) {
+    switch (cat) {
+      case NewsCategory.world:
+        return Icons.language_rounded;
+      case NewsCategory.politics:
+        return Icons.account_balance_rounded;
+      case NewsCategory.sports:
+        return Icons.sports_rounded;
+      case NewsCategory.technology:
+        return Icons.memory_rounded;
+      case NewsCategory.business:
+        return Icons.trending_up_rounded;
+      case NewsCategory.health:
+        return Icons.health_and_safety_rounded;
+      case NewsCategory.entertainment:
+        return Icons.theaters_rounded;
+    }
+  }
+
+  List<RankedArticle> _articlesForTab(PipelineState pipeline, int tabIndex) {
+    switch (tabIndex) {
+      case 0:
+        return _buildForYouFeed(pipeline);
+      case 1:
+        return _filtered(pipeline, NewsCategory.politics);
+      case 2:
+        return _filtered(pipeline, NewsCategory.sports);
+      case 3:
+        return _filtered(pipeline, NewsCategory.technology);
+      case 4:
+        return _filtered(pipeline, NewsCategory.business);
+      case 5:
+        return _filtered(pipeline, NewsCategory.health);
+      case 6:
+        return _filtered(pipeline, NewsCategory.entertainment);
+      default:
+        return [];
+    }
+  }
+
+  List<RankedArticle> _filtered(PipelineState pipeline, NewsCategory cat) =>
+      (pipeline.byCategory[cat] ?? [])
+          .where((a) => a.sourceQualityScore >= 60)
+          .take(10)
+          .toList();
+
+  List<RankedArticle> _buildForYouFeed(PipelineState pipeline) {
+    final perCat = <NewsCategory, List<RankedArticle>>{};
+    for (final cat in _catOrder) {
+      perCat[cat] = (pipeline.byCategory[cat] ?? [])
+          .where((a) => a.sourceQualityScore >= 60)
+          .take(4)
+          .toList();
+    }
+    final result = <RankedArticle>[];
+    final usedPerCat = <NewsCategory, int>{for (final c in _catOrder) c: 0};
+    for (int round = 0; round < 2; round++) {
+      for (final cat in _catOrder) {
+        if (result.length >= 10) break;
+        final pool = perCat[cat]!;
+        int idx = usedPerCat[cat]!;
+        final fallbackIdx = idx;
+        while (idx < pool.length &&
+            result.isNotEmpty &&
+            pool[idx].sourceDomain == result.last.sourceDomain) {
+          idx++;
+        }
+        // If all remaining pool items share the last domain, fall back to the
+        // next unused item so single-source pipelines still show articles.
+        if (idx >= pool.length && fallbackIdx < pool.length) {
+          idx = fallbackIdx;
+        }
+        if (idx < pool.length) {
+          result.add(pool[idx]);
+          usedPerCat[cat] = idx + 1;
+        }
+      }
+    }
+    return result;
+  }
+
+  void _selectTab(int i) {
+    setState(() => _selectedTab = i);
+    _tabController.animateTo(i,
+        duration: const Duration(milliseconds: 200), curve: Curves.easeOut);
+    _pageController.animateToPage(i,
+        duration: const Duration(milliseconds: 200), curve: Curves.easeOut);
+  }
+
+  Color _getTabColor(int index) {
+    if (index == 0) {
+      return const Color(0xFFFF5722); // For You - orange
+    }
+    // Map tab index to category
+    final categories = [
+      NewsCategory.politics,
+      NewsCategory.sports,
+      NewsCategory.technology,
+      NewsCategory.business,
+      NewsCategory.health,
+      NewsCategory.entertainment,
+    ];
+    if (index > 0 && index <= categories.length) {
+      return _catColor(categories[index - 1]);
+    }
+    return const Color(0xFFFF5722);
+  }
+
+  void _showArticleDetailModal(
+      BuildContext context, List<RankedArticle> articles, int initialIndex) {
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (ctx) => _ArticleDetailModal(
+        articles: articles,
+        initialIndex: initialIndex,
+        onLaunchUrl: _launchUrl,
+        catColor: _catColor,
+        catIcon: _catIcon,
+      ),
+    );
   }
 
   @override
@@ -4274,141 +3418,87 @@ class _BriefingScreenState extends ConsumerState<BriefingScreen>
     return Scaffold(
       backgroundColor: context.bgColor,
       body: SafeArea(
-        child: Column(children: [
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+          // Header
           Padding(
-            padding: const EdgeInsets.fromLTRB(16, 12, 16, 0),
-            child: Row(children: [
-              Expanded(
-                child: RichText(
-                  text: TextSpan(children: [
-                    TextSpan(
-                      text: 'Briefed',
-                      style: GoogleFonts.dmSans(
-                          fontSize: 32,
-                          fontWeight: FontWeight.w800,
-                          color: context.textColor,
-                          letterSpacing: -0.8),
-                    ),
-                    TextSpan(
-                      text: '.',
-                      style: GoogleFonts.dmSans(
-                          fontSize: 32,
-                          fontWeight: FontWeight.w800,
-                          color: AppColors.accent),
-                    ),
-                    TextSpan(
-                      text: '  Briefing',
-                      style: GoogleFonts.dmSans(
-                          fontSize: 12,
-                          fontWeight: FontWeight.w400,
-                          color: context.hintColor),
-                    ),
-                  ]),
-                ),
-              ),
-              BriefedCard(
-                padding: const EdgeInsets.all(8),
-                child: Icon(Icons.search_rounded,
-                    color: context.hintColor, size: 18),
-              ),
-            ]),
-          ),
-          if (pipeline.error != null && pipeline.byCategory.isEmpty)
-            const _NewsBanner(
-              icon: Icons.error_outline_rounded,
-              message: 'News error — pull down to retry',
+            padding: const EdgeInsets.fromLTRB(16, 16, 20, 0),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text('Explore',
+                    style: TextStyle(
+                        fontFamily: AppFonts.display,
+                        height: 1.02,
+                        fontSize: 28,
+                        fontWeight: FontWeight.w900,
+                        color: context.textColor)),
+                const SizedBox(height: 2),
+                Text('Stay informed beyond the quiz',
+                    style: TextStyle(
+                        fontFamily: AppFonts.body,
+                        fontSize: 13,
+                        color: context.hintColor)),
+                const SizedBox(height: 4),
+                _RefreshStatusChip(pipeline: pipeline),
+                const SizedBox(height: 8),
+              ],
             ),
+          ),
+          // Tab row — Duolingo-style chunky chips
           SizedBox(
-            height: 52,
+            height: 54,
             child: ListView.builder(
               controller: _tabScroll,
               scrollDirection: Axis.horizontal,
-              padding: const EdgeInsets.fromLTRB(16, 8, 16, 8),
+              clipBehavior: Clip.none,
+              padding: const EdgeInsets.fromLTRB(16, 4, 16, 6),
               itemCount: _tabs.length,
-              itemBuilder: (context, i) {
-                final on = _tabCtrl.index == i;
-                final chipColor = _tabColor(_tabs[i]);
-                return GestureDetector(
-                  onTap: () => _tabCtrl.animateTo(i),
-                  child: AnimatedContainer(
-                    duration: const Duration(milliseconds: 180),
-                    margin: const EdgeInsets.only(right: 8),
-                    padding: const EdgeInsets.symmetric(
-                        horizontal: 16, vertical: 6),
-                    decoration: BoxDecoration(
-                      color: on ? chipColor : chipColor.withValues(alpha: 0.1),
-                      borderRadius: BorderRadius.circular(999),
-                      border: Border.all(
-                        color: on
-                            ? chipColor
-                            : chipColor.withValues(alpha: 0.3),
-                        width: 1.5,
-                      ),
-                    ),
-                    child: Text(
-                      _tabs[i],
-                      style: GoogleFonts.dmSans(
-                          fontSize: 13,
-                          fontWeight: FontWeight.w700,
-                          color: on ? Colors.white : chipColor),
-                    ),
-                  ),
-                );
-              },
+              itemBuilder: (context, i) => _TabChip(
+                label: _tabs[i],
+                selected: _selectedTab == i,
+                color: _getTabColor(i),
+                onTap: () => _selectTab(i),
+              ),
             ),
           ),
-          Divider(height: 1, color: context.borderColor),
+          const SizedBox(height: 8),
+          // Body
           Expanded(
             child: pipeline.isLoading && pipeline.byCategory.isEmpty
-                ? _buildSkeleton()
-                : TabBarView(
-                    controller: _tabCtrl,
-                    children: _tabs.map((tab) {
-                      return RefreshIndicator(
-                        color: AppColors.accent,
-                        onRefresh: () async {
-                          await ref
-                              .read(newsPipelineProvider.notifier)
-                              .refresh();
-                          _tabCtrl.animateTo(0);
+                ? const _ExploreSkeleton()
+                : pipeline.error != null && pipeline.byCategory.isEmpty
+                    ? _buildError(context)
+                    : PageView(
+                        controller: _pageController,
+                        onPageChanged: (index) {
+                          setState(() => _selectedTab = index);
+                          _tabController.animateTo(index,
+                              duration: const Duration(milliseconds: 200),
+                              curve: Curves.easeOut);
                         },
-                        child: _buildFeed(pipeline, tab),
-                      );
-                    }).toList(),
-                  ),
+                        children: List.generate(_tabs.length, (i) {
+                          final articles = _articlesForTab(pipeline, i);
+                          return RefreshIndicator(
+                            color: const Color(0xFFFF5722),
+                            onRefresh: i == 0
+                                ? () => ref
+                                    .read(newsPipelineProvider.notifier)
+                                    .refresh()
+                                : () async => _selectTab(0),
+                            child: _buildFeed(context, articles),
+                          );
+                        }),
+                      ),
           ),
         ]),
       ),
     );
   }
 
-  Color _tabColor(String tab) {
-    switch (tab) {
-      case 'World':     return AppColors.blue;
-      case 'Politics':  return AppColors.purple;
-      case 'Sports':    return AppColors.green;
-      case 'Technology':return AppColors.teal;
-      case 'Business':  return AppColors.orange;
-      default:          return AppColors.accent;
-    }
-  }
-
-  List<RankedArticle> _articlesForTab(PipelineState pipeline, String tab) {
-    switch (tab) {
-      case 'For You':    return pipeline.forYouStories;
-      case 'World':      return pipeline.getTopStoriesForDisplay(NewsCategory.world);
-      case 'Politics':   return pipeline.getTopStoriesForDisplay(NewsCategory.politics);
-      case 'Sports':     return pipeline.getTopStoriesForDisplay(NewsCategory.sports);
-      case 'Technology': return pipeline.getTopStoriesForDisplay(NewsCategory.technology);
-      case 'Business':   return pipeline.getTopStoriesForDisplay(NewsCategory.business);
-      default:           return [];
-    }
-  }
-
-  Widget _buildFeed(PipelineState pipeline, String filter) {
-    final items = _articlesForTab(pipeline, filter);
-
-    if (items.isEmpty) {
+  Widget _buildFeed(BuildContext context, List<RankedArticle> articles) {
+    if (articles.isEmpty) {
       return ListView(children: [
         SizedBox(
           height: 300,
@@ -4417,77 +3507,924 @@ class _BriefingScreenState extends ConsumerState<BriefingScreen>
               Icon(Icons.newspaper_rounded, size: 48, color: context.hintColor),
               const SizedBox(height: 12),
               Text('No stories yet',
-                  style: GoogleFonts.dmSans(
+                  style: TextStyle(
+                      fontFamily: AppFonts.body,
                       fontSize: 16,
                       fontWeight: FontWeight.w600,
                       color: context.hintColor)),
               const SizedBox(height: 8),
               Text('Pull down to refresh',
-                  style: GoogleFonts.dmSans(
-                      fontSize: 13, color: context.hintColor)),
+                  style: TextStyle(
+                      fontFamily: AppFonts.body,
+                      fontSize: 13,
+                      color: context.hintColor)),
             ]),
           ),
         ),
       ]);
     }
 
+    final weeklyGame = _weeklyExploreGame(context);
+    // Build items: hero, game, banner, articles..., bottom banner
+    final itemCount = articles.length + 3; // hero + game + banner + articles + bottom banner
     return ListView.builder(
       padding: const EdgeInsets.fromLTRB(16, 14, 16, 32),
-      itemCount: items.length + (filter == 'For You' ? 1 : 0),
+      itemCount: itemCount,
       itemBuilder: (context, index) {
-        // Insert quiz promo strip after the first card on For You
-        if (filter == 'For You' && index == 1) {
-          return Padding(
-            padding: const EdgeInsets.only(bottom: 12),
-            child: _QuizPromoStrip(),
+        // Bottom banner — last item
+        if (index == itemCount - 1) {
+          return const Padding(
+            padding: EdgeInsets.only(top: 16),
+            child: Center(child: BriefedBannerAd()),
           );
         }
-        final articleIndex =
-            (filter == 'For You' && index > 1) ? index - 1 : index;
-        if (articleIndex >= items.length) return const SizedBox.shrink();
-        final article = items[articleIndex];
-        return Padding(
-          padding: const EdgeInsets.only(bottom: 12),
-          child: _NewsCard(
-            article: article,
-            onTap: () => _openRankedArticle(context, article),
-          ),
+        // Post-game banner (index 2)
+        if (index == 2) {
+          return const Padding(
+            padding: EdgeInsets.only(bottom: 16),
+            child: Center(child: BriefedBannerAd()),
+          );
+        }
+        // Weekly game card (index 1)
+        if (index == 1) {
+          return Padding(
+            padding: const EdgeInsets.only(bottom: 16),
+            child: _ExploreWeeklyGameCard(game: weeklyGame),
+          );
+        }
+        // Articles: index 0 = hero, index 3+ = remaining articles
+        final articleIndex = index == 0 ? 0 : index - 2;
+        if (articleIndex >= articles.length) return const SizedBox.shrink();
+        final article = articles[articleIndex];
+        final color = _catColor(article.category);
+        final icon = _catIcon(article.category);
+        if (articleIndex == 0) {
+          return Padding(
+            padding: const EdgeInsets.only(bottom: 16),
+            child: _ExploreLeadCard(
+              article: article,
+              catColor: color,
+              catIcon: icon,
+              onTap: () =>
+                  _showArticleDetailModal(context, articles, articleIndex),
+            ),
+          );
+        }
+        return _ExploreStandardCard(
+          article: article,
+          catColor: color,
+          catIcon: icon,
+          showDivider: articleIndex < articles.length - 1,
+          onTap: () => _showArticleDetailModal(context, articles, articleIndex),
         );
       },
     );
   }
 
-  Widget _buildSkeleton() {
-    return ListView.builder(
-      padding: const EdgeInsets.fromLTRB(16, 14, 16, 32),
-      itemCount: 3,
-      itemBuilder: (_, __) => Padding(
-        padding: const EdgeInsets.only(bottom: 12),
-        child: Container(
-          decoration: BoxDecoration(
-            color: context.cardColor,
-            borderRadius: BorderRadius.circular(20),
-            border: Border.all(color: context.borderColor),
+  _GameSpec _weeklyExploreGame(BuildContext context) {
+    final games = [
+      _GameSpec(
+        icon: Icons.fact_check_rounded,
+        title: 'Real or Fake?',
+        description: 'Spot the fake headline',
+        tag: 'QUICK PLAY',
+        color: const Color(0xFF3B5BDB),
+        best: '10 rounds',
+        plays: '~60 sec',
+        onTap: () => Navigator.of(context)
+            .push(MaterialPageRoute(builder: (_) => const RealOrFakeGame())),
+      ),
+      _GameSpec(
+        icon: Icons.timeline_rounded,
+        title: 'Oldest to Latest',
+        description: 'Sort events in order',
+        tag: 'BRAIN',
+        color: const Color(0xFF7C3AED),
+        best: '4 events',
+        plays: '~45 sec',
+        onTap: () => Navigator.of(context).push(
+            MaterialPageRoute(builder: (_) => const OldestToLatestGame())),
+      ),
+      _GameSpec(
+        icon: Icons.compare_arrows_rounded,
+        title: 'Headline Match',
+        description: 'Pair briefs with headlines',
+        tag: 'MATCH',
+        color: const Color(0xFF16A34A),
+        best: '5 questions',
+        plays: 'Daily mix',
+        onTap: () => Navigator.of(context)
+            .push(MaterialPageRoute(builder: (_) => const HeadlineMatchGame())),
+      ),
+      _GameSpec(
+        icon: Icons.travel_explore_rounded,
+        title: 'Source Sleuth',
+        description: 'Pick the right news desk',
+        tag: 'SLEUTH',
+        color: const Color(0xFF0EA5E9),
+        best: '5 questions',
+        plays: 'Daily mix',
+        onTap: () => Navigator.of(context)
+            .push(MaterialPageRoute(builder: (_) => const SourceSleuthGame())),
+      ),
+    ];
+    return games[GamesScreen._weeklyIndex(games.length)];
+  }
+
+  Widget _buildError(BuildContext context) {
+    return Center(
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          const Icon(Icons.wifi_off_rounded, size: 48, color: Colors.grey),
+          const SizedBox(height: 12),
+          Text("Couldn't load news",
+              style: TextStyle(
+                  fontFamily: AppFonts.body,
+                  fontSize: 16,
+                  fontWeight: FontWeight.w600,
+                  color: context.textColor)),
+          const SizedBox(height: 4),
+          Text('Pull down to refresh',
+              style: TextStyle(
+                  fontFamily: AppFonts.body,
+                  fontSize: 13,
+                  color: context.hintColor)),
+          const SizedBox(height: 20),
+          OutlinedButton(
+            onPressed: () => ref.read(newsPipelineProvider.notifier).refresh(),
+            style: OutlinedButton.styleFrom(
+              side: const BorderSide(color: Color(0xFFFF5722)),
+              foregroundColor: const Color(0xFFFF5722),
+            ),
+            child: const Text('Retry',
+                style: TextStyle(
+                    fontFamily: AppFonts.body, fontWeight: FontWeight.w700)),
           ),
-          clipBehavior: Clip.antiAlias,
-          child: const Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-            ShimmerBox(width: double.infinity, height: 210, borderRadius: 0),
+        ],
+      ),
+    );
+  }
+}
+
+// ── Explore: Refresh Status Chip ─────────────────────────────────────────────
+
+class _RefreshStatusChip extends StatefulWidget {
+  final PipelineState pipeline;
+  const _RefreshStatusChip({required this.pipeline});
+
+  @override
+  State<_RefreshStatusChip> createState() => _RefreshStatusChipState();
+}
+
+class _RefreshStatusChipState extends State<_RefreshStatusChip> {
+  Timer? _ticker;
+
+  @override
+  void initState() {
+    super.initState();
+    _ticker = Timer.periodic(const Duration(seconds: 30), (_) {
+      if (mounted) setState(() {});
+    });
+  }
+
+  @override
+  void dispose() {
+    _ticker?.cancel();
+    super.dispose();
+  }
+
+  String _label() {
+    if (widget.pipeline.isLoading) return 'Refreshing…';
+    final at = widget.pipeline.updatedAt;
+    if (at == null) return '';
+    final now = DateTime.now();
+    final age = now.difference(at);
+    final nextRefresh = at.add(const Duration(hours: 4));
+    final until = nextRefresh.difference(now);
+
+    String ago;
+    if (age.inMinutes < 1) {
+      ago = 'just now';
+    } else if (age.inMinutes < 60) {
+      ago = '${age.inMinutes}m ago';
+    } else {
+      ago = '${age.inHours}h ago';
+    }
+
+    String next;
+    if (until.isNegative) {
+      next = 'soon';
+    } else if (until.inMinutes < 1) {
+      next = '< 1 min';
+    } else if (until.inMinutes < 60) {
+      next = '~${until.inMinutes} min';
+    } else {
+      next = '~${until.inHours}h';
+    }
+
+    return 'Updated $ago · next in $next';
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final label = _label();
+    if (label.isEmpty) return const SizedBox.shrink();
+    return Row(
+      children: [
+        Container(
+          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+          decoration: BoxDecoration(
+            color: context.isDark
+                ? Colors.white.withValues(alpha: 0.07)
+                : Colors.black.withValues(alpha: 0.05),
+            borderRadius: BorderRadius.circular(20),
+          ),
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Icon(Icons.schedule_rounded, size: 12, color: context.hintColor),
+              const SizedBox(width: 4),
+              Text(label,
+                  style: TextStyle(
+                      fontFamily: AppFonts.body,
+                      fontSize: 11,
+                      color: context.hintColor)),
+            ],
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+// ── Explore: Lead Card ────────────────────────────────────────────────────────
+
+class _ExploreLeadCard extends StatelessWidget {
+  final RankedArticle article;
+  final Color catColor;
+  final IconData catIcon;
+  final VoidCallback onTap;
+
+  const _ExploreLeadCard({
+    required this.article,
+    required this.catColor,
+    required this.catIcon,
+    required this.onTap,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        decoration: BoxDecoration(
+          color:
+              context.cardColor.withValues(alpha: context.isDark ? 0.84 : 0.98),
+          borderRadius: BorderRadius.circular(28),
+          border: Border.all(
+              color:
+                  Colors.white.withValues(alpha: context.isDark ? 0.06 : 0.72)),
+          boxShadow: [
+            BoxShadow(
+              color: AppColors.accent.withValues(alpha: 0.14),
+              blurRadius: 32,
+              offset: const Offset(0, 16),
+            ),
+          ],
+        ),
+        clipBehavior: Clip.antiAlias,
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            SizedBox(
+              height: 230,
+              width: double.infinity,
+              child: article.imageUrl != null && article.imageUrl!.isNotEmpty
+                  ? Image.network(
+                      article.imageUrl!,
+                      fit: BoxFit.cover,
+                      errorBuilder: (_, __, ___) => _placeholder(),
+                    )
+                  : _placeholder(),
+            ),
             Padding(
-              padding: EdgeInsets.fromLTRB(14, 12, 14, 14),
+              padding: const EdgeInsets.all(16),
               child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Container(
+                    padding:
+                        const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                    decoration: BoxDecoration(
+                      gradient: const LinearGradient(
+                          colors: [AppColors.accentLight, AppColors.accent]),
+                      borderRadius: BorderRadius.circular(999),
+                    ),
+                    child: Text(article.category.label,
+                        style: const TextStyle(
+                            fontFamily: AppFonts.body,
+                            fontSize: 10,
+                            fontWeight: FontWeight.w700,
+                            color: Colors.white)),
+                  ),
+                  const SizedBox(height: 10),
+                  Text(
+                    article.title,
+                    maxLines: 3,
+                    overflow: TextOverflow.ellipsis,
+                    style: TextStyle(
+                        fontFamily: AppFonts.body,
+                        fontSize: 18,
+                        fontWeight: FontWeight.w700,
+                        color: context.textColor,
+                        height: 1.3),
+                  ),
+                  const SizedBox(height: 8),
+                  Row(children: [
+                    Text(article.sourceName,
+                        style: TextStyle(
+                            fontFamily: AppFonts.body,
+                            fontSize: 12,
+                            fontWeight: FontWeight.w600,
+                            color: context.subColor)),
+                    Text(' · ',
+                        style:
+                            TextStyle(color: context.hintColor, fontSize: 12)),
+                    Text(article.timeAgo,
+                        style: TextStyle(
+                            fontFamily: AppFonts.body,
+                            fontSize: 12,
+                            color: context.hintColor)),
+                  ]),
+                  if (article.summary.isNotEmpty) ...[
+                    const SizedBox(height: 8),
+                    Text(
+                      article.summary,
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
+                      style: TextStyle(
+                          fontFamily: AppFonts.body,
+                          fontSize: 13,
+                          color: context.subColor,
+                          height: 1.5),
+                    ),
+                  ],
+                ],
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _placeholder() => Container(
+        color: catColor.withValues(alpha: 0.12),
+        child: Center(
+            child: Icon(catIcon,
+                size: 48, color: catColor.withValues(alpha: 0.35))),
+      );
+}
+
+// ── Explore: Standard Card ────────────────────────────────────────────────────
+
+class _ExploreStandardCard extends StatelessWidget {
+  final RankedArticle article;
+  final Color catColor;
+  final IconData catIcon;
+  final bool showDivider;
+  final VoidCallback onTap;
+
+  const _ExploreStandardCard({
+    required this.article,
+    required this.catColor,
+    required this.catIcon,
+    required this.showDivider,
+    required this.onTap,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(children: [
+      GestureDetector(
+        onTap: onTap,
+        child: Padding(
+          padding: const EdgeInsets.symmetric(vertical: 14),
+          child: Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              ClipRRect(
+                borderRadius: BorderRadius.circular(12),
+                child: SizedBox(
+                  width: 90,
+                  height: 90,
+                  child:
+                      article.imageUrl != null && article.imageUrl!.isNotEmpty
+                          ? Image.network(
+                              article.imageUrl!,
+                              fit: BoxFit.cover,
+                              errorBuilder: (_, __, ___) => _thumb(),
+                            )
+                          : _thumb(),
+                ),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    ShimmerBox(width: 140, height: 11, borderRadius: 6),
-                    SizedBox(height: 10),
-                    ShimmerBox(
-                        width: double.infinity, height: 18, borderRadius: 6),
-                    SizedBox(height: 6),
-                    ShimmerBox(width: 240, height: 18, borderRadius: 6),
-                    SizedBox(height: 14),
-                    ShimmerBox(width: 80, height: 22, borderRadius: 11),
-                  ]),
+                    Container(
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 7, vertical: 3),
+                      decoration: BoxDecoration(
+                        color: AppColors.accent.withValues(alpha: 0.10),
+                        borderRadius: BorderRadius.circular(999),
+                      ),
+                      child: Text(article.category.label,
+                          style: const TextStyle(
+                              fontFamily: AppFonts.body,
+                              fontSize: 9,
+                              fontWeight: FontWeight.w700,
+                              color: AppColors.accent)),
+                    ),
+                    const SizedBox(height: 6),
+                    Text(
+                      article.title,
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
+                      style: TextStyle(
+                          fontFamily: AppFonts.body,
+                          fontSize: 14,
+                          fontWeight: FontWeight.w700,
+                          color: context.textColor,
+                          height: 1.3),
+                    ),
+                    const SizedBox(height: 6),
+                    Row(children: [
+                      Flexible(
+                        child: Text(
+                          article.sourceName,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: TextStyle(
+                              fontFamily: AppFonts.body,
+                              fontSize: 11,
+                              color: context.hintColor),
+                        ),
+                      ),
+                      Text(' · ',
+                          style: TextStyle(
+                              color: context.hintColor, fontSize: 11)),
+                      Text(article.timeAgo,
+                          style: TextStyle(
+                              fontFamily: AppFonts.body,
+                              fontSize: 11,
+                              color: context.hintColor)),
+                    ]),
+                  ],
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+      if (showDivider) Divider(height: 1, color: context.borderColor),
+    ]);
+  }
+
+  Widget _thumb() => Container(
+        color: catColor.withValues(alpha: 0.15),
+        child: Center(
+            child: Icon(catIcon,
+                size: 32, color: catColor.withValues(alpha: 0.35))),
+      );
+}
+
+class _ExploreWeeklyGameCard extends StatelessWidget {
+  final _GameSpec game;
+
+  const _ExploreWeeklyGameCard({required this.game});
+
+  @override
+  Widget build(BuildContext context) {
+    final surface = context.isDark ? const Color(0xFF27170E) : Colors.white;
+    return GestureDetector(
+      onTap: game.onTap,
+      child: Container(
+        padding: const EdgeInsets.all(14),
+        decoration: BoxDecoration(
+          color: surface,
+          borderRadius: BorderRadius.circular(20),
+          boxShadow: [
+            BoxShadow(
+              color: AppColors.accent
+                  .withValues(alpha: context.isDark ? 0.10 : 0.16),
+              blurRadius: 24,
+              offset: const Offset(0, 12),
             ),
-          ]),
+          ],
+        ),
+        child: Row(children: [
+          Container(
+            width: 52,
+            height: 52,
+            decoration: BoxDecoration(
+              color: game.color.withValues(alpha: 0.14),
+              borderRadius: BorderRadius.circular(14),
+            ),
+            child: Icon(game.icon, color: game.color, size: 26),
+          ),
+          const SizedBox(width: 12),
+          Expanded(
+            child:
+                Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+              Text('FEATURED GAME',
+                  style: TextStyle(
+                      fontFamily: AppFonts.body,
+                      fontSize: 9,
+                      fontWeight: FontWeight.w900,
+                      color: game.color,
+                      letterSpacing: 1.0)),
+              const SizedBox(height: 3),
+              Text(game.title,
+                  style: TextStyle(
+                      fontFamily: AppFonts.body,
+                      fontSize: 16,
+                      fontWeight: FontWeight.w900,
+                      color: context.textColor,
+                      letterSpacing: -0.2)),
+              const SizedBox(height: 2),
+              Text('${game.description} · ${game.plays}',
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: TextStyle(
+                      fontFamily: AppFonts.body,
+                      fontSize: 12,
+                      fontWeight: FontWeight.w600,
+                      color: context.hintColor)),
+            ]),
+          ),
+          const SizedBox(width: 10),
+          Container(
+            width: 40,
+            height: 40,
+            decoration: BoxDecoration(
+              color: game.color,
+              borderRadius: BorderRadius.circular(12),
+              boxShadow: [
+                BoxShadow(
+                  color: game.color.withValues(alpha: 0.30),
+                  blurRadius: 0,
+                  offset: const Offset(0, 3),
+                ),
+              ],
+            ),
+            child: const Icon(Icons.play_arrow_rounded,
+                color: Colors.white, size: 20),
+          ),
+        ]),
+      ),
+    );
+  }
+}
+
+// ── Article Detail Modal ──────────────────────────────────────────────────────
+
+class _ArticleDetailModal extends StatefulWidget {
+  final List<RankedArticle> articles;
+  final int initialIndex;
+  final Future<void> Function(String) onLaunchUrl;
+  final Color Function(NewsCategory) catColor;
+  final IconData Function(NewsCategory) catIcon;
+
+  const _ArticleDetailModal({
+    required this.articles,
+    required this.initialIndex,
+    required this.onLaunchUrl,
+    required this.catColor,
+    required this.catIcon,
+  });
+
+  @override
+  State<_ArticleDetailModal> createState() => _ArticleDetailModalState();
+}
+
+class _ArticleDetailModalState extends State<_ArticleDetailModal> {
+  late int _selectedIndex;
+
+  @override
+  void initState() {
+    super.initState();
+    _selectedIndex = widget.initialIndex;
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final selectedArticle = widget.articles[_selectedIndex];
+    final catColor = widget.catColor(selectedArticle.category);
+    final catIcon = widget.catIcon(selectedArticle.category);
+    final bottomPadding = MediaQuery.of(context).viewInsets.bottom +
+        MediaQuery.of(context).padding.bottom +
+        24;
+
+    return DraggableScrollableSheet(
+      initialChildSize: 0.92,
+      minChildSize: 0.55,
+      maxChildSize: 0.96,
+      expand: false,
+      builder: (context, scrollController) => Container(
+        decoration: BoxDecoration(
+          color: context.bgColor,
+          borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
+        ),
+        child: ListView(
+          controller: scrollController,
+          padding: EdgeInsets.fromLTRB(16, 12, 16, bottomPadding),
+          children: [
+            Center(
+              child: Container(
+                width: 40,
+                height: 4,
+                margin: const EdgeInsets.only(bottom: 16),
+                decoration: BoxDecoration(
+                  color: context.borderColor,
+                  borderRadius: BorderRadius.circular(2),
+                ),
+              ),
+            ),
+            Container(
+              decoration: BoxDecoration(
+                color: context.cardColor,
+                borderRadius: BorderRadius.circular(20),
+                border: Border(bottom: BorderSide(color: catColor, width: 3)),
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black.withValues(alpha: 0.08),
+                    blurRadius: 8,
+                    offset: const Offset(0, 2),
+                  ),
+                ],
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  ClipRRect(
+                    borderRadius:
+                        const BorderRadius.vertical(top: Radius.circular(20)),
+                    child: Image.network(
+                      selectedArticle.effectiveImageUrl,
+                      height: 200,
+                      width: double.infinity,
+                      fit: BoxFit.cover,
+                      errorBuilder: (_, __, ___) => Container(
+                        height: 200,
+                        color: catColor.withValues(alpha: 0.15),
+                        child: Center(
+                          child: Icon(catIcon,
+                              size: 48,
+                              color: catColor.withValues(alpha: 0.35)),
+                        ),
+                      ),
+                    ),
+                  ),
+                  Padding(
+                    padding: const EdgeInsets.all(16),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Row(children: [
+                          Container(
+                            padding: const EdgeInsets.symmetric(
+                                horizontal: 10, vertical: 5),
+                            decoration: BoxDecoration(
+                              color: catColor.withValues(alpha: 0.12),
+                              borderRadius: BorderRadius.circular(999),
+                            ),
+                            child: Text(
+                              selectedArticle.category.label.toUpperCase(),
+                              style: TextStyle(
+                                fontFamily: AppFonts.body,
+                                fontSize: 10,
+                                fontWeight: FontWeight.w800,
+                                color: catColor,
+                                letterSpacing: 0.4,
+                              ),
+                            ),
+                          ),
+                          const SizedBox(width: 8),
+                          Text(
+                            selectedArticle.timeAgo,
+                            style: TextStyle(
+                                fontFamily: AppFonts.body,
+                                fontSize: 11,
+                                color: context.hintColor),
+                          ),
+                          const Spacer(),
+                          Flexible(
+                            child: Text(
+                              selectedArticle.sourceName,
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                              style: TextStyle(
+                                  fontFamily: AppFonts.body,
+                                  fontSize: 11,
+                                  fontWeight: FontWeight.w700,
+                                  color: context.subColor),
+                            ),
+                          ),
+                        ]),
+                        const SizedBox(height: 12),
+                        Text(
+                          selectedArticle.title,
+                          style: TextStyle(
+                            fontFamily: AppFonts.body,
+                            fontSize: 18,
+                            fontWeight: FontWeight.w700,
+                            color: context.textColor,
+                            height: 1.35,
+                          ),
+                        ),
+                        if (selectedArticle.summary.isNotEmpty) ...[
+                          const SizedBox(height: 10),
+                          Text(
+                            selectedArticle.summary,
+                            style: TextStyle(
+                                fontFamily: AppFonts.body,
+                                fontSize: 14,
+                                color: context.subColor,
+                                height: 1.65),
+                          ),
+                        ],
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(height: 16),
+            AccentButton(
+              text: 'Read Full Article',
+              icon: Icons.open_in_new_rounded,
+              fontSize: 14,
+              padding: const EdgeInsets.symmetric(vertical: 14),
+              onTap: () => widget.onLaunchUrl(selectedArticle.url),
+            ),
+            if (widget.articles.length > 1) ...[
+              const SizedBox(height: 16),
+              Text(
+                'More from ${selectedArticle.category.label}',
+                style: TextStyle(
+                    fontFamily: AppFonts.body,
+                    fontSize: 13,
+                    fontWeight: FontWeight.w700,
+                    color: context.textColor),
+              ),
+              const SizedBox(height: 12),
+              ...widget.articles.asMap().entries.where((entry) {
+                return entry.key != _selectedIndex;
+              }).map((entry) {
+                final idx = entry.key;
+                final article = entry.value;
+                final color = widget.catColor(article.category);
+                final icon = widget.catIcon(article.category);
+                return Padding(
+                  padding: const EdgeInsets.only(bottom: 12),
+                  child: GestureDetector(
+                    onTap: () => setState(() => _selectedIndex = idx),
+                    child: Container(
+                      decoration: BoxDecoration(
+                        color: context.cardColor,
+                        borderRadius: BorderRadius.circular(12),
+                        border: Border.all(color: context.borderColor),
+                      ),
+                      padding: const EdgeInsets.all(12),
+                      child: Row(children: [
+                        ClipRRect(
+                          borderRadius: BorderRadius.circular(8),
+                          child: Image.network(
+                            article.effectiveImageUrl,
+                            width: 70,
+                            height: 70,
+                            fit: BoxFit.cover,
+                            errorBuilder: (_, __, ___) => Container(
+                              width: 70,
+                              height: 70,
+                              decoration: BoxDecoration(
+                                color: color.withValues(alpha: 0.15),
+                                borderRadius: BorderRadius.circular(8),
+                              ),
+                              child: Center(
+                                child: Icon(icon,
+                                    size: 24,
+                                    color: color.withValues(alpha: 0.35)),
+                              ),
+                            ),
+                          ),
+                        ),
+                        const SizedBox(width: 12),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                article.title,
+                                maxLines: 2,
+                                overflow: TextOverflow.ellipsis,
+                                style: TextStyle(
+                                    fontFamily: AppFonts.body,
+                                    fontSize: 13,
+                                    fontWeight: FontWeight.w700,
+                                    color: context.textColor,
+                                    height: 1.35),
+                              ),
+                              const SizedBox(height: 6),
+                              Row(children: [
+                                Flexible(
+                                  child: Text(
+                                    article.sourceName,
+                                    maxLines: 1,
+                                    overflow: TextOverflow.ellipsis,
+                                    style: TextStyle(
+                                        fontFamily: AppFonts.body,
+                                        fontSize: 10,
+                                        fontWeight: FontWeight.w600,
+                                        color: context.subColor),
+                                  ),
+                                ),
+                                const SizedBox(width: 6),
+                                Text(
+                                  '• ${article.timeAgo}',
+                                  style: TextStyle(
+                                      fontFamily: AppFonts.body,
+                                      fontSize: 10,
+                                      color: context.hintColor),
+                                ),
+                              ]),
+                            ],
+                          ),
+                        ),
+                      ]),
+                    ),
+                  ),
+                );
+              }),
+            ],
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+// ── Explore: Skeleton ─────────────────────────────────────────────────────────
+
+class _ExploreSkeleton extends StatefulWidget {
+  const _ExploreSkeleton();
+  @override
+  State<_ExploreSkeleton> createState() => _ExploreSkeletonState();
+}
+
+class _ExploreSkeletonState extends State<_ExploreSkeleton>
+    with SingleTickerProviderStateMixin {
+  late AnimationController _ctrl;
+  late Animation<double> _opacity;
+
+  @override
+  void initState() {
+    super.initState();
+    _ctrl = AnimationController(
+        vsync: this, duration: const Duration(milliseconds: 1000))
+      ..repeat(reverse: true);
+    _opacity = Tween<double>(begin: 0.3, end: 0.8).animate(_ctrl);
+  }
+
+  @override
+  void dispose() {
+    _ctrl.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return AnimatedBuilder(
+      animation: _opacity,
+      builder: (context, _) => ListView.builder(
+        padding: const EdgeInsets.fromLTRB(16, 14, 16, 32),
+        itemCount: 3,
+        itemBuilder: (context, index) => Opacity(
+          opacity: _opacity.value,
+          child: Padding(
+            padding: const EdgeInsets.only(bottom: 12),
+            child: Container(
+              height: index == 0 ? 320 : 88,
+              decoration: BoxDecoration(
+                color: context.cardColor,
+                borderRadius: BorderRadius.circular(20),
+                border: Border.all(color: context.borderColor),
+              ),
+            ),
+          ),
         ),
       ),
     );
@@ -4513,8 +4450,11 @@ class _NewsBanner extends StatelessWidget {
             message,
             maxLines: 2,
             overflow: TextOverflow.ellipsis,
-            style: GoogleFonts.dmSans(
-                fontSize: 12, fontWeight: FontWeight.w600, color: Colors.white),
+            style: const TextStyle(
+                fontFamily: AppFonts.body,
+                fontSize: 12,
+                fontWeight: FontWeight.w600,
+                color: Colors.white),
           ),
         ),
       ]),
@@ -4531,21 +4471,39 @@ class _NewsCard extends StatelessWidget {
 
   Color _catColor() {
     switch (article.category) {
-      case NewsCategory.world:      return AppColors.blue;
-      case NewsCategory.politics:   return AppColors.purple;
-      case NewsCategory.sports:     return AppColors.green;
-      case NewsCategory.technology: return AppColors.teal;
-      case NewsCategory.business:   return AppColors.orange;
+      case NewsCategory.world:
+        return AppColors.blue;
+      case NewsCategory.politics:
+        return AppColors.purple;
+      case NewsCategory.sports:
+        return AppColors.green;
+      case NewsCategory.technology:
+        return AppColors.teal;
+      case NewsCategory.business:
+        return AppColors.orange;
+      case NewsCategory.health:
+        return const Color(0xFF26A69A);
+      case NewsCategory.entertainment:
+        return AppColors.pink;
     }
   }
 
   IconData _catIcon() {
     switch (article.category) {
-      case NewsCategory.world:      return Icons.language_rounded;
-      case NewsCategory.politics:   return Icons.account_balance_rounded;
-      case NewsCategory.sports:     return Icons.sports_rounded;
-      case NewsCategory.technology: return Icons.memory_rounded;
-      case NewsCategory.business:   return Icons.trending_up_rounded;
+      case NewsCategory.world:
+        return Icons.language_rounded;
+      case NewsCategory.politics:
+        return Icons.account_balance_rounded;
+      case NewsCategory.sports:
+        return Icons.sports_rounded;
+      case NewsCategory.technology:
+        return Icons.memory_rounded;
+      case NewsCategory.business:
+        return Icons.trending_up_rounded;
+      case NewsCategory.health:
+        return Icons.health_and_safety_rounded;
+      case NewsCategory.entertainment:
+        return Icons.theaters_rounded;
     }
   }
 
@@ -4570,8 +4528,8 @@ class _NewsCard extends StatelessWidget {
           border: Border.all(color: context.borderColor),
           boxShadow: [
             BoxShadow(
-              color: Colors.black
-                  .withValues(alpha: context.isDark ? 0.18 : 0.05),
+              color:
+                  Colors.black.withValues(alpha: context.isDark ? 0.18 : 0.05),
               blurRadius: 12,
               offset: const Offset(0, 4),
             ),
@@ -4591,13 +4549,13 @@ class _NewsCard extends StatelessWidget {
           ),
           Padding(
             padding: const EdgeInsets.fromLTRB(14, 12, 14, 14),
-            child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
+            child:
+                Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
               Row(children: [
                 Text(
                   article.sourceName,
-                  style: GoogleFonts.dmSans(
+                  style: TextStyle(
+                    fontFamily: AppFonts.body,
                     fontSize: 12,
                     fontWeight: FontWeight.w800,
                     color: _sourceColor(context),
@@ -4605,19 +4563,21 @@ class _NewsCard extends StatelessWidget {
                 ),
                 const SizedBox(width: 5),
                 Text('·',
-                    style: TextStyle(
-                        color: context.hintColor, fontSize: 10)),
+                    style: TextStyle(color: context.hintColor, fontSize: 10)),
                 const SizedBox(width: 5),
                 Text(article.timeAgo,
-                    style: GoogleFonts.dmSans(
-                        fontSize: 11, color: context.hintColor)),
+                    style: TextStyle(
+                        fontFamily: AppFonts.body,
+                        fontSize: 11,
+                        color: context.hintColor)),
               ]),
               const SizedBox(height: 8),
               Text(
                 article.title,
                 maxLines: 2,
                 overflow: TextOverflow.ellipsis,
-                style: GoogleFonts.dmSans(
+                style: TextStyle(
+                  fontFamily: AppFonts.body,
                   fontSize: 17,
                   fontWeight: FontWeight.w700,
                   height: 1.35,
@@ -4627,20 +4587,20 @@ class _NewsCard extends StatelessWidget {
               const SizedBox(height: 12),
               Row(children: [
                 Container(
-                  padding: const EdgeInsets.symmetric(
-                      horizontal: 10, vertical: 5),
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
                   decoration: BoxDecoration(
                     color: catColor.withValues(alpha: 0.12),
                     borderRadius: BorderRadius.circular(999),
-                    border: Border.all(
-                        color: catColor.withValues(alpha: 0.25)),
+                    border: Border.all(color: catColor.withValues(alpha: 0.25)),
                   ),
                   child: Row(mainAxisSize: MainAxisSize.min, children: [
                     Icon(_catIcon(), size: 11, color: catColor),
                     const SizedBox(width: 4),
                     Text(
                       article.category.label,
-                      style: GoogleFonts.dmSans(
+                      style: TextStyle(
+                        fontFamily: AppFonts.body,
                         fontSize: 11,
                         fontWeight: FontWeight.w700,
                         color: catColor,
@@ -4650,8 +4610,8 @@ class _NewsCard extends StatelessWidget {
                 ),
                 const Spacer(),
                 GestureDetector(
-                  onTap: () => Share.share(
-                      '${article.title}\n\n${article.url}'),
+                  onTap: () =>
+                      Share.share('${article.title}\n\n${article.url}'),
                   child: Container(
                     width: 34,
                     height: 34,
@@ -4725,15 +4685,18 @@ class _RankedArticleSheet extends StatelessWidget {
             _CategoryChip(article.category),
             const SizedBox(width: 8),
             Text(article.timeAgo,
-                style: GoogleFonts.dmSans(
-                    fontSize: 11, color: context.hintColor)),
+                style: TextStyle(
+                    fontFamily: AppFonts.body,
+                    fontSize: 11,
+                    color: context.hintColor)),
             const Spacer(),
             Flexible(
               child: Text(
                 article.sourceName,
                 maxLines: 1,
                 overflow: TextOverflow.ellipsis,
-                style: GoogleFonts.dmSans(
+                style: TextStyle(
+                  fontFamily: AppFonts.body,
                   fontSize: 11,
                   fontWeight: FontWeight.w700,
                   color: context.subColor,
@@ -4743,7 +4706,8 @@ class _RankedArticleSheet extends StatelessWidget {
           ]),
           const SizedBox(height: 12),
           Text(article.title,
-              style: GoogleFonts.dmSans(
+              style: TextStyle(
+                fontFamily: AppFonts.body,
                 fontSize: 18,
                 fontWeight: FontWeight.w700,
                 color: context.textColor,
@@ -4752,27 +4716,29 @@ class _RankedArticleSheet extends StatelessWidget {
           if (article.summary.isNotEmpty) ...[
             const SizedBox(height: 10),
             Text(article.summary,
-                style: GoogleFonts.roboto(
-                    fontSize: 14, color: context.subColor, height: 1.65)),
+                style: TextStyle(
+                    fontFamily: AppFonts.body,
+                    fontSize: 14,
+                    color: context.subColor,
+                    height: 1.65)),
           ],
           const SizedBox(height: 20),
           Row(children: [
             GestureDetector(
-              onTap: () =>
-                  Share.share('${article.title}\n\n${article.url}'),
+              onTap: () => Share.share('${article.title}\n\n${article.url}'),
               child: Container(
-                padding: const EdgeInsets.symmetric(
-                    horizontal: 20, vertical: 13),
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 20, vertical: 13),
                 decoration: BoxDecoration(
                   color: context.inputBg,
                   borderRadius: BorderRadius.circular(14),
                 ),
                 child: Row(children: [
-                  Icon(Icons.share_rounded,
-                      size: 16, color: context.subColor),
+                  Icon(Icons.share_rounded, size: 16, color: context.subColor),
                   const SizedBox(width: 6),
                   Text('Share',
-                      style: GoogleFonts.dmSans(
+                      style: TextStyle(
+                        fontFamily: AppFonts.body,
                         fontSize: 12,
                         fontWeight: FontWeight.w600,
                         color: context.subColor,
@@ -4805,11 +4771,20 @@ class _CategoryChip extends StatelessWidget {
 
   Color _color() {
     switch (cat) {
-      case NewsCategory.world:      return AppColors.blue;
-      case NewsCategory.politics:   return AppColors.purple;
-      case NewsCategory.sports:     return AppColors.green;
-      case NewsCategory.technology: return AppColors.teal;
-      case NewsCategory.business:   return AppColors.orange;
+      case NewsCategory.world:
+        return AppColors.blue;
+      case NewsCategory.politics:
+        return AppColors.purple;
+      case NewsCategory.sports:
+        return AppColors.green;
+      case NewsCategory.technology:
+        return AppColors.teal;
+      case NewsCategory.business:
+        return AppColors.orange;
+      case NewsCategory.health:
+        return const Color(0xFF26A69A);
+      case NewsCategory.entertainment:
+        return AppColors.pink;
     }
   }
 
@@ -4824,7 +4799,8 @@ class _CategoryChip extends StatelessWidget {
       ),
       child: Text(
         cat.label,
-        style: GoogleFonts.dmSans(
+        style: TextStyle(
+          fontFamily: AppFonts.body,
           fontSize: 10,
           fontWeight: FontWeight.w800,
           color: c,
@@ -4834,7 +4810,6 @@ class _CategoryChip extends StatelessWidget {
     );
   }
 }
-
 
 void _openArticle(BuildContext ctx, NewsArticle article) {
   showModalBottomSheet(
@@ -4885,21 +4860,25 @@ class _ArticleSheet extends StatelessWidget {
             CategoryTag(category: article.category, small: true),
             const SizedBox(width: 8),
             Text(article.timeAgo,
-                style: GoogleFonts.dmSans(
-                    fontSize: 11, color: context.hintColor)),
+                style: TextStyle(
+                    fontFamily: AppFonts.body,
+                    fontSize: 11,
+                    color: context.hintColor)),
             const Spacer(),
             Flexible(
                 child: Text('Source: ${article.sourceName}',
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
-                    style: GoogleFonts.dmSans(
+                    style: TextStyle(
+                        fontFamily: AppFonts.body,
                         fontSize: 11,
                         fontWeight: FontWeight.w600,
                         color: context.subColor))),
           ]),
           const SizedBox(height: 12),
           Text(article.title,
-              style: GoogleFonts.dmSans(
+              style: TextStyle(
+                  fontFamily: AppFonts.body,
                   fontSize: 18,
                   fontWeight: FontWeight.w700,
                   color: context.textColor,
@@ -4907,8 +4886,11 @@ class _ArticleSheet extends StatelessWidget {
           if (article.description.isNotEmpty) ...[
             const SizedBox(height: 10),
             Text(article.description,
-                style: GoogleFonts.roboto(
-                    fontSize: 14, color: context.subColor, height: 1.65)),
+                style: TextStyle(
+                    fontFamily: AppFonts.body,
+                    fontSize: 14,
+                    color: context.subColor,
+                    height: 1.65)),
           ],
           const SizedBox(height: 20),
           Row(children: [
@@ -4924,7 +4906,8 @@ class _ArticleSheet extends StatelessWidget {
                   Icon(Icons.share_rounded, size: 16, color: context.subColor),
                   const SizedBox(width: 6),
                   Text('Share',
-                      style: GoogleFonts.dmSans(
+                      style: TextStyle(
+                          fontFamily: AppFonts.body,
                           fontSize: 12,
                           fontWeight: FontWeight.w600,
                           color: context.subColor)),
@@ -4995,7 +4978,8 @@ class _QuizPromoStrip extends ConsumerWidget {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                   Text('Test your knowledge',
-                      style: GoogleFonts.dmSans(
+                      style: TextStyle(
+                          fontFamily: AppFonts.body,
                           fontSize: 13,
                           fontWeight: FontWeight.w800,
                           color: context.textColor)),
@@ -5003,8 +4987,10 @@ class _QuizPromoStrip extends ConsumerWidget {
                       played
                           ? 'Come back tomorrow for a fresh quiz'
                           : '5 questions from today\'s top stories',
-                      style: GoogleFonts.dmSans(
-                          fontSize: 11, color: context.subColor)),
+                      style: TextStyle(
+                          fontFamily: AppFonts.body,
+                          fontSize: 11,
+                          color: context.subColor)),
                 ])),
             Container(
                 padding:
@@ -5020,7 +5006,8 @@ class _QuizPromoStrip extends ConsumerWidget {
                           offset: const Offset(0, 3))
                     ]),
                 child: Text(played ? 'View' : 'Start Quiz',
-                    style: GoogleFonts.dmSans(
+                    style: const TextStyle(
+                        fontFamily: AppFonts.body,
                         fontSize: 11,
                         fontWeight: FontWeight.w800,
                         color: Colors.white))),
@@ -5033,97 +5020,385 @@ class _QuizPromoStrip extends ConsumerWidget {
 
 class GamesScreen extends StatelessWidget {
   const GamesScreen({super.key});
+
+  List<_GameSpec> _games(BuildContext context) => [
+        _GameSpec(
+          icon: Icons.fact_check_rounded,
+          title: 'Real or Fake?',
+          description:
+              'Spot a real headline from a convincing fake. 10 rapid rounds.',
+          tag: 'QUICK PLAY',
+          color: const Color(0xFF3B5BDB),
+          best: '10 rounds',
+          plays: '~60 sec',
+          onTap: () => Navigator.of(context)
+              .push(MaterialPageRoute(builder: (_) => const RealOrFakeGame())),
+        ),
+        _GameSpec(
+          icon: Icons.timeline_rounded,
+          title: 'Oldest to Latest',
+          description: 'Sort historical events from oldest to newest.',
+          tag: 'BRAIN',
+          color: const Color(0xFF7C3AED),
+          best: '4 events',
+          plays: '~45 sec',
+          onTap: () => Navigator.of(context).push(
+              MaterialPageRoute(builder: (_) => const OldestToLatestGame())),
+        ),
+        _GameSpec(
+          icon: Icons.compare_arrows_rounded,
+          title: 'Headline Match',
+          description: 'Match each brief to the correct headline.',
+          tag: 'MATCH',
+          color: const Color(0xFF16A34A),
+          best: '5/5',
+          plays: 'Daily mix',
+          onTap: () => Navigator.of(context).push(
+              MaterialPageRoute(builder: (_) => const HeadlineMatchGame())),
+        ),
+        _GameSpec(
+          icon: Icons.travel_explore_rounded,
+          title: 'Source Sleuth',
+          description: 'Pick the most likely news desk from the clue.',
+          tag: 'SLEUTH',
+          color: const Color(0xFF0EA5E9),
+          best: '5 questions',
+          plays: 'Daily mix',
+          onTap: () => Navigator.of(context).push(
+              MaterialPageRoute(builder: (_) => const SourceSleuthGame())),
+        ),
+      ];
+
+  static int _weeklyIndex(int length) {
+    if (length == 0) return 0;
+    final now = DateTime.now();
+    final start = DateTime(now.year, 1, 1);
+    return now.difference(start).inDays ~/ 7 % length;
+  }
+
   @override
   Widget build(BuildContext context) {
+    final games = _games(context);
+    final featured = games[_weeklyIndex(games.length)];
+    final bg =
+        context.isDark ? const Color(0xFF1A0F08) : const Color(0xFFFFF1E2);
+
     return Scaffold(
-        backgroundColor: context.bgColor,
-        body: SafeArea(
-            child: SingleChildScrollView(
-                padding: const EdgeInsets.all(20),
-                child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text('Games',
-                          style: Theme.of(context).textTheme.headlineLarge),
-                      const SizedBox(height: 4),
-                      Text('Quick news games to sharpen your mind',
-                          style: GoogleFonts.dmSans(
-                              fontSize: 13, color: context.subColor)),
-                      const SizedBox(height: 24),
-                      _GameCard(
-                          gradient: const LinearGradient(
-                              colors: [Color(0xFF2979FF), Color(0xFF1565C0)],
-                              begin: Alignment.topLeft,
-                              end: Alignment.bottomRight),
-                          icon: Icons.fact_check_rounded,
-                          title: 'Real or Fake?',
-                          description:
-                              'Can you tell a real headline from a convincing fake? 10 rounds, tap as fast as you can.',
-                          tag: 'QUICK PLAY',
-                          tagColor: AppColors.blue,
-                          stats: const [
-                            '10 rounds',
-                            '~60 sec',
-                            'Unlimited plays'
-                          ],
-                          onTap: () => Navigator.of(context).push(
-                              MaterialPageRoute(
-                                  builder: (_) => const RealOrFakeGame()))),
-                      const SizedBox(height: 16),
-                      _GameCard(
-                          gradient: const LinearGradient(
-                              colors: [Color(0xFF7C4DFF), Color(0xFF512DA8)],
-                              begin: Alignment.topLeft,
-                              end: Alignment.bottomRight),
-                          icon: Icons.timeline_rounded,
-                          title: 'Oldest to Latest',
-                          description:
-                              'Sort 4 historical events from oldest to most recent. Sounds easy — it\'s not.',
-                          tag: 'BRAIN TEASER',
-                          tagColor: AppColors.purple,
-                          stats: const [
-                            '4 events',
-                            '~45 sec',
-                            'Unlimited rounds'
-                          ],
-                          onTap: () => Navigator.of(context).push(
-                              MaterialPageRoute(
-                                  builder: (_) => const OldestToLatestGame()))),
-                      const SizedBox(height: 24),
-                      Container(
-                          padding: const EdgeInsets.all(16),
-                          decoration: BoxDecoration(
-                              color: context.cardColor,
-                              borderRadius: BorderRadius.circular(20),
-                              border: Border.all(color: context.borderColor)),
-                          child: Row(children: [
-                            Container(
-                                width: 44,
-                                height: 44,
-                                decoration: BoxDecoration(
-                                    color: context.inputBg,
-                                    borderRadius: BorderRadius.circular(13)),
-                                child: Icon(Icons.lock_rounded,
-                                    color: context.hintColor, size: 22)),
-                            const SizedBox(width: 14),
-                            Expanded(
-                                child: Column(
-                                    crossAxisAlignment:
-                                        CrossAxisAlignment.start,
-                                    children: [
-                                  Text('More games coming soon',
-                                      style: GoogleFonts.dmSans(
-                                          fontSize: 13,
-                                          fontWeight: FontWeight.w700,
-                                          color: context.subColor)),
-                                  Text(
-                                      'Flash Headlines, News Connections & more',
-                                      style: GoogleFonts.dmSans(
-                                          fontSize: 11,
-                                          color: context.hintColor)),
-                                ])),
-                          ])),
-                    ]))));
+      backgroundColor: bg,
+      body: SafeArea(
+        child: SingleChildScrollView(
+          padding: const EdgeInsets.fromLTRB(20, 16, 20, 110),
+          child:
+              Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+            Row(children: [
+              Text('Games',
+                  style: TextStyle(
+                      fontFamily: AppFonts.display,
+                      height: 1.02,
+                      fontSize: 30,
+                      fontWeight: FontWeight.w900,
+                      color: context.textColor,
+                      letterSpacing: -0.6)),
+              const SizedBox(width: 8),
+              const Icon(Icons.local_fire_department_rounded,
+                  color: AppColors.accent, size: 27),
+            ]),
+            const SizedBox(height: 4),
+            Text('Quick news games to sharpen your mind',
+                style: TextStyle(
+                    fontFamily: AppFonts.body,
+                    fontSize: 13,
+                    fontWeight: FontWeight.w600,
+                    color: context.subColor)),
+            const SizedBox(height: 16),
+            _FeaturedGameHero(game: featured),
+            const SizedBox(height: 16),
+            const Center(child: BriefedBannerAd()),
+            const SizedBox(height: 22),
+            const _BriefedSectionHeader(title: 'All games'),
+            const SizedBox(height: 12),
+            GridView.builder(
+              itemCount: games.length,
+              shrinkWrap: true,
+              physics: const NeverScrollableScrollPhysics(),
+              gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+                crossAxisCount: 2,
+                crossAxisSpacing: 12,
+                mainAxisSpacing: 12,
+                childAspectRatio: 0.86,
+              ),
+              itemBuilder: (context, i) => _GameTile(game: games[i]),
+            ),
+          ]),
+        ),
+      ),
+    );
+  }
+}
+
+class _GameSpec {
+  final IconData icon;
+  final String title;
+  final String description;
+  final String tag;
+  final Color color;
+  final String best;
+  final String plays;
+  final VoidCallback onTap;
+
+  const _GameSpec({
+    required this.icon,
+    required this.title,
+    required this.description,
+    required this.tag,
+    required this.color,
+    required this.best,
+    required this.plays,
+    required this.onTap,
+  });
+}
+
+class _BriefedSectionHeader extends StatelessWidget {
+  final String title;
+
+  const _BriefedSectionHeader({required this.title});
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(children: [
+      Text(title,
+          style: TextStyle(
+              fontFamily: AppFonts.display,
+              height: 1.02,
+              fontSize: 22,
+              fontWeight: FontWeight.w900,
+              color: context.textColor,
+              letterSpacing: -0.4)),
+    ]);
+  }
+}
+
+class _FeaturedGameHero extends StatelessWidget {
+  final _GameSpec game;
+
+  const _FeaturedGameHero({required this.game});
+
+  @override
+  Widget build(BuildContext context) {
+    final shadowColor =
+        game.color.withValues(alpha: context.isDark ? 0.26 : 0.42);
+    return GestureDetector(
+      onTap: game.onTap,
+      child: Container(
+        padding: const EdgeInsets.all(20),
+        decoration: BoxDecoration(
+          gradient: LinearGradient(
+            colors: [game.color, const Color(0xFF7C3AED)],
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+          ),
+          borderRadius: BorderRadius.circular(26),
+          boxShadow: [
+            BoxShadow(
+              color: game.color.withValues(alpha: 0.95),
+              blurRadius: 0,
+              offset: const Offset(0, 6),
+            ),
+            BoxShadow(
+              color: shadowColor,
+              blurRadius: 40,
+              offset: const Offset(0, 20),
+            ),
+          ],
+        ),
+        child: Stack(children: [
+          Positioned(
+            right: -34,
+            bottom: -50,
+            child: Container(
+              width: 170,
+              height: 170,
+              decoration: BoxDecoration(
+                shape: BoxShape.circle,
+                color: Colors.white.withValues(alpha: 0.14),
+              ),
+            ),
+          ),
+          Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+            Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
+              Container(
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+                decoration: BoxDecoration(
+                  color: Colors.white.withValues(alpha: 0.22),
+                  borderRadius: BorderRadius.circular(999),
+                ),
+                child: const Text('FEATURED THIS WEEK',
+                    style: TextStyle(
+                        fontFamily: AppFonts.body,
+                        fontSize: 10,
+                        fontWeight: FontWeight.w900,
+                        color: Colors.white,
+                        letterSpacing: 0.8)),
+              ),
+              const Spacer(),
+              Container(
+                width: 48,
+                height: 48,
+                decoration: BoxDecoration(
+                  color: Colors.white.withValues(alpha: 0.18),
+                  borderRadius: BorderRadius.circular(14),
+                ),
+                child: Icon(game.icon, color: Colors.white, size: 26),
+              ),
+            ]),
+            const SizedBox(height: 14),
+            Text(game.title,
+                style: const TextStyle(
+                    fontFamily: AppFonts.display,
+                    height: 1.02,
+                    fontSize: 27,
+                    fontWeight: FontWeight.w900,
+                    color: Colors.white,
+                    letterSpacing: -0.7)),
+            const SizedBox(height: 6),
+            Text(game.description,
+                style: TextStyle(
+                    fontFamily: AppFonts.body,
+                    fontSize: 13,
+                    fontWeight: FontWeight.w600,
+                    color: Colors.white.withValues(alpha: 0.88),
+                    height: 1.35)),
+            const SizedBox(height: 18),
+            Row(children: [
+              Expanded(
+                child: Container(
+                  height: 50,
+                  decoration: BoxDecoration(
+                    color: Colors.white,
+                    borderRadius: BorderRadius.circular(16),
+                    boxShadow: [
+                      BoxShadow(
+                          color: Colors.black.withValues(alpha: 0.18),
+                          blurRadius: 0,
+                          offset: const Offset(0, 4))
+                    ],
+                  ),
+                  alignment: Alignment.center,
+                  child: Row(mainAxisSize: MainAxisSize.min, children: [
+                    Icon(Icons.play_arrow_rounded, color: game.color, size: 18),
+                    const SizedBox(width: 6),
+                    Text('Play now',
+                        style: TextStyle(
+                            fontFamily: AppFonts.body,
+                            fontSize: 14,
+                            fontWeight: FontWeight.w900,
+                            color: game.color)),
+                  ]),
+                ),
+              ),
+              const SizedBox(width: 12),
+              Column(crossAxisAlignment: CrossAxisAlignment.end, children: [
+                Text('BEST',
+                    style: TextStyle(
+                        fontFamily: AppFonts.body,
+                        fontSize: 10,
+                        fontWeight: FontWeight.w900,
+                        color: Colors.white.withValues(alpha: 0.70))),
+                Text(game.best,
+                    style: const TextStyle(
+                        fontFamily: AppFonts.display,
+                        height: 1.02,
+                        fontSize: 18,
+                        fontWeight: FontWeight.w900,
+                        color: Colors.white)),
+              ]),
+            ]),
+          ]),
+        ]),
+      ),
+    );
+  }
+}
+
+class _GameTile extends StatelessWidget {
+  final _GameSpec game;
+
+  const _GameTile({required this.game});
+
+  @override
+  Widget build(BuildContext context) {
+    final surface = context.isDark ? const Color(0xFF27170E) : Colors.white;
+    final line =
+        context.isDark ? const Color(0xFF3A2516) : const Color(0xFFF4E2CE);
+    return GestureDetector(
+      onTap: game.onTap,
+      child: Container(
+        padding: const EdgeInsets.all(14),
+        decoration: BoxDecoration(
+          color: surface,
+          borderRadius: BorderRadius.circular(20),
+          boxShadow: [
+            BoxShadow(
+              color:
+                  Colors.black.withValues(alpha: context.isDark ? 0.16 : 0.04),
+              blurRadius: 18,
+              offset: const Offset(0, 10),
+            ),
+          ],
+        ),
+        child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+          Container(
+            width: 48,
+            height: 48,
+            decoration: BoxDecoration(
+              color: game.color.withValues(alpha: 0.14),
+              borderRadius: BorderRadius.circular(14),
+            ),
+            child: Icon(game.icon, color: game.color, size: 24),
+          ),
+          const SizedBox(height: 10),
+          Text(game.tag,
+              style: TextStyle(
+                  fontFamily: AppFonts.body,
+                  fontSize: 9,
+                  fontWeight: FontWeight.w900,
+                  color: game.color,
+                  letterSpacing: 1.0)),
+          const SizedBox(height: 3),
+          Text(game.title,
+              maxLines: 2,
+              overflow: TextOverflow.ellipsis,
+              style: TextStyle(
+                  fontFamily: AppFonts.body,
+                  fontSize: 14,
+                  fontWeight: FontWeight.w900,
+                  color: context.textColor,
+                  height: 1.15,
+                  letterSpacing: -0.2)),
+          const Spacer(),
+          Container(height: 1, color: line),
+          const SizedBox(height: 9),
+          Row(children: [
+            Expanded(
+              child: Text(game.plays,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: TextStyle(
+                      fontFamily: AppFonts.body,
+                      fontSize: 10,
+                      color: context.hintColor)),
+            ),
+            Text(game.best,
+                style: TextStyle(
+                    fontFamily: AppFonts.body,
+                    fontSize: 12,
+                    fontWeight: FontWeight.w900,
+                    color: game.color)),
+          ]),
+        ]),
+      ),
+    );
   }
 }
 
@@ -5145,17 +5420,34 @@ class _GameCard extends StatelessWidget {
       required this.onTap});
   @override
   Widget build(BuildContext context) {
+    final dark = context.isDark;
+    final cardGradient = LinearGradient(
+      colors: dark
+          ? const [
+              Color(0xFF5A210E),
+              Color(0xFF32140A),
+              Color(0xFF1D0D08),
+            ]
+          : const [
+              Color(0xFFFFB27C),
+              Color(0xFFFF6B2C),
+              Color(0xFFD84315),
+            ],
+      begin: Alignment.topLeft,
+      end: Alignment.bottomRight,
+    );
     return GestureDetector(
         onTap: onTap,
         child: Container(
             decoration: BoxDecoration(
-                gradient: gradient,
-                borderRadius: BorderRadius.circular(24),
+                gradient: cardGradient,
+                borderRadius: BorderRadius.circular(30),
                 boxShadow: [
                   BoxShadow(
-                      color: tagColor.withValues(alpha: 0.35),
-                      blurRadius: 20,
-                      offset: const Offset(0, 8))
+                      color: (dark ? const Color(0xFFB84A1C) : AppColors.accent)
+                          .withValues(alpha: dark ? 0.18 : 0.24),
+                      blurRadius: dark ? 24 : 32,
+                      offset: const Offset(0, 14))
                 ]),
             padding: const EdgeInsets.all(22),
             child:
@@ -5166,7 +5458,7 @@ class _GameCard extends StatelessWidget {
                     height: 48,
                     decoration: BoxDecoration(
                         color: Colors.white.withValues(alpha: 0.2),
-                        borderRadius: BorderRadius.circular(14)),
+                        borderRadius: BorderRadius.circular(18)),
                     child: Icon(icon, color: Colors.white, size: 26)),
                 const SizedBox(width: 14),
                 Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
@@ -5177,14 +5469,17 @@ class _GameCard extends StatelessWidget {
                           color: Colors.white.withValues(alpha: 0.2),
                           borderRadius: BorderRadius.circular(999)),
                       child: Text(tag,
-                          style: GoogleFonts.dmSans(
+                          style: const TextStyle(
+                              fontFamily: AppFonts.body,
                               fontSize: 8,
                               fontWeight: FontWeight.w800,
                               color: Colors.white,
                               letterSpacing: 1.5))),
                   const SizedBox(height: 4),
                   Text(title,
-                      style: GoogleFonts.dmSans(
+                      style: const TextStyle(
+                          fontFamily: AppFonts.display,
+                          height: 1.02,
                           fontSize: 20,
                           fontWeight: FontWeight.w900,
                           color: Colors.white,
@@ -5193,7 +5488,8 @@ class _GameCard extends StatelessWidget {
               ]),
               const SizedBox(height: 14),
               Text(description,
-                  style: GoogleFonts.dmSans(
+                  style: TextStyle(
+                      fontFamily: AppFonts.body,
                       fontSize: 13,
                       color: Colors.white.withValues(alpha: 0.8),
                       height: 1.55)),
@@ -5208,7 +5504,8 @@ class _GameCard extends StatelessWidget {
                             color: Colors.white.withValues(alpha: 0.15),
                             borderRadius: BorderRadius.circular(999)),
                         child: Text(s,
-                            style: GoogleFonts.dmSans(
+                            style: const TextStyle(
+                                fontFamily: AppFonts.body,
                                 fontSize: 9,
                                 fontWeight: FontWeight.w700,
                                 color: Colors.white))))),
@@ -5217,7 +5514,7 @@ class _GameCard extends StatelessWidget {
                     width: 36,
                     height: 36,
                     decoration: BoxDecoration(
-                        color: Colors.white,
+                        color: dark ? const Color(0xFFFFD8C2) : Colors.white,
                         shape: BoxShape.circle,
                         boxShadow: [
                           BoxShadow(
@@ -5225,8 +5522,8 @@ class _GameCard extends StatelessWidget {
                               blurRadius: 8,
                               offset: const Offset(0, 3))
                         ]),
-                    child: Icon(Icons.play_arrow_rounded,
-                        color: tagColor, size: 20)),
+                    child: const Icon(Icons.play_arrow_rounded,
+                        color: AppColors.accent, size: 20)),
               ]),
             ])));
   }
@@ -5246,6 +5543,7 @@ class _RealOrFakeGameState extends State<RealOrFakeGame>
   int _index = 0, _score = 0;
   String? _tapped;
   bool _finished = false;
+  bool _resultSaved = false;
   late AnimationController _shakeCtrl;
   late Animation<double> _shakeAnim;
   static const int _rounds = 10;
@@ -5281,12 +5579,19 @@ class _RealOrFakeGameState extends State<RealOrFakeGame>
       if (correct) _score++;
     });
     if (!correct) _shakeCtrl.forward(from: 0);
-    Future.delayed(const Duration(milliseconds: 1400), () {
+    Future.delayed(const Duration(milliseconds: 1400), () async {
       if (!mounted) return;
       if (_index + 1 >= _rounds) {
-        AdService.showInterstitial(then: () {
-          if (mounted) setState(() => _finished = true);
-        });
+        _saveGameResult();
+        await StorageService.incrementGamePlaysToday('real_or_fake');
+        if (!mounted) return;
+        if (StorageService.getGamePlaysToday('real_or_fake') >= 2) {
+          AdService.showInterstitial(then: () {
+            if (mounted) setState(() => _finished = true);
+          });
+        } else {
+          setState(() => _finished = true);
+        }
       } else {
         setState(() {
           _index++;
@@ -5296,6 +5601,21 @@ class _RealOrFakeGameState extends State<RealOrFakeGame>
     });
   }
 
+  Future<void> _saveGameResult() async {
+    if (_resultSaved) return;
+    _resultSaved = true;
+    final xp = _score * 10;
+    await XpService.addXp(xp);
+    await GameResultsService.saveResult(GameResult(
+      gameId: 'real_or_fake',
+      gameName: 'Real or Fake?',
+      score: _score,
+      total: _rounds,
+      xpEarned: xp,
+      playedAt: DateTime.now(),
+    ));
+  }
+
   void _restart() {
     _buildDeck();
     setState(() {
@@ -5303,6 +5623,7 @@ class _RealOrFakeGameState extends State<RealOrFakeGame>
       _score = 0;
       _tapped = null;
       _finished = false;
+      _resultSaved = false;
     });
   }
 
@@ -5311,8 +5632,9 @@ class _RealOrFakeGameState extends State<RealOrFakeGame>
     return Scaffold(
         backgroundColor: context.bgColor,
         appBar: AppBar(
-            title: Text('Real or Fake?',
-                style: GoogleFonts.dmSans(fontWeight: FontWeight.w800)),
+            title: const Text('Real or Fake?',
+                style: TextStyle(
+                    fontFamily: AppFonts.body, fontWeight: FontWeight.w800)),
             centerTitle: true,
             leading: BackButton(color: context.subColor),
             actions: [
@@ -5320,7 +5642,8 @@ class _RealOrFakeGameState extends State<RealOrFakeGame>
                   padding: const EdgeInsets.only(right: 16),
                   child: Center(
                       child: Text('${_index + 1}/$_rounds',
-                          style: GoogleFonts.dmSans(
+                          style: TextStyle(
+                              fontFamily: AppFonts.body,
                               fontSize: 13,
                               fontWeight: FontWeight.w700,
                               color: context.subColor))))
@@ -5348,14 +5671,17 @@ class _RealOrFakeGameState extends State<RealOrFakeGame>
           const SizedBox(height: 8),
           Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [
             Text('Round ${_index + 1} of $_rounds',
-                style: GoogleFonts.dmSans(
-                    fontSize: 10, color: context.hintColor)),
+                style: TextStyle(
+                    fontFamily: AppFonts.body,
+                    fontSize: 10,
+                    color: context.hintColor)),
             Row(children: [
               const Icon(Icons.check_circle_rounded,
                   color: AppColors.green, size: 14),
               const SizedBox(width: 4),
               Text('$_score correct',
-                  style: GoogleFonts.dmSans(
+                  style: TextStyle(
+                      fontFamily: AppFonts.body,
                       fontSize: 10,
                       fontWeight: FontWeight.w700,
                       color: context.subColor))
@@ -5404,15 +5730,17 @@ class _RealOrFakeGameState extends State<RealOrFakeGame>
                         decoration: BoxDecoration(
                             color: AppColors.blue.withValues(alpha: 0.1),
                             borderRadius: BorderRadius.circular(999)),
-                        child: Text('HEADLINE',
-                            style: GoogleFonts.dmSans(
+                        child: const Text('HEADLINE',
+                            style: TextStyle(
+                                fontFamily: AppFonts.body,
                                 fontSize: 9,
                                 fontWeight: FontWeight.w700,
                                 color: AppColors.blue,
                                 letterSpacing: 2))),
                     const SizedBox(height: 16),
                     Text(headline,
-                        style: GoogleFonts.dmSans(
+                        style: TextStyle(
+                            fontFamily: AppFonts.body,
                             fontSize: 17,
                             fontWeight: FontWeight.w700,
                             color: context.textColor,
@@ -5448,7 +5776,8 @@ class _RealOrFakeGameState extends State<RealOrFakeGame>
                                           correct
                                               ? 'Correct!'
                                               : 'This headline is ${isReal ? "REAL" : "FAKE"}',
-                                          style: GoogleFonts.dmSans(
+                                          style: TextStyle(
+                                              fontFamily: AppFonts.body,
                                               fontSize: 12,
                                               fontWeight: FontWeight.w800,
                                               color: correct
@@ -5456,7 +5785,8 @@ class _RealOrFakeGameState extends State<RealOrFakeGame>
                                                   : AppColors.red)),
                                       const SizedBox(height: 3),
                                       Text(explanation,
-                                          style: GoogleFonts.dmSans(
+                                          style: TextStyle(
+                                              fontFamily: AppFonts.body,
                                               fontSize: 11,
                                               color: context.subColor,
                                               height: 1.5)),
@@ -5467,8 +5797,10 @@ class _RealOrFakeGameState extends State<RealOrFakeGame>
           const Spacer(),
           if (!answered)
             Text('Is this headline real or fake?',
-                style: GoogleFonts.dmSans(
-                    fontSize: 12, color: context.hintColor)),
+                style: TextStyle(
+                    fontFamily: AppFonts.body,
+                    fontSize: 12,
+                    color: context.hintColor)),
           const SizedBox(height: 16),
           Row(children: [
             Expanded(
@@ -5527,7 +5859,8 @@ class _RealOrFakeGameState extends State<RealOrFakeGame>
           Text(emoji, style: const TextStyle(fontSize: 60)),
           const SizedBox(height: 10),
           Text(label.toUpperCase(),
-              style: GoogleFonts.dmSans(
+              style: TextStyle(
+                  fontFamily: AppFonts.body,
                   fontSize: 11,
                   fontWeight: FontWeight.w700,
                   color: color,
@@ -5537,7 +5870,8 @@ class _RealOrFakeGameState extends State<RealOrFakeGame>
               text: TextSpan(children: [
             TextSpan(
                 text: '$_score',
-                style: GoogleFonts.dmSans(
+                style: TextStyle(
+                    fontFamily: AppFonts.body,
                     fontSize: 88,
                     fontWeight: FontWeight.w900,
                     letterSpacing: -4,
@@ -5547,15 +5881,19 @@ class _RealOrFakeGameState extends State<RealOrFakeGame>
                           .createShader(const Rect.fromLTWH(0, 0, 100, 100)))),
             TextSpan(
                 text: '/$_rounds',
-                style: GoogleFonts.dmSans(
+                style: TextStyle(
+                    fontFamily: AppFonts.display,
+                    height: 1.02,
                     fontSize: 36,
                     fontWeight: FontWeight.w800,
                     color: color.withValues(alpha: 0.7))),
           ])),
           const SizedBox(height: 6),
           Text('$pct% correct',
-              style:
-                  GoogleFonts.dmSans(fontSize: 13, color: context.subColor)),
+              style: TextStyle(
+                  fontFamily: AppFonts.body,
+                  fontSize: 13,
+                  color: context.subColor)),
           const Spacer(),
           const Center(child: BriefedBannerAd()),
           const SizedBox(height: 12),
@@ -5643,7 +5981,8 @@ class _VoteBtn extends StatelessWidget {
                       size: 28),
                   const SizedBox(height: 8),
                   Text(label,
-                      style: GoogleFonts.dmSans(
+                      style: TextStyle(
+                          fontFamily: AppFonts.body,
                           fontSize: 15,
                           fontWeight: FontWeight.w900,
                           color: tc)),
@@ -5662,6 +6001,7 @@ class OldestToLatestGame extends StatefulWidget {
 class _OldestToLatestGameState extends State<OldestToLatestGame> {
   late List<Map<String, dynamic>> _round, _order;
   bool _submitted = false, _finished = false;
+  bool _resultSaved = false;
   int _score = 0, _roundNum = 1;
   static const int _totalRounds = 5;
 
@@ -5696,11 +6036,33 @@ class _OldestToLatestGameState extends State<OldestToLatestGame> {
     });
   }
 
-  void _next() {
+  Future<void> _saveGameResult() async {
+    if (_resultSaved) return;
+    _resultSaved = true;
+    final xp = _score * 25;
+    await XpService.addXp(xp);
+    await GameResultsService.saveResult(GameResult(
+      gameId: 'oldest_to_latest',
+      gameName: 'Oldest to Latest',
+      score: _score,
+      total: _totalRounds,
+      xpEarned: xp,
+      playedAt: DateTime.now(),
+    ));
+  }
+
+  Future<void> _next() async {
     if (_roundNum >= _totalRounds) {
-      AdService.showInterstitial(then: () {
-        if (mounted) setState(() => _finished = true);
-      });
+      _saveGameResult();
+      await StorageService.incrementGamePlaysToday('oldest_to_latest');
+      if (!mounted) return;
+      if (StorageService.getGamePlaysToday('oldest_to_latest') >= 2) {
+        AdService.showInterstitial(then: () {
+          if (mounted) setState(() => _finished = true);
+        });
+      } else {
+        setState(() => _finished = true);
+      }
     } else {
       setState(() {
         _roundNum++;
@@ -5714,6 +6076,7 @@ class _OldestToLatestGameState extends State<OldestToLatestGame> {
       _score = 0;
       _roundNum = 1;
       _finished = false;
+      _resultSaved = false;
       _newRound();
     });
   }
@@ -5723,8 +6086,9 @@ class _OldestToLatestGameState extends State<OldestToLatestGame> {
     return Scaffold(
         backgroundColor: context.bgColor,
         appBar: AppBar(
-            title: Text('Oldest to Latest',
-                style: GoogleFonts.dmSans(fontWeight: FontWeight.w800)),
+            title: const Text('Oldest to Latest',
+                style: TextStyle(
+                    fontFamily: AppFonts.body, fontWeight: FontWeight.w800)),
             centerTitle: true,
             leading: BackButton(color: context.subColor),
             actions: [
@@ -5732,7 +6096,8 @@ class _OldestToLatestGameState extends State<OldestToLatestGame> {
                   padding: const EdgeInsets.only(right: 16),
                   child: Center(
                       child: Text('$_roundNum/$_totalRounds',
-                          style: GoogleFonts.dmSans(
+                          style: TextStyle(
+                              fontFamily: AppFonts.body,
                               fontSize: 13,
                               fontWeight: FontWeight.w700,
                               color: context.subColor))))
@@ -5753,8 +6118,10 @@ class _OldestToLatestGameState extends State<OldestToLatestGame> {
                   valueColor: const AlwaysStoppedAnimation(AppColors.purple))),
           const SizedBox(height: 16),
           Text('Round $_roundNum of $_totalRounds',
-              style:
-                  GoogleFonts.dmSans(fontSize: 10, color: context.hintColor)),
+              style: TextStyle(
+                  fontFamily: AppFonts.body,
+                  fontSize: 10,
+                  color: context.hintColor)),
           const SizedBox(height: 4),
           Text(
               _submitted
@@ -5762,7 +6129,9 @@ class _OldestToLatestGameState extends State<OldestToLatestGame> {
                       ? 'Correct order! 🎉'
                       : 'Not quite — here\'s the right order:')
                   : 'Sort oldest → most recent',
-              style: GoogleFonts.dmSans(
+              style: TextStyle(
+                  fontFamily: AppFonts.display,
+                  height: 1.02,
                   fontSize: 18,
                   fontWeight: FontWeight.w800,
                   color: _submitted
@@ -5771,8 +6140,10 @@ class _OldestToLatestGameState extends State<OldestToLatestGame> {
           if (!_submitted) ...[
             const SizedBox(height: 4),
             Text('Drag to reorder the events by when they happened',
-                style:
-                    GoogleFonts.dmSans(fontSize: 12, color: context.subColor))
+                style: TextStyle(
+                    fontFamily: AppFonts.body,
+                    fontSize: 12,
+                    color: context.subColor))
           ],
           const SizedBox(height: 12),
           const Center(child: BriefedBannerAd()),
@@ -5859,7 +6230,8 @@ class _OldestToLatestGameState extends State<OldestToLatestGame> {
           Text(emoji, style: const TextStyle(fontSize: 60)),
           const SizedBox(height: 10),
           Text(label.toUpperCase(),
-              style: GoogleFonts.dmSans(
+              style: TextStyle(
+                  fontFamily: AppFonts.body,
                   fontSize: 11,
                   fontWeight: FontWeight.w700,
                   color: color,
@@ -5869,7 +6241,8 @@ class _OldestToLatestGameState extends State<OldestToLatestGame> {
               text: TextSpan(children: [
             TextSpan(
                 text: '$_score',
-                style: GoogleFonts.dmSans(
+                style: TextStyle(
+                    fontFamily: AppFonts.body,
                     fontSize: 88,
                     fontWeight: FontWeight.w900,
                     letterSpacing: -4,
@@ -5879,15 +6252,19 @@ class _OldestToLatestGameState extends State<OldestToLatestGame> {
                           .createShader(const Rect.fromLTWH(0, 0, 100, 100)))),
             TextSpan(
                 text: '/$_totalRounds',
-                style: GoogleFonts.dmSans(
+                style: TextStyle(
+                    fontFamily: AppFonts.display,
+                    height: 1.02,
                     fontSize: 36,
                     fontWeight: FontWeight.w800,
                     color: color.withValues(alpha: 0.7))),
           ])),
           const SizedBox(height: 6),
           Text('$pct% rounds correct',
-              style:
-                  GoogleFonts.dmSans(fontSize: 13, color: context.subColor)),
+              style: TextStyle(
+                  fontFamily: AppFonts.body,
+                  fontSize: 13,
+                  color: context.subColor)),
           const Spacer(),
           const Center(child: BriefedBannerAd()),
           const SizedBox(height: 12),
@@ -5965,7 +6342,8 @@ class _EventCard extends StatelessWidget {
               child: Center(
                   child: isCorrect == null
                       ? Text('${index + 1}',
-                          style: GoogleFonts.dmSans(
+                          style: TextStyle(
+                              fontFamily: AppFonts.body,
                               fontSize: 14,
                               fontWeight: FontWeight.w900,
                               color: color))
@@ -5981,7 +6359,8 @@ class _EventCard extends StatelessWidget {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                 Text(event,
-                    style: GoogleFonts.dmSans(
+                    style: TextStyle(
+                        fontFamily: AppFonts.body,
                         fontSize: 13,
                         fontWeight: FontWeight.w700,
                         color: context.textColor,
@@ -5989,8 +6368,10 @@ class _EventCard extends StatelessWidget {
                 if (showYear && year != null) ...[
                   const SizedBox(height: 3),
                   Text(detail ?? '$year',
-                      style: GoogleFonts.dmSans(
-                          fontSize: 10, color: context.hintColor))
+                      style: TextStyle(
+                          fontFamily: AppFonts.body,
+                          fontSize: 10,
+                          color: context.hintColor))
                 ],
               ])),
           if (showYear && year != null && isCorrect != null)
@@ -6002,12 +6383,869 @@ class _EventCard extends StatelessWidget {
                         .withValues(alpha: 0.12),
                     borderRadius: BorderRadius.circular(999)),
                 child: Text('$year',
-                    style: GoogleFonts.dmSans(
+                    style: TextStyle(
+                        fontFamily: AppFonts.body,
                         fontSize: 12,
                         fontWeight: FontWeight.w800,
                         color: isCorrect! ? AppColors.green : AppColors.red))),
         ]));
   }
+}
+
+// HEADLINE MATCH GAME
+
+class HeadlineMatchGame extends StatefulWidget {
+  const HeadlineMatchGame({super.key});
+
+  @override
+  State<HeadlineMatchGame> createState() => _HeadlineMatchGameState();
+}
+
+class _HeadlineMatchGameState extends State<HeadlineMatchGame> {
+  static const int _rounds = 5;
+  late List<_HeadlineMatchQuestion> _deck;
+  int _index = 0, _score = 0;
+  String? _selected;
+  bool _finished = false, _resultSaved = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _buildDeck();
+  }
+
+  void _buildDeck() {
+    _deck = _dailyDeck(_HeadlineMatchData.questions, 'headline_match');
+  }
+
+  void _answer(String headline) {
+    if (_selected != null) return;
+    setState(() {
+      _selected = headline;
+      if (headline == _deck[_index].headline) _score++;
+    });
+  }
+
+  Future<void> _saveGameResult() async {
+    if (_resultSaved) return;
+    _resultSaved = true;
+    final xp = _score * 20;
+    await XpService.addXp(xp);
+    await GameResultsService.saveResult(GameResult(
+      gameId: 'headline_match',
+      gameName: 'Headline Match',
+      score: _score,
+      total: _rounds,
+      xpEarned: xp,
+      playedAt: DateTime.now(),
+    ));
+  }
+
+  Future<void> _next() async {
+    if (_index + 1 >= _rounds) {
+      _saveGameResult();
+      await StorageService.incrementGamePlaysToday('headline_match');
+      if (!mounted) return;
+      if (StorageService.getGamePlaysToday('headline_match') >= 2) {
+        AdService.showInterstitial(then: () {
+          if (mounted) setState(() => _finished = true);
+        });
+      } else {
+        setState(() => _finished = true);
+      }
+    } else {
+      setState(() {
+        _index++;
+        _selected = null;
+      });
+    }
+  }
+
+  void _restart() {
+    _buildDeck();
+    setState(() {
+      _index = 0;
+      _score = 0;
+      _selected = null;
+      _finished = false;
+      _resultSaved = false;
+    });
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      backgroundColor: context.bgColor,
+      appBar: AppBar(
+        title: const Text('Headline Match',
+            style: TextStyle(
+                fontFamily: AppFonts.body, fontWeight: FontWeight.w800)),
+        centerTitle: true,
+        leading: BackButton(color: context.subColor),
+        actions: [
+          Padding(
+            padding: const EdgeInsets.only(right: 16),
+            child: Center(
+              child: Text('${_index + 1}/$_rounds',
+                  style: TextStyle(
+                      fontFamily: AppFonts.body,
+                      fontSize: 13,
+                      fontWeight: FontWeight.w700,
+                      color: context.subColor)),
+            ),
+          )
+        ],
+      ),
+      body: _finished ? _buildResult() : _buildGame(),
+    );
+  }
+
+  Widget _buildGame() {
+    final q = _deck[_index];
+    final answered = _selected != null;
+    final options = q.optionsFor(_daySeed('headline_match') + _index);
+    return Padding(
+      padding: const EdgeInsets.all(20),
+      child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+        ClipRRect(
+          borderRadius: BorderRadius.circular(999),
+          child: LinearProgressIndicator(
+            value: _index / _rounds,
+            minHeight: 4,
+            backgroundColor: context.inputBg,
+            valueColor: const AlwaysStoppedAnimation(AppColors.teal),
+          ),
+        ),
+        const SizedBox(height: 14),
+        Text('Round ${_index + 1} of $_rounds',
+            style: TextStyle(
+                fontFamily: AppFonts.body,
+                fontSize: 10,
+                color: context.hintColor)),
+        const SizedBox(height: 4),
+        Text('Which headline matches this brief?',
+            style: TextStyle(
+                fontFamily: AppFonts.display,
+                height: 1.02,
+                fontSize: 20,
+                fontWeight: FontWeight.w900,
+                color: context.textColor)),
+        const SizedBox(height: 12),
+        const Center(child: BriefedBannerAd()),
+        const SizedBox(height: 12),
+        Container(
+          width: double.infinity,
+          padding: const EdgeInsets.all(18),
+          decoration: BoxDecoration(
+            color: AppColors.teal.withValues(alpha: 0.08),
+            borderRadius: BorderRadius.circular(20),
+            border: Border.all(color: AppColors.teal.withValues(alpha: 0.26)),
+          ),
+          child:
+              Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+            Text(q.category.toUpperCase(),
+                style: const TextStyle(
+                    fontFamily: AppFonts.body,
+                    fontSize: 10,
+                    fontWeight: FontWeight.w900,
+                    color: AppColors.teal,
+                    letterSpacing: 1.4)),
+            const SizedBox(height: 8),
+            Text(q.brief,
+                style: TextStyle(
+                    fontFamily: AppFonts.body,
+                    fontSize: 15,
+                    color: context.textColor,
+                    height: 1.55)),
+          ]),
+        ),
+        const SizedBox(height: 16),
+        Expanded(
+          child: ListView.builder(
+            itemCount: options.length,
+            itemBuilder: (context, i) {
+              final option = options[i];
+              return _GameChoiceTile(
+                text: option,
+                color: AppColors.teal,
+                selected: _selected == option,
+                correct: option == q.headline,
+                answered: answered,
+                onTap: () => _answer(option),
+              );
+            },
+          ),
+        ),
+        if (answered) ...[
+          Text(
+            _selected == q.headline ? 'Matched.' : 'Correct: ${q.headline}',
+            style: TextStyle(
+                fontFamily: AppFonts.body,
+                fontSize: 12,
+                fontWeight: FontWeight.w800,
+                color:
+                    _selected == q.headline ? AppColors.green : AppColors.red),
+          ),
+          const SizedBox(height: 10),
+          AccentButton(
+            text: _index + 1 >= _rounds ? 'See Results' : 'Next Brief',
+            icon: Icons.arrow_forward_rounded,
+            onTap: _next,
+          ),
+        ],
+      ]),
+    );
+  }
+
+  Widget _buildResult() => _GameResultView(
+        gameName: 'Headline Match',
+        score: _score,
+        total: _rounds,
+        color: AppColors.teal,
+        onRestart: _restart,
+        shareText:
+            'I scored $_score/$_rounds on Headline Match in Briefed! #Briefed',
+      );
+}
+
+// SOURCE SLEUTH GAME
+
+class SourceSleuthGame extends StatefulWidget {
+  const SourceSleuthGame({super.key});
+
+  @override
+  State<SourceSleuthGame> createState() => _SourceSleuthGameState();
+}
+
+class _SourceSleuthGameState extends State<SourceSleuthGame> {
+  static const int _rounds = 5;
+  late List<_SourceSleuthQuestion> _deck;
+  int _index = 0, _score = 0;
+  String? _selected;
+  bool _finished = false, _resultSaved = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _buildDeck();
+  }
+
+  void _buildDeck() {
+    _deck = _dailyDeck(_SourceSleuthData.questions, 'source_sleuth');
+  }
+
+  void _answer(String desk) {
+    if (_selected != null) return;
+    setState(() {
+      _selected = desk;
+      if (desk == _deck[_index].desk) _score++;
+    });
+  }
+
+  Future<void> _saveGameResult() async {
+    if (_resultSaved) return;
+    _resultSaved = true;
+    final xp = _score * 20;
+    await XpService.addXp(xp);
+    await GameResultsService.saveResult(GameResult(
+      gameId: 'source_sleuth',
+      gameName: 'Source Sleuth',
+      score: _score,
+      total: _rounds,
+      xpEarned: xp,
+      playedAt: DateTime.now(),
+    ));
+  }
+
+  Future<void> _next() async {
+    if (_index + 1 >= _rounds) {
+      _saveGameResult();
+      await StorageService.incrementGamePlaysToday('source_sleuth');
+      if (!mounted) return;
+      if (StorageService.getGamePlaysToday('source_sleuth') >= 2) {
+        AdService.showInterstitial(then: () {
+          if (mounted) setState(() => _finished = true);
+        });
+      } else {
+        setState(() => _finished = true);
+      }
+    } else {
+      setState(() {
+        _index++;
+        _selected = null;
+      });
+    }
+  }
+
+  void _restart() {
+    _buildDeck();
+    setState(() {
+      _index = 0;
+      _score = 0;
+      _selected = null;
+      _finished = false;
+      _resultSaved = false;
+    });
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      backgroundColor: context.bgColor,
+      appBar: AppBar(
+        title: const Text('Source Sleuth',
+            style: TextStyle(
+                fontFamily: AppFonts.body, fontWeight: FontWeight.w800)),
+        centerTitle: true,
+        leading: BackButton(color: context.subColor),
+        actions: [
+          Padding(
+            padding: const EdgeInsets.only(right: 16),
+            child: Center(
+              child: Text('${_index + 1}/$_rounds',
+                  style: TextStyle(
+                      fontFamily: AppFonts.body,
+                      fontSize: 13,
+                      fontWeight: FontWeight.w700,
+                      color: context.subColor)),
+            ),
+          )
+        ],
+      ),
+      body: _finished ? _buildResult() : _buildGame(),
+    );
+  }
+
+  Widget _buildGame() {
+    final q = _deck[_index];
+    final answered = _selected != null;
+    final options = q.optionsFor(_daySeed('source_sleuth') + _index);
+    return Padding(
+      padding: const EdgeInsets.all(20),
+      child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+        ClipRRect(
+          borderRadius: BorderRadius.circular(999),
+          child: LinearProgressIndicator(
+            value: _index / _rounds,
+            minHeight: 4,
+            backgroundColor: context.inputBg,
+            valueColor: const AlwaysStoppedAnimation(AppColors.accent),
+          ),
+        ),
+        const SizedBox(height: 14),
+        Text('Round ${_index + 1} of $_rounds',
+            style: TextStyle(
+                fontFamily: AppFonts.body,
+                fontSize: 10,
+                color: context.hintColor)),
+        const SizedBox(height: 4),
+        Text('Which news desk fits this clue?',
+            style: TextStyle(
+                fontFamily: AppFonts.display,
+                height: 1.02,
+                fontSize: 20,
+                fontWeight: FontWeight.w900,
+                color: context.textColor)),
+        const SizedBox(height: 12),
+        const Center(child: BriefedBannerAd()),
+        const SizedBox(height: 12),
+        Container(
+          width: double.infinity,
+          padding: const EdgeInsets.all(18),
+          decoration: BoxDecoration(
+            color: AppColors.accent.withValues(alpha: 0.08),
+            borderRadius: BorderRadius.circular(20),
+            border: Border.all(color: AppColors.accent.withValues(alpha: 0.26)),
+          ),
+          child: Text(q.clue,
+              style: TextStyle(
+                  fontFamily: AppFonts.body,
+                  fontSize: 16,
+                  fontWeight: FontWeight.w700,
+                  color: context.textColor,
+                  height: 1.5)),
+        ),
+        const SizedBox(height: 16),
+        Expanded(
+          child: ListView.builder(
+            itemCount: options.length,
+            itemBuilder: (context, i) {
+              final option = options[i];
+              return _GameChoiceTile(
+                text: option,
+                color: AppColors.accent,
+                selected: _selected == option,
+                correct: option == q.desk,
+                answered: answered,
+                onTap: () => _answer(option),
+              );
+            },
+          ),
+        ),
+        if (answered) ...[
+          Text(q.explanation,
+              style: TextStyle(
+                  fontFamily: AppFonts.body,
+                  fontSize: 12,
+                  color: context.subColor)),
+          const SizedBox(height: 10),
+          AccentButton(
+            text: _index + 1 >= _rounds ? 'See Results' : 'Next Clue',
+            icon: Icons.arrow_forward_rounded,
+            onTap: _next,
+          ),
+        ],
+      ]),
+    );
+  }
+
+  Widget _buildResult() => _GameResultView(
+        gameName: 'Source Sleuth',
+        score: _score,
+        total: _rounds,
+        color: AppColors.accent,
+        onRestart: _restart,
+        shareText:
+            'I scored $_score/$_rounds on Source Sleuth in Briefed! #Briefed',
+      );
+}
+
+class _GameChoiceTile extends StatelessWidget {
+  final String text;
+  final Color color;
+  final bool selected;
+  final bool correct;
+  final bool answered;
+  final VoidCallback onTap;
+
+  const _GameChoiceTile({
+    required this.text,
+    required this.color,
+    required this.selected,
+    required this.correct,
+    required this.answered,
+    required this.onTap,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final showCorrect = answered && correct;
+    final showWrong = answered && selected && !correct;
+    final dim = answered && !selected && !correct;
+    final tileColor = showCorrect
+        ? AppColors.green.withValues(alpha: 0.1)
+        : showWrong
+            ? AppColors.red.withValues(alpha: 0.1)
+            : color.withValues(alpha: 0.06);
+    final borderColor = showCorrect
+        ? AppColors.green.withValues(alpha: 0.45)
+        : showWrong
+            ? AppColors.red.withValues(alpha: 0.45)
+            : context.borderColor;
+    final textColor = showCorrect
+        ? AppColors.green
+        : showWrong
+            ? AppColors.red
+            : context.textColor;
+
+    return GestureDetector(
+      onTap: answered ? null : onTap,
+      child: AnimatedOpacity(
+        duration: const Duration(milliseconds: 180),
+        opacity: dim ? 0.45 : 1,
+        child: AnimatedContainer(
+          duration: const Duration(milliseconds: 180),
+          margin: const EdgeInsets.only(bottom: 10),
+          padding: const EdgeInsets.all(14),
+          decoration: BoxDecoration(
+            color: tileColor,
+            borderRadius: BorderRadius.circular(16),
+            border: Border.all(color: borderColor, width: selected ? 2 : 1),
+          ),
+          child: Row(children: [
+            Icon(
+              showCorrect
+                  ? Icons.check_circle_rounded
+                  : showWrong
+                      ? Icons.cancel_rounded
+                      : Icons.radio_button_unchecked_rounded,
+              color: showCorrect
+                  ? AppColors.green
+                  : showWrong
+                      ? AppColors.red
+                      : color,
+              size: 20,
+            ),
+            const SizedBox(width: 10),
+            Expanded(
+              child: Text(text,
+                  style: TextStyle(
+                      fontFamily: AppFonts.body,
+                      fontSize: 13,
+                      fontWeight: FontWeight.w800,
+                      color: textColor,
+                      height: 1.35)),
+            ),
+          ]),
+        ),
+      ),
+    );
+  }
+}
+
+class _GameResultView extends StatelessWidget {
+  final String gameName;
+  final int score;
+  final int total;
+  final Color color;
+  final VoidCallback onRestart;
+  final String shareText;
+
+  const _GameResultView({
+    required this.gameName,
+    required this.score,
+    required this.total,
+    required this.color,
+    required this.onRestart,
+    required this.shareText,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final pct = (score / total * 100).round();
+    final emoji = score == total
+        ? '🏆'
+        : score >= 4
+            ? '🔥'
+            : score >= 3
+                ? '👏'
+                : '💪';
+    return Padding(
+      padding: const EdgeInsets.all(24),
+      child: Column(children: [
+        const Spacer(),
+        Text(emoji, style: const TextStyle(fontSize: 60)),
+        const SizedBox(height: 10),
+        Text(gameName.toUpperCase(),
+            style: TextStyle(
+                fontFamily: AppFonts.body,
+                fontSize: 11,
+                fontWeight: FontWeight.w700,
+                color: color,
+                letterSpacing: 2)),
+        const SizedBox(height: 8),
+        RichText(
+          text: TextSpan(children: [
+            TextSpan(
+              text: '$score',
+              style: TextStyle(
+                fontFamily: AppFonts.body,
+                fontSize: 88,
+                fontWeight: FontWeight.w900,
+                letterSpacing: -4,
+                color: color,
+              ),
+            ),
+            TextSpan(
+              text: '/$total',
+              style: TextStyle(
+                  fontFamily: AppFonts.display,
+                  height: 1.02,
+                  fontSize: 36,
+                  fontWeight: FontWeight.w800,
+                  color: color.withValues(alpha: 0.7)),
+            ),
+          ]),
+        ),
+        Text('$pct% correct',
+            style: TextStyle(
+                fontFamily: AppFonts.body,
+                fontSize: 13,
+                color: context.subColor)),
+        const Spacer(),
+        const Center(child: BriefedBannerAd()),
+        const SizedBox(height: 12),
+        AccentButton(
+            text: 'Play Again', onTap: onRestart, icon: Icons.refresh_rounded),
+        const SizedBox(height: 10),
+        OutlineButton(
+            text: 'Share Score',
+            onTap: () => Share.share(shareText),
+            icon: Icons.share_rounded),
+        const SizedBox(height: 10),
+        OutlineButton(text: 'Back', onTap: () => Navigator.of(context).pop()),
+      ]),
+    );
+  }
+}
+
+class _HeadlineMatchQuestion {
+  final String category;
+  final String brief;
+  final String headline;
+  final List<String> distractors;
+
+  const _HeadlineMatchQuestion({
+    required this.category,
+    required this.brief,
+    required this.headline,
+    required this.distractors,
+  });
+
+  List<String> optionsFor(int seed) {
+    final options = [headline, ...distractors.take(3)]..shuffle(Random(seed));
+    return options;
+  }
+}
+
+class _SourceSleuthQuestion {
+  final String clue;
+  final String desk;
+  final String explanation;
+
+  const _SourceSleuthQuestion({
+    required this.clue,
+    required this.desk,
+    required this.explanation,
+  });
+
+  List<String> optionsFor(int seed) {
+    final options = ['World', 'Politics', 'Sports', 'Technology', 'Business'];
+    options.shuffle(Random(seed));
+    return options.take(4).contains(desk)
+        ? options.take(4).toList()
+        : ([desk, ...options.where((o) => o != desk).take(3)]
+          ..shuffle(Random(seed + 7)));
+  }
+}
+
+List<T> _dailyDeck<T>(List<T> bank, String salt) {
+  final start = (_daySeed(salt) * 5) % bank.length;
+  return List.generate(5, (i) => bank[(start + i) % bank.length]);
+}
+
+int _daySeed(String salt) {
+  final now = DateTime.now();
+  final day = DateTime(now.year, now.month, now.day)
+      .difference(DateTime(2024, 1, 1))
+      .inDays;
+  return day + salt.codeUnits.fold<int>(0, (sum, code) => sum + code);
+}
+
+class _HeadlineMatchData {
+  static final questions = List<_HeadlineMatchQuestion>.generate(120, (i) {
+    final topic = _topics[i % _topics.length];
+    final angle = _angles[(i ~/ _topics.length) % _angles.length];
+    final headline = '${topic.$2} ${angle.$1}';
+    final distractors = List.generate(3, (j) {
+      final other = _topics[(i + j + 7) % _topics.length];
+      final otherAngle = _angles[(i + j + 2) % _angles.length];
+      return '${other.$2} ${otherAngle.$1}';
+    });
+    return _HeadlineMatchQuestion(
+      category: topic.$1,
+      headline: headline,
+      brief: '${topic.$3} ${angle.$2}',
+      distractors: distractors,
+    );
+  });
+
+  static const _topics = [
+    (
+      'World',
+      'Leaders gather for emergency climate talks',
+      'A summit brings governments together after extreme weather strains regional planning.'
+    ),
+    (
+      'Politics',
+      'Parliament faces pressure over housing bill',
+      'Lawmakers are negotiating a package aimed at affordability and rental supply.'
+    ),
+    (
+      'Sports',
+      'Underdog side stuns favourites in final',
+      'A late surge changes the result after the match looked settled.'
+    ),
+    (
+      'Technology',
+      'Chip maker unveils faster low-power processor',
+      'A hardware company says its latest design improves battery life and AI workloads.'
+    ),
+    (
+      'Business',
+      'Markets rise as inflation data cools',
+      'Investors respond positively to signs that price growth may be easing.'
+    ),
+    (
+      'World',
+      'Ceasefire talks resume after border clashes',
+      'Diplomats return to the table following several tense days near a disputed frontier.'
+    ),
+    (
+      'Politics',
+      'Election watchdog announces spending review',
+      'Officials will examine campaign finance records before the next national vote.'
+    ),
+    (
+      'Sports',
+      'Teenage sprinter breaks long-standing record',
+      'A young athlete delivers a standout performance at a major meet.'
+    ),
+    (
+      'Technology',
+      'New privacy rules target data brokers',
+      'Regulators are preparing tighter limits on how personal information is packaged and sold.'
+    ),
+    (
+      'Business',
+      'Airline expands routes after profit rebound',
+      'A carrier is adding capacity as travel demand improves.'
+    ),
+    (
+      'World',
+      'Aid convoys reach flood-hit communities',
+      'Relief teams deliver supplies after severe rain cuts off towns.'
+    ),
+    (
+      'Politics',
+      'Cabinet reshuffle follows policy backlash',
+      'A leader changes senior roles after criticism of a major reform plan.'
+    ),
+    (
+      'Sports',
+      'Coach defends selection after narrow loss',
+      'A team boss backs their choices despite frustration from supporters.'
+    ),
+    (
+      'Technology',
+      'Cybersecurity warning issued after breach',
+      'Authorities urge organisations to patch systems after a large intrusion.'
+    ),
+    (
+      'Business',
+      'Retail sales jump during holiday promotions',
+      'Stores report stronger demand as discounts draw shoppers back.'
+    ),
+    (
+      'World',
+      'Health agency monitors new virus cluster',
+      'Officials are tracking a local outbreak while advising calm and testing.'
+    ),
+    (
+      'Politics',
+      'Senate committee questions energy executives',
+      'A hearing focuses on prices, supply and climate obligations.'
+    ),
+    (
+      'Sports',
+      'Star striker returns from injury layoff',
+      'A key player is available again after weeks of rehabilitation.'
+    ),
+    (
+      'Technology',
+      'Satellite network expands rural coverage',
+      'A communications firm adds capacity for remote communities.'
+    ),
+    (
+      'Business',
+      'Central bank holds rates steady',
+      'Policymakers pause after months of debate about inflation and growth.'
+    ),
+  ];
+
+  static const _angles = [
+    (
+      'after late-night negotiations',
+      'The decision followed hours of talks and several unresolved sticking points.'
+    ),
+    (
+      'as officials promise review',
+      'Authorities say the outcome will be examined before longer-term changes are made.'
+    ),
+    (
+      'amid public concern',
+      'The issue has drawn attention from residents, advocates and industry groups.'
+    ),
+    (
+      'with funding boost announced',
+      'New money is being directed toward implementation and oversight.'
+    ),
+    (
+      'following surprise data release',
+      'Fresh figures shifted expectations and prompted a quick response.'
+    ),
+    (
+      'as pressure builds on leaders',
+      'Decision-makers are facing calls to explain what happens next.'
+    ),
+  ];
+}
+
+class _SourceSleuthData {
+  static final questions = List<_SourceSleuthQuestion>.generate(120, (i) {
+    final desk = _desks[i % _desks.length];
+    final clue = _clues[(i ~/ _desks.length) % _clues.length];
+    return _SourceSleuthQuestion(
+      desk: desk.$1,
+      clue: '$clue ${desk.$2}',
+      explanation: 'This belongs on the ${desk.$1} desk because ${desk.$3}.',
+    );
+  });
+
+  static const _desks = [
+    (
+      'World',
+      'The story crosses borders and centres on diplomacy, conflict or international aid.',
+      'the core actors are countries, international agencies or cross-border events'
+    ),
+    (
+      'Politics',
+      'The story focuses on lawmakers, elections, government policy or public officials.',
+      'the main action is about power, legislation or public administration'
+    ),
+    (
+      'Sports',
+      'The story is driven by matches, athletes, teams, leagues or tournament results.',
+      'the outcome depends on competition and sporting performance'
+    ),
+    (
+      'Technology',
+      'The story involves software, hardware, cybersecurity, platforms or scientific computing.',
+      'the key development is a digital or technical change'
+    ),
+    (
+      'Business',
+      'The story follows companies, markets, jobs, prices, trade or central bank decisions.',
+      'the central impact is economic or commercial'
+    ),
+  ];
+
+  static const _clues = [
+    'A breaking update mentions ministers, a vote and a contested reform.',
+    'A report tracks earnings, demand forecasts and investor reaction.',
+    'The lead names a club, a coach and a dramatic second-half comeback.',
+    'The article explains a breach, a patch and warnings for users.',
+    'The opening paragraph describes envoys meeting after regional tension.',
+    'The key detail is a regulator examining a platform used by millions.',
+    'The story turns on inflation, bond yields and household spending.',
+    'A medal race changes after a favourite is ruled out injured.',
+    'The report follows refugees, aid agencies and a humanitarian corridor.',
+    'The lead names a mayor, a budget and opposition criticism.',
+    'The main source is a central bank statement about rates.',
+    'The piece compares smartphone chips, batteries and AI features.',
+    'A national team announces its squad before a qualifying match.',
+    'The story involves sanctions, negotiations and foreign ministers.',
+    'A committee hearing asks executives about pricing and competition.',
+    'The article centres on a start-up launch and cloud infrastructure.',
+    'The lead describes polling, party strategy and campaign promises.',
+    'The result changes league standings and playoff chances.',
+    'A shipping disruption affects exporters and commodity prices.',
+    'The report analyses a new app store rule and developer fees.',
+    'The story follows peacekeepers, observers and border monitoring.',
+    'The article explains a tax proposal before parliament.',
+    'The lead highlights a record time, a podium and a championship.',
+    'The core issue is a merger, revenue outlook and layoffs.',
+  ];
 }
 
 // QUIZ SCREEN
@@ -6062,9 +7300,39 @@ class _QuizScreenState extends ConsumerState<QuizScreen> {
     int? replaySeed,
     String? categoryFilter,
   }) async {
-    final news = ref.read(newsProvider);
+    // Wait up to 8 s for the pipeline to have real articles
+    var pipeline = ref.read(newsPipelineProvider);
+    for (int i = 0; i < 16 && pipeline.byCategory.isEmpty; i++) {
+      await Future.delayed(const Duration(milliseconds: 500));
+      if (!mounted) return;
+      pipeline = ref.read(newsPipelineProvider);
+    }
+
+    List<RankedArticle> ranked;
+    if (categoryFilter != null) {
+      final cat = NewsCategory.values.firstWhere(
+        (c) => c.name == categoryFilter,
+        orElse: () => NewsCategory.world,
+      );
+      ranked = pipeline.getTopStoriesForDisplay(cat);
+    } else {
+      ranked = pipeline.forYouStories;
+    }
+
+    final articles = ranked
+        .map((ra) => NewsArticle(
+              title: ra.title,
+              description: ra.summary,
+              sourceName: ra.sourceName,
+              category: ra.category.name,
+              pubDate: ra.publishedAt.toIso8601String(),
+              link: ra.url,
+              imageUrl: ra.imageUrl,
+            ))
+        .toList();
+
     await ref.read(quizProvider.notifier).startQuiz(
-          news.articles,
+          articles.isNotEmpty ? articles : ref.read(newsProvider).articles,
           forceRefresh: forceRefresh,
           bonusRound: bonusRound,
           replaySeed: replaySeed,
@@ -6188,10 +7456,16 @@ class _QuizScreenState extends ConsumerState<QuizScreen> {
                 color: AppColors.accent, size: 30)),
         const SizedBox(height: 16),
         Text('Generating today\'s quiz...',
-            style: GoogleFonts.dmSans(fontSize: 14, color: context.subColor)),
+            style: TextStyle(
+                fontFamily: AppFonts.body,
+                fontSize: 14,
+                color: context.subColor)),
         const SizedBox(height: 8),
         Text('Powered by AI',
-            style: GoogleFonts.dmSans(fontSize: 11, color: context.hintColor)),
+            style: TextStyle(
+                fontFamily: AppFonts.body,
+                fontSize: 11,
+                color: context.hintColor)),
         const SizedBox(height: 20),
         const SizedBox(
             width: 24,
@@ -6219,8 +7493,11 @@ class _QuizScreenState extends ConsumerState<QuizScreen> {
                     border: Border.all(
                         color: AppColors.red.withValues(alpha: 0.2))),
                 child: Text(msg,
-                    style: GoogleFonts.dmSans(
-                        fontSize: 11, color: context.subColor, height: 1.6))),
+                    style: TextStyle(
+                        fontFamily: AppFonts.body,
+                        fontSize: 11,
+                        color: context.subColor,
+                        height: 1.6))),
             const SizedBox(height: 20),
             AccentButton(
                 text: 'Retry (fresh)',
@@ -6269,7 +7546,8 @@ class _QuizScreenState extends ConsumerState<QuizScreen> {
                             .withValues(alpha: 0.35))),
                 child: Text(
                     q.difficulty[0].toUpperCase() + q.difficulty.substring(1),
-                    style: GoogleFonts.dmSans(
+                    style: TextStyle(
+                        fontFamily: AppFonts.body,
                         fontSize: 9,
                         fontWeight: FontWeight.w700,
                         color: q.isEasy ? AppColors.green : AppColors.orange))),
@@ -6301,12 +7579,15 @@ class _QuizScreenState extends ConsumerState<QuizScreen> {
                       const SizedBox(width: 10),
                       Text(
                           '${quiz.currentIndex + 1} of ${quiz.questions.length}',
-                          style: GoogleFonts.dmSans(
-                              fontSize: 11, color: context.hintColor))
+                          style: TextStyle(
+                              fontFamily: AppFonts.body,
+                              fontSize: 11,
+                              color: context.hintColor))
                     ]),
                     const SizedBox(height: 16),
                     Text(q.question,
-                        style: GoogleFonts.dmSans(
+                        style: TextStyle(
+                            fontFamily: AppFonts.display,
                             fontSize: 19,
                             fontWeight: FontWeight.w800,
                             color: context.textColor,
@@ -6349,12 +7630,13 @@ class _QuizScreenState extends ConsumerState<QuizScreen> {
                                         borderRadius:
                                             const BorderRadius.vertical(
                                                 top: Radius.circular(18))),
-                                    child: Row(children: [
-                                      const Icon(Icons.newspaper_rounded,
+                                    child: const Row(children: [
+                                      Icon(Icons.newspaper_rounded,
                                           color: AppColors.accent, size: 15),
-                                      const SizedBox(width: 8),
+                                      SizedBox(width: 8),
                                       Text('STORY BEHIND THIS',
-                                          style: GoogleFonts.dmSans(
+                                          style: TextStyle(
+                                              fontFamily: AppFonts.body,
                                               fontSize: 9,
                                               fontWeight: FontWeight.w700,
                                               color: AppColors.accent,
@@ -6367,22 +7649,27 @@ class _QuizScreenState extends ConsumerState<QuizScreen> {
                                             CrossAxisAlignment.start,
                                         children: [
                                           Text(q.storySummary,
-                                              style: GoogleFonts.dmSans(
+                                              style: TextStyle(
+                                                  fontFamily: AppFonts.body,
                                                   fontSize: 12,
                                                   color: context.subColor,
                                                   height: 1.7)),
                                           const SizedBox(height: 8),
                                           Row(children: [
                                             Text(q.source,
-                                                style: GoogleFonts.dmSans(
+                                                style: TextStyle(
+                                                    fontFamily:
+                                                        AppFonts.display,
                                                     fontSize: 10,
                                                     color: context.hintColor)),
                                             Text(' · ',
                                                 style: TextStyle(
                                                     color: context.hintColor,
                                                     fontSize: 10)),
-                                            Text('Read full story',
-                                                style: GoogleFonts.dmSans(
+                                            const Text('Read full story',
+                                                style: TextStyle(
+                                                    fontFamily:
+                                                        AppFonts.display,
                                                     fontSize: 10,
                                                     fontWeight: FontWeight.w700,
                                                     color: AppColors.accent))
@@ -6462,7 +7749,8 @@ class _QuizTimerBar extends StatelessWidget {
                   const SizedBox(width: 7),
                   Text(
                     answered ? 'Answered' : '$timeLeft',
-                    style: GoogleFonts.dmSans(
+                    style: TextStyle(
+                        fontFamily: AppFonts.body,
                         fontSize: 16,
                         fontWeight: FontWeight.w800,
                         color: color),
@@ -6470,7 +7758,8 @@ class _QuizTimerBar extends StatelessWidget {
                   if (!answered) ...[
                     const SizedBox(width: 2),
                     Text('sec',
-                        style: GoogleFonts.dmSans(
+                        style: TextStyle(
+                            fontFamily: AppFonts.body,
                             fontSize: 11,
                             fontWeight: FontWeight.w600,
                             color: color.withValues(alpha: 0.8))),
@@ -6782,7 +8071,8 @@ class _ResultScreenState extends ConsumerState<ResultScreen>
                                     style: const TextStyle(fontSize: 46)),
                                 const SizedBox(height: 2),
                                 Text(result.performanceLabel.toUpperCase(),
-                                    style: GoogleFonts.dmSans(
+                                    style: TextStyle(
+                                        fontFamily: AppFonts.body,
                                         fontSize: 11,
                                         fontWeight: FontWeight.w700,
                                         color: sc,
@@ -6796,7 +8086,8 @@ class _ResultScreenState extends ConsumerState<ResultScreen>
                                       text: TextSpan(children: [
                                     TextSpan(
                                         text: '$v',
-                                        style: GoogleFonts.dmSans(
+                                        style: TextStyle(
+                                            fontFamily: AppFonts.body,
                                             fontSize: 86,
                                             fontWeight: FontWeight.w900,
                                             letterSpacing: -5,
@@ -6810,7 +8101,9 @@ class _ResultScreenState extends ConsumerState<ResultScreen>
                                                       0, 0, 100, 100)))),
                                     TextSpan(
                                         text: '/$total',
-                                        style: GoogleFonts.dmSans(
+                                        style: TextStyle(
+                                            fontFamily: AppFonts.display,
+                                            height: 1.02,
                                             fontSize: 36,
                                             fontWeight: FontWeight.w800,
                                             color: sc.withValues(alpha: 0.8))),
@@ -6834,7 +8127,8 @@ class _ResultScreenState extends ConsumerState<ResultScreen>
                                                 AlwaysStoppedAnimation(sc)))),
                                 const SizedBox(height: 6),
                                 Text('${result.percentageString} correct',
-                                    style: GoogleFonts.dmSans(
+                                    style: TextStyle(
+                                        fontFamily: AppFonts.body,
                                         fontSize: 11,
                                         fontWeight: FontWeight.w600,
                                         color: Colors.black.withValues(
@@ -6898,16 +8192,17 @@ class _ResultScreenState extends ConsumerState<ResultScreen>
                                   border: Border.all(
                                       color: AppColors.purple
                                           .withValues(alpha: 0.25))),
-                              child: Row(
+                              child: const Row(
                                   mainAxisAlignment: MainAxisAlignment.center,
                                   children: [
-                                    const Icon(
+                                    Icon(
                                         Icons.local_fire_department_rounded,
                                         color: AppColors.purple,
                                         size: 16),
-                                    const SizedBox(width: 8),
+                                    SizedBox(width: 8),
                                     Text("Today's Hot Take",
-                                        style: GoogleFonts.dmSans(
+                                        style: TextStyle(
+                                            fontFamily: AppFonts.body,
                                             fontSize: 14,
                                             fontWeight: FontWeight.w700,
                                             color: AppColors.purple)),
@@ -6924,7 +8219,7 @@ class _ResultScreenState extends ConsumerState<ResultScreen>
                     final nav = Navigator.of(context);
                     final tab = ref.read(selectedTabProvider.notifier);
                     AdService.showInterstitial(then: () {
-                      tab.state = 2;
+                      tab.state = 1;
                       nav.pushNamedAndRemoveUntil('/home', (_) => false);
                     });
                   }),
@@ -6961,7 +8256,8 @@ class _AnswerReviewCard extends StatelessWidget {
                     color: AppColors.blue, size: 18)),
             const SizedBox(width: 10),
             Text('Review Answers',
-                style: GoogleFonts.dmSans(
+                style: TextStyle(
+                    fontFamily: AppFonts.body,
                     fontSize: 14,
                     fontWeight: FontWeight.w800,
                     color: context.textColor)),
@@ -7004,7 +8300,8 @@ class _AnswerReviewCard extends StatelessWidget {
                     title: Text('Q${index + 1}. ${question.question}',
                         maxLines: 2,
                         overflow: TextOverflow.ellipsis,
-                        style: GoogleFonts.dmSans(
+                        style: TextStyle(
+                            fontFamily: AppFonts.body,
                             fontSize: 12,
                             fontWeight: FontWeight.w700,
                             color: context.textColor)),
@@ -7014,7 +8311,8 @@ class _AnswerReviewCard extends StatelessWidget {
                             : 'Your answer: $selectedLabel',
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
-                        style: GoogleFonts.dmSans(
+                        style: TextStyle(
+                            fontFamily: AppFonts.body,
                             fontSize: 10,
                             fontWeight: FontWeight.w600,
                             color: color)),
@@ -7062,13 +8360,15 @@ class _ReviewLine extends StatelessWidget {
           SizedBox(
               width: 86,
               child: Text(label,
-                  style: GoogleFonts.dmSans(
+                  style: TextStyle(
+                      fontFamily: AppFonts.body,
                       fontSize: 10,
                       fontWeight: FontWeight.w700,
                       color: context.hintColor))),
           Expanded(
               child: Text(value,
-                  style: GoogleFonts.dmSans(
+                  style: TextStyle(
+                      fontFamily: AppFonts.body,
                       fontSize: 11,
                       fontWeight: FontWeight.w700,
                       color: color))),
@@ -7102,15 +8402,19 @@ class _ReviewParagraph extends StatelessWidget {
                 Icon(icon, size: 14, color: AppColors.accent),
                 const SizedBox(width: 6),
                 Text(title,
-                    style: GoogleFonts.dmSans(
+                    style: TextStyle(
+                        fontFamily: AppFonts.body,
                         fontSize: 10,
                         fontWeight: FontWeight.w800,
                         color: context.textColor)),
               ]),
               const SizedBox(height: 4),
               Text(text,
-                  style: GoogleFonts.roboto(
-                      fontSize: 12, color: context.subColor, height: 1.35)),
+                  style: TextStyle(
+                      fontFamily: AppFonts.body,
+                      fontSize: 12,
+                      color: context.subColor,
+                      height: 1.35)),
             ])));
   }
 }
@@ -7144,8 +8448,9 @@ class _ShareCard extends StatelessWidget {
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         Row(children: [
-                          Text('Briefed.',
-                              style: GoogleFonts.dmSans(
+                          const Text('Briefed.',
+                              style: TextStyle(
+                                  fontFamily: AppFonts.body,
                                   fontSize: 14,
                                   fontWeight: FontWeight.w900,
                                   color: Colors.white)),
@@ -7174,7 +8479,9 @@ class _ShareCard extends StatelessWidget {
                         ]),
                         const SizedBox(height: 10),
                         Text('$score/$total — ${result.performanceLabel}',
-                            style: GoogleFonts.dmSans(
+                            style: const TextStyle(
+                                fontFamily: AppFonts.display,
+                                height: 1.02,
                                 fontSize: 22,
                                 fontWeight: FontWeight.w900,
                                 color: Colors.white,
@@ -7182,7 +8489,8 @@ class _ShareCard extends StatelessWidget {
                         const SizedBox(height: 4),
                         Text(
                             '${result.pointsEarned} points · ${result.percentageString} correct',
-                            style: GoogleFonts.dmSans(
+                            style: TextStyle(
+                                fontFamily: AppFonts.body,
                                 fontSize: 11,
                                 color: Colors.white.withValues(alpha: 0.75))),
                       ])),
@@ -7190,21 +8498,25 @@ class _ShareCard extends StatelessWidget {
                   color: context.cardColor,
                   padding: const EdgeInsets.fromLTRB(18, 12, 18, 14),
                   child: Row(children: [
-                    Text('#Briefed',
-                        style: GoogleFonts.dmSans(
+                    const Text('#Briefed',
+                        style: TextStyle(
+                            fontFamily: AppFonts.body,
                             fontSize: 11,
                             fontWeight: FontWeight.w700,
                             color: AppColors.accent)),
                     const SizedBox(width: 8),
-                    Text('#StaySharp',
-                        style: GoogleFonts.dmSans(
+                    const Text('#StaySharp',
+                        style: TextStyle(
+                            fontFamily: AppFonts.body,
                             fontSize: 11,
                             fontWeight: FontWeight.w700,
                             color: AppColors.accent)),
                     const Spacer(),
                     Text('briefedapp.com',
-                        style: GoogleFonts.dmSans(
-                            fontSize: 10, color: context.hintColor)),
+                        style: TextStyle(
+                            fontFamily: AppFonts.body,
+                            fontSize: 10,
+                            color: context.hintColor)),
                   ])),
             ])));
   }
@@ -7233,7 +8545,8 @@ class HotTakeScreen extends ConsumerWidget {
             child: Column(children: [
               const SizedBox(height: 20),
               Text(ht.question,
-                  style: GoogleFonts.dmSans(
+                  style: TextStyle(
+                      fontFamily: AppFonts.display,
                       fontSize: 20,
                       fontWeight: FontWeight.w800,
                       color: context.textColor,
@@ -7276,7 +8589,8 @@ class HotTakeScreen extends ConsumerWidget {
                             ht.total == 0
                                 ? 'Be the first to vote!'
                                 : '${_fmt(ht.total)} votes',
-                            style: GoogleFonts.dmSans(
+                            style: TextStyle(
+                                fontFamily: AppFonts.body,
                                 fontSize: 9,
                                 fontWeight: FontWeight.w700,
                                 color: context.hintColor,
@@ -7367,7 +8681,9 @@ class _VoteButton extends StatelessWidget {
                       color: isVoted ? color : context.hintColor, size: 26)),
               const SizedBox(height: 10),
               Text(label,
-                  style: GoogleFonts.dmSans(
+                  style: TextStyle(
+                      fontFamily: AppFonts.display,
+                      height: 1.02,
                       fontSize: 18,
                       fontWeight: FontWeight.w900,
                       color: isVoted ? color : context.subColor)),
@@ -7386,14 +8702,18 @@ class _ResultBar extends StatelessWidget {
     return Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
       Row(children: [
         Text(label,
-            style: GoogleFonts.dmSans(
+            style: TextStyle(
+                fontFamily: AppFonts.body,
                 fontSize: 12,
                 fontWeight: FontWeight.w700,
                 color: context.subColor)),
         const Spacer(),
         Text('$percent%',
-            style: GoogleFonts.dmSans(
-                fontSize: 16, fontWeight: FontWeight.w900, color: color)),
+            style: TextStyle(
+                fontFamily: AppFonts.body,
+                fontSize: 16,
+                fontWeight: FontWeight.w900,
+                color: color)),
       ]),
       const SizedBox(height: 6),
       ClipRRect(
@@ -7477,906 +8797,2203 @@ class _CategoryStat {
   }
 }
 
+// PRO PURCHASE SHEET — top-level so any screen can call it
+
+void showBriefedProSheet(BuildContext context, WidgetRef ref) {
+  final user = ref.read(userProvider);
+  final canActivatePro =
+      AuthService.currentUser != null && !AuthService.isGuest;
+  final hasPro = user.isPro && canActivatePro;
+  showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: context.cardColor,
+      shape: const RoundedRectangleBorder(
+          borderRadius: BorderRadius.vertical(top: Radius.circular(24))),
+      builder: (ctx) => Padding(
+          padding: const EdgeInsets.fromLTRB(20, 8, 20, 32),
+          child: Column(mainAxisSize: MainAxisSize.min, children: [
+            Center(
+                child: Container(
+                    width: 40,
+                    height: 4,
+                    margin: const EdgeInsets.only(bottom: 20),
+                    decoration: BoxDecoration(
+                        color: ctx.borderColor,
+                        borderRadius: BorderRadius.circular(2)))),
+            Container(
+                width: 56,
+                height: 56,
+                decoration: BoxDecoration(
+                    gradient: const LinearGradient(
+                        colors: [AppColors.gold, Color(0xFFFF9100)]),
+                    borderRadius: BorderRadius.circular(18)),
+                child: const Icon(Icons.star_rounded,
+                    color: Colors.white, size: 30)),
+            const SizedBox(height: 14),
+            Text('Briefed Pro',
+                style: TextStyle(
+                    fontFamily: AppFonts.display,
+                    height: 1.02,
+                    fontSize: 22,
+                    fontWeight: FontWeight.w900,
+                    color: ctx.textColor)),
+            Text(hasPro ? 'Active' : ProPurchaseService.fallbackPriceLabel,
+                style: const TextStyle(
+                    fontFamily: AppFonts.body,
+                    fontSize: 14,
+                    color: AppColors.gold,
+                    fontWeight: FontWeight.w700)),
+            const SizedBox(height: 20),
+            ...[
+              ('All 7 quiz categories unlocked', Icons.quiz_rounded),
+              ('Unlimited quiz replays', Icons.replay_rounded),
+              ('Ad-free experience across all games', Icons.block_rounded),
+              ('Category accuracy breakdown', Icons.bar_chart_rounded),
+              ('Early access to new games', Icons.games_rounded),
+              ('Support Briefed\'s growth', Icons.favorite_rounded),
+            ].map((f) => Padding(
+                padding: const EdgeInsets.only(bottom: 12),
+                child: Row(children: [
+                  Container(
+                      width: 32,
+                      height: 32,
+                      decoration: BoxDecoration(
+                          color: AppColors.gold.withValues(alpha: 0.12),
+                          borderRadius: BorderRadius.circular(9)),
+                      child: Icon(f.$2, color: AppColors.gold, size: 16)),
+                  const SizedBox(width: 12),
+                  Text(f.$1,
+                      style: TextStyle(
+                          fontFamily: AppFonts.body,
+                          fontSize: 13,
+                          fontWeight: FontWeight.w600,
+                          color: ctx.textColor)),
+                ]))),
+            const SizedBox(height: 8),
+            GestureDetector(
+                onTap: hasPro
+                    ? null
+                    : () async {
+                        if (!canActivatePro) {
+                          Navigator.of(ctx).pop();
+                          showModalBottomSheet(
+                              context: context,
+                              isScrollControlled: true,
+                              backgroundColor: context.cardColor,
+                              shape: const RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.vertical(
+                                      top: Radius.circular(24))),
+                              builder: (_) => _AuthSheet(ref: ref));
+                          return;
+                        }
+                        final messenger = ScaffoldMessenger.of(context);
+                        final nav =
+                            Navigator.of(context, rootNavigator: true);
+                        showDialog<void>(
+                            context: context,
+                            barrierDismissible: false,
+                            builder: (dCtx) => const Center(
+                                child: CircularProgressIndicator()));
+                        try {
+                          final product =
+                              await ProPurchaseService.loadProProduct();
+                          if (nav.canPop()) nav.pop();
+                          await ProPurchaseService.buyPro(product);
+                          messenger.showSnackBar(const SnackBar(
+                              content: Text(
+                                  'Complete the purchase to activate Briefed Pro.')));
+                        } catch (e) {
+                          if (nav.canPop()) nav.pop();
+                          messenger.showSnackBar(
+                              SnackBar(content: Text(e.toString())));
+                        }
+                      },
+                child: Container(
+                    width: double.infinity,
+                    padding: const EdgeInsets.symmetric(vertical: 16),
+                    decoration: BoxDecoration(
+                        gradient: const LinearGradient(
+                            colors: [AppColors.gold, Color(0xFFFF9100)]),
+                        borderRadius: BorderRadius.circular(16),
+                        boxShadow: [
+                          BoxShadow(
+                              color: AppColors.gold.withValues(alpha: 0.35),
+                              blurRadius: 20,
+                              offset: const Offset(0, 6))
+                        ]),
+                    child: Center(
+                        child: Text(
+                            hasPro
+                                ? 'Pro Active'
+                                : !canActivatePro
+                                    ? 'Sign in to Activate'
+                                    : 'Subscribe — A\$2.99/month',
+                            style: const TextStyle(
+                                fontFamily: AppFonts.body,
+                                fontSize: 15,
+                                fontWeight: FontWeight.w900,
+                                color: Colors.white))))),
+            const SizedBox(height: 8),
+            Text(
+                hasPro
+                    ? 'Unlimited replay is ready on the home quiz card'
+                    : canActivatePro
+                        ? 'Monthly subscription · cancel anytime'
+                        : 'Pro is tied to a signed-in account',
+                style: TextStyle(
+                    fontFamily: AppFonts.body,
+                    fontSize: 11,
+                    color: ctx.hintColor)),
+            if (canActivatePro && !hasPro) ...[
+              const SizedBox(height: 6),
+              GestureDetector(
+                  onTap: () async {
+                    final messenger = ScaffoldMessenger.of(context);
+                    try {
+                      await ProPurchaseService.restorePurchases();
+                      messenger.showSnackBar(const SnackBar(
+                          content:
+                              Text('Checking for previous purchases...')));
+                    } catch (e) {
+                      messenger.showSnackBar(
+                          SnackBar(content: Text(e.toString())));
+                    }
+                  },
+                  child: const Text('Restore subscription',
+                      style: TextStyle(
+                          fontFamily: AppFonts.body,
+                          fontSize: 12,
+                          fontWeight: FontWeight.w700,
+                          color: AppColors.gold))),
+            ],
+          ])));
+}
+
 // PROFILE SCREEN — with leaderboard
 
-class ProfileScreen extends ConsumerWidget {
+class ProfileScreen extends ConsumerStatefulWidget {
   const ProfileScreen({super.key});
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<ProfileScreen> createState() => _ProfileScreenState();
+}
+
+class _ProfileScreenState extends ConsumerState<ProfileScreen>
+    with SingleTickerProviderStateMixin {
+  static const _accent = Color(0xFFFF5722);
+  static const _gamePurple = Color(0xFFFF7A2F);
+  static const _gameBlue = Color(0xFFE85D04);
+  static const _darkProfileBg = Color(0xFF1A0F08);
+  static const _darkProfileSurface = Color(0xFF27170E);
+  late final AnimationController _heroCtrl;
+  late final Future<Map<String, dynamic>> _gameSummaryFuture;
+  late final Future<List<GameResult>> _recentGameResultsFuture;
+  int _tabIndex = 0;
+  int _categoryLeaderboardIndex = 0;
+  int _gameLeaderboardIndex = 0;
+  int _mainLbScope = 1; // 0=Friends, 1=Global, 2=Country
+
+  @override
+  void initState() {
+    super.initState();
+    _heroCtrl = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 500),
+    )..forward();
+    _gameSummaryFuture = GameResultsService.getGameSummary();
+    _recentGameResultsFuture = GameResultsService.getRecentResults(limit: 10);
+  }
+
+  @override
+  void dispose() {
+    _heroCtrl.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
     final user = ref.watch(userProvider);
     final authUser = ref.watch(authStateProvider).valueOrNull;
     final isGuest = authUser == null || authUser.isAnonymous;
-    final leaderboardAsync = ref.watch(leaderboardProvider);
-    final streakDays = _buildStreakDays(user);
-    final activeDays = streakDays.where((d) => d.result != null).length;
-    final results = user.recentResults;
 
-    // Average score
-    final avgPct = results.isEmpty
-        ? 0.0
-        : results.map((r) => r.percentage).reduce((a, b) => a + b) /
-            results.length;
-
-    // This-week stats (last 7 calendar days)
-    final weekAgo = DateTime.now().subtract(const Duration(days: 7));
-    final weekResults = results.where((r) {
-      try {
-        return DateTime.parse(r.date).isAfter(weekAgo);
-      } catch (_) {
-        return false;
-      }
-    }).toList();
-    final bestWeekPct = weekResults.isEmpty
-        ? 0
-        : weekResults
-            .map((r) => (r.percentage * 100).round())
-            .reduce((a, b) => a > b ? a : b);
-    final weekDays = weekResults.map((r) => r.date).toSet().length;
-
-    // Category accuracy (from saved per-question attempts, with fallback for
-    // older quiz history that only stored quiz-level categories).
-    final catMap = <String, _CategoryStat>{};
-    for (final r in results) {
-      if (r.attempts.isNotEmpty) {
-        for (final attempt in r.attempts) {
-          final stat =
-              catMap.putIfAbsent(attempt.category, () => const _CategoryStat());
-          catMap[attempt.category] = stat.add(correct: attempt.correct);
-        }
-      } else {
-        for (final cat in r.categories) {
-          final stat = catMap.putIfAbsent(cat, () => const _CategoryStat());
-          catMap[cat] = stat.addLegacy(r.percentage);
-        }
-      }
-    }
-    final catAccuracy = catMap.entries.toList()
-      ..sort((a, b) => b.value.accuracy.compareTo(a.value.accuracy));
-
-    // Sparkline: last 7 results oldest-first
-    final sparkValues =
-        results.take(7).toList().reversed.map((r) => r.percentage).toList();
+    final catStats = _categoryStats(user);
+    final strongest = _strongestCategory(catStats);
+    final totalXp = XpService.getTotalXp();
+    final level = XpService.getLevel();
+    final levelTitle = XpService.getLevelTitle();
+    final xpForNext = XpService.getXpForNextLevel();
+    final progress = XpService.getLevelProgress();
+    final profileBg = context.isDark ? _darkProfileBg : const Color(0xFFFFF1E2);
 
     return Scaffold(
-        backgroundColor: context.bgColor,
-        body: SafeArea(
-            child: SingleChildScrollView(
-                padding: const EdgeInsets.all(20),
-                child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      // ── Header ──────────────────────────────────────────────────────────────
-                      Row(children: [
-                        _buildAvatar(authUser?.photoURL, 54),
-                        const SizedBox(width: 14),
-                        Expanded(
-                            child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                              Text(user.name,
-                                  style:
-                                      Theme.of(context).textTheme.titleLarge),
-                              Text('${user.totalQuizzes} quizzes completed',
-                                  style: GoogleFonts.roboto(
-                                      fontSize: 11, color: context.hintColor)),
-                            ])),
-                        GestureDetector(
-                            onTap: () =>
-                                Navigator.of(context).pushNamed('/settings'),
-                            child: BriefedCard(
-                                padding: const EdgeInsets.all(9),
-                                child: Icon(Icons.settings_rounded,
-                                    color: context.hintColor, size: 18))),
-                      ]),
-                      if (isGuest) ...[
-                        const SizedBox(height: 12),
-                        GestureDetector(
-                          onTap: () =>
-                              Navigator.of(context).pushNamed('/settings'),
-                          child: Container(
-                              padding: const EdgeInsets.symmetric(
-                                  horizontal: 16, vertical: 12),
-                              decoration: BoxDecoration(
-                                  color: AppColors.blue.withValues(alpha: 0.07),
-                                  borderRadius: BorderRadius.circular(14),
-                                  border: Border.all(
-                                      color: AppColors.blue
-                                          .withValues(alpha: 0.2))),
-                              child: Row(children: [
-                                const Icon(Icons.sync_rounded,
-                                    color: AppColors.blue, size: 18),
-                                const SizedBox(width: 10),
-                                Expanded(
-                                    child: Text(
-                                        'Sign in to sync your progress across devices',
-                                        style: GoogleFonts.roboto(
-                                            fontSize: 12,
-                                            fontWeight: FontWeight.w600,
-                                            color: AppColors.blue))),
-                                const Icon(Icons.chevron_right_rounded,
-                                    color: AppColors.blue, size: 16),
-                              ])),
-                        ),
-                      ],
-                      const SizedBox(height: 20),
-
-                      // ── Stat Cards ───────────────────────────────────────────────────────────
-                      Row(children: [
-                        Expanded(
-                            child: StatCard(
-                                icon: Icons.local_fire_department_rounded,
-                                value: '${user.streak}',
-                                label: 'Streak',
-                                color: AppColors.accent)),
-                        const SizedBox(width: 10),
-                        Expanded(
-                            child: StatCard(
-                                icon: Icons.bolt_rounded,
-                                value: _fmt(user.knowledgeScore),
-                                label: 'Score',
-                                color: AppColors.gold)),
-                        const SizedBox(width: 10),
-                        Expanded(
-                            child: StatCard(
-                                icon: Icons.emoji_events_rounded,
-                                value: user.globalRankLabel,
-                                label: 'Global',
-                                color: AppColors.purple)),
-                      ]),
-                      const SizedBox(height: 12),
-
-                      // ── Avg score + sparkline ────────────────────────────────────────────────
-                      if (results.isNotEmpty) ...[
-                        BriefedCard(
-                            child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                              Row(children: [
-                                Expanded(
-                                    child: Column(
-                                        crossAxisAlignment:
-                                            CrossAxisAlignment.start,
-                                        children: [
-                                      Text('AVG SCORE',
-                                          style: GoogleFonts.roboto(
-                                              fontSize: 9,
-                                              fontWeight: FontWeight.w700,
-                                              color: context.hintColor,
-                                              letterSpacing: 1.5)),
-                                      const SizedBox(height: 4),
-                                      Text('${(avgPct * 100).round()}%',
-                                          style: GoogleFonts.dmSans(
-                                              fontSize: 28,
-                                              fontWeight: FontWeight.w900,
-                                              color: avgPct >= 0.8
-                                                  ? AppColors.green
-                                                  : avgPct >= 0.6
-                                                      ? AppColors.accent
-                                                      : AppColors.red)),
-                                      Text(
-                                          'across ${results.length} quiz${results.length == 1 ? '' : 'zes'}',
-                                          style: GoogleFonts.roboto(
-                                              fontSize: 10,
-                                              color: context.hintColor)),
-                                    ])),
-                                if (sparkValues.length >= 2) ...[
-                                  const SizedBox(width: 12),
-                                  Column(
-                                      crossAxisAlignment:
-                                          CrossAxisAlignment.end,
-                                      children: [
-                                        Text('TREND',
-                                            style: GoogleFonts.roboto(
-                                                fontSize: 9,
-                                                fontWeight: FontWeight.w700,
-                                                color: context.hintColor,
-                                                letterSpacing: 1.5)),
-                                        const SizedBox(height: 8),
-                                        _ScoreSparkline(
-                                            values: sparkValues,
-                                            width: 110,
-                                            height: 44),
-                                      ]),
-                                ],
-                              ]),
-                            ])),
-                        const SizedBox(height: 12),
-                      ],
-
-                      // ── This Week ────────────────────────────────────────────────────────────
-                      if (weekResults.isNotEmpty) ...[
-                        BriefedCard(
-                            child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                              Text('THIS WEEK',
-                                  style: GoogleFonts.roboto(
-                                      fontSize: 9,
-                                      fontWeight: FontWeight.w700,
-                                      color: context.hintColor,
-                                      letterSpacing: 1.5)),
-                              const SizedBox(height: 12),
-                              Row(children: [
-                                _miniStat(context, '${weekResults.length}',
-                                    'Quizzes', AppColors.blue),
-                                _miniStat(context, '$bestWeekPct%',
-                                    'Best Score', AppColors.green),
-                                _miniStat(context, '$weekDays', 'Days Active',
-                                    AppColors.purple),
-                              ]),
-                            ])),
-                        const SizedBox(height: 12),
-                      ],
-
-                      // ── Leaderboard ─────────────────────────────────────────────────────────
-                      Row(children: [
-                        Text('Leaderboard',
-                            style: Theme.of(context).textTheme.titleMedium),
-                        const Spacer(),
-                        Text('Global',
-                            style: GoogleFonts.roboto(
-                                fontSize: 9,
-                                fontWeight: FontWeight.w700,
-                                color: AppColors.accent)),
-                      ]),
-                      const SizedBox(height: 10),
-                      if (isGuest)
-                        BriefedCard(
-                            child: Column(children: [
-                          const Icon(Icons.leaderboard_rounded,
-                              size: 32, color: AppColors.accent),
-                          const SizedBox(height: 8),
-                          Text('Sign in to see the global leaderboard',
-                              style: GoogleFonts.roboto(
-                                  fontSize: 13,
-                                  fontWeight: FontWeight.w600,
-                                  color: context.subColor),
-                              textAlign: TextAlign.center),
-                          const SizedBox(height: 10),
-                          GestureDetector(
-                            onTap: () =>
-                                Navigator.of(context).pushNamed('/settings'),
-                            child: Container(
-                              padding: const EdgeInsets.symmetric(
-                                  horizontal: 20, vertical: 10),
-                              decoration: BoxDecoration(
-                                  color: AppColors.accent,
-                                  borderRadius: BorderRadius.circular(12)),
-                              child: Text('Sign In',
-                                  style: GoogleFonts.roboto(
-                                      fontSize: 13,
-                                      fontWeight: FontWeight.w700,
-                                      color: Colors.white)),
-                            ),
-                          ),
-                        ]))
-                      else
-                        leaderboardAsync.when(
-                          loading: () => BriefedCard(
-                              child: Column(
-                                  children: List.generate(
-                                      5,
-                                      (_) => Padding(
-                                            padding: const EdgeInsets.symmetric(
-                                                vertical: 8),
-                                            child: Row(children: [
-                                              Container(
-                                                  width: 24,
-                                                  height: 14,
-                                                  decoration: BoxDecoration(
-                                                      color: context.inputBg,
-                                                      borderRadius:
-                                                          BorderRadius.circular(
-                                                              4))),
-                                              const SizedBox(width: 10),
-                                              Container(
-                                                  width: 34,
-                                                  height: 34,
-                                                  decoration: BoxDecoration(
-                                                      color: context.inputBg,
-                                                      shape: BoxShape.circle)),
-                                              const SizedBox(width: 12),
-                                              Expanded(
-                                                  child: Container(
-                                                      height: 14,
-                                                      decoration: BoxDecoration(
-                                                          color:
-                                                              context.inputBg,
-                                                          borderRadius:
-                                                              BorderRadius
-                                                                  .circular(
-                                                                      4)))),
-                                            ]),
-                                          )))),
-                          error: (_, __) => BriefedCard(
-                              child: Center(
-                                  child: Text('Could not load leaderboard',
-                                      style: GoogleFonts.roboto(
-                                          fontSize: 12,
-                                          color: context.hintColor)))),
-                          data: (entries) {
-                            if (entries.isEmpty) {
-                              return BriefedCard(
-                                  child: Center(
-                                      child: Text(
-                                          'No scores yet — play a quiz!',
-                                          style: GoogleFonts.roboto(
-                                              fontSize: 12,
-                                              color: context.hintColor))));
-                            }
-                            return BriefedCard(
-                                padding: EdgeInsets.zero,
-                                child: Column(
-                                    children: entries.asMap().entries.map((e) {
-                                  final entry = e.value;
-                                  final rank = e.key + 1;
-                                  final isLast = e.key == entries.length - 1;
-                                  if (entry.isSeparator) {
-                                    return Column(
-                                        mainAxisSize: MainAxisSize.min,
-                                        children: [
-                                          Padding(
-                                              padding:
-                                                  const EdgeInsets.symmetric(
-                                                      horizontal: 16,
-                                                      vertical: 4),
-                                              child: Row(children: [
-                                                const Expanded(
-                                                    child: Divider()),
-                                                Padding(
-                                                    padding: const EdgeInsets
-                                                        .symmetric(
-                                                        horizontal: 8),
-                                                    child: Text('your rank',
-                                                        style: GoogleFonts
-                                                            .sourceSans3(
-                                                                fontSize: 9,
-                                                                color: context
-                                                                    .hintColor,
-                                                                letterSpacing:
-                                                                    1))),
-                                                const Expanded(
-                                                    child: Divider()),
-                                              ])),
-                                          _leaderboardRow(context, entry, '?',
-                                              isLast: true),
-                                        ]);
-                                  }
-                                  return _leaderboardRow(
-                                      context,
-                                      entry,
-                                      rank <= 3
-                                          ? ['🥇', '🥈', '🥉'][rank - 1]
-                                          : '$rank',
-                                      isLast: isLast);
-                                }).toList()));
-                          },
-                        ),
-                      const SizedBox(height: 20),
-
-                      // ── Category Accuracy ────────────────────────────────────────────────────
-                      if (catAccuracy.isNotEmpty) ...[
-                        Text('Category Accuracy',
-                            style: Theme.of(context).textTheme.titleMedium),
-                        const SizedBox(height: 10),
-                        BriefedCard(
-                            child: Column(
-                                children: catAccuracy.take(5).map((e) {
-                          final color = AppColors.categoryColor(e.key);
-                          final stat = e.value;
-                          return Padding(
-                              padding: const EdgeInsets.only(bottom: 12),
-                              child: Column(
-                                  crossAxisAlignment: CrossAxisAlignment.start,
-                                  children: [
-                                    Row(children: [
-                                      Text(
-                                          e.key[0].toUpperCase() +
-                                              e.key.substring(1),
-                                          style: GoogleFonts.roboto(
-                                              fontSize: 12,
-                                              fontWeight: FontWeight.w700,
-                                              color: context.subColor)),
-                                      const Spacer(),
-                                      Text('${(stat.accuracy * 100).round()}%',
-                                          style: GoogleFonts.roboto(
-                                              fontSize: 13,
-                                              fontWeight: FontWeight.w800,
-                                              color: color)),
-                                    ]),
-                                    const SizedBox(height: 2),
-                                    Text(stat.label,
-                                        style: GoogleFonts.roboto(
-                                            fontSize: 10,
-                                            fontWeight: FontWeight.w600,
-                                            color: context.hintColor)),
-                                    const SizedBox(height: 5),
-                                    ClipRRect(
-                                        borderRadius:
-                                            BorderRadius.circular(999),
-                                        child: TweenAnimationBuilder<double>(
-                                            tween: Tween(
-                                                begin: 0, end: stat.accuracy),
-                                            duration: const Duration(
-                                                milliseconds: 900),
-                                            curve: Curves.easeOutCubic,
-                                            builder: (_, v, __) =>
-                                                LinearProgressIndicator(
-                                                    value: v,
-                                                    minHeight: 8,
-                                                    backgroundColor:
-                                                        context.inputBg,
-                                                    valueColor:
-                                                        AlwaysStoppedAnimation(
-                                                            color)))),
-                                  ]));
-                        }).toList())),
-                        const SizedBox(height: 20),
-                      ],
-
-                      // ── Streak calendar ──────────────────────────────────────────────────────
-                      BriefedCard(
-                          child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                            Row(children: [
-                              Container(
-                                  width: 38,
-                                  height: 38,
-                                  decoration: BoxDecoration(
-                                      gradient: const LinearGradient(colors: [
-                                        AppColors.accent,
-                                        AppColors.orange
-                                      ]),
-                                      borderRadius: BorderRadius.circular(13),
-                                      boxShadow: [
-                                        BoxShadow(
-                                            color: AppColors.accent
-                                                .withValues(alpha: 0.22),
-                                            blurRadius: 12,
-                                            offset: const Offset(0, 4))
-                                      ]),
-                                  child: const Icon(
-                                      Icons.local_fire_department_rounded,
-                                      color: Colors.white,
-                                      size: 21)),
-                              const SizedBox(width: 12),
-                              Expanded(
-                                  child: Column(
-                                      crossAxisAlignment:
-                                          CrossAxisAlignment.start,
-                                      children: [
-                                    Text('STREAK CALENDAR',
-                                        style: GoogleFonts.roboto(
-                                            fontSize: 9,
-                                            fontWeight: FontWeight.w800,
-                                            color: context.hintColor,
-                                            letterSpacing: 1.5)),
-                                    const SizedBox(height: 2),
-                                    Text(
-                                        user.streak > 0
-                                            ? '${user.streak} day flame is alive'
-                                            : 'Start your flame today',
-                                        style: GoogleFonts.roboto(
-                                            fontSize: 15,
-                                            fontWeight: FontWeight.w800,
-                                            color: context.textColor)),
-                                  ])),
-                              Container(
-                                  padding: const EdgeInsets.symmetric(
-                                      horizontal: 10, vertical: 6),
-                                  decoration: BoxDecoration(
-                                      color: AppColors.accent
-                                          .withValues(alpha: 0.1),
-                                      borderRadius: BorderRadius.circular(999),
-                                      border: Border.all(
-                                          color: AppColors.accent
-                                              .withValues(alpha: 0.22))),
-                                  child: Text('$activeDays/35',
-                                      style: GoogleFonts.roboto(
-                                          fontSize: 12,
-                                          fontWeight: FontWeight.w900,
-                                          color: AppColors.accent))),
-                            ]),
-                            const SizedBox(height: 14),
-                            Row(children: [
-                              _streakMetric(context, '${user.streak}',
-                                  'Current', AppColors.accent),
-                              _streakMetric(context, '${user.longestStreak}',
-                                  'Best', AppColors.gold),
-                              _streakMetric(context, '$activeDays', 'Active',
-                                  AppColors.purple),
-                            ]),
-                            const SizedBox(height: 14),
-                            Row(
-                                children: ['M', 'T', 'W', 'T', 'F', 'S', 'S']
-                                    .map((d) => Expanded(
-                                        child: Text(d,
-                                            style: GoogleFonts.roboto(
-                                                fontSize: 9,
-                                                fontWeight: FontWeight.w800,
-                                                color: context.hintColor),
-                                            textAlign: TextAlign.center)))
-                                    .toList()),
-                            const SizedBox(height: 6),
-                            GridView.builder(
-                                shrinkWrap: true,
-                                physics: const NeverScrollableScrollPhysics(),
-                                gridDelegate:
-                                    const SliverGridDelegateWithFixedCrossAxisCount(
-                                        crossAxisCount: 7,
-                                        crossAxisSpacing: 6,
-                                        mainAxisSpacing: 6),
-                                itemCount: streakDays.length,
-                                itemBuilder: (_, i) => _StreakCalendarTile(
-                                    day: streakDays[i],
-                                    delay: Duration(milliseconds: 18 * i))),
-                            const SizedBox(height: 12),
-                            Row(children: [
-                              Text('Less',
-                                  style: GoogleFonts.roboto(
-                                      fontSize: 10, color: context.hintColor)),
-                              const SizedBox(width: 6),
-                              ...[0.18, 0.34, 0.52, 0.72].map((a) => Container(
-                                  width: 15,
-                                  height: 8,
-                                  margin: const EdgeInsets.only(right: 4),
-                                  decoration: BoxDecoration(
-                                      color:
-                                          AppColors.accent.withValues(alpha: a),
-                                      borderRadius:
-                                          BorderRadius.circular(999)))),
-                              Text('More',
-                                  style: GoogleFonts.roboto(
-                                      fontSize: 10, color: context.hintColor)),
-                              const Spacer(),
-                              Text('Last 5 weeks',
-                                  style: GoogleFonts.roboto(
-                                      fontSize: 10,
-                                      fontWeight: FontWeight.w700,
-                                      color: context.hintColor)),
-                            ]),
-                          ])),
-                      const SizedBox(height: 16),
-
-                      // ── Badges ───────────────────────────────────────────────────────────────
-                      BriefedCard(
-                          child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                            Row(children: [
-                              Expanded(
-                                  child: Column(
-                                      crossAxisAlignment:
-                                          CrossAxisAlignment.start,
-                                      children: [
-                                    Text('BADGES',
-                                        style: GoogleFonts.roboto(
-                                            fontSize: 9,
-                                            fontWeight: FontWeight.w800,
-                                            color: context.hintColor,
-                                            letterSpacing: 1.5)),
-                                    const SizedBox(height: 2),
-                                    Text(
-                                        '${_earnedBadgeCount(user)} of 5 unlocked',
-                                        style: GoogleFonts.roboto(
-                                            fontSize: 13,
-                                            fontWeight: FontWeight.w800,
-                                            color: context.textColor)),
-                                  ])),
-                              Container(
-                                  padding: const EdgeInsets.symmetric(
-                                      horizontal: 10, vertical: 6),
-                                  decoration: BoxDecoration(
-                                      color:
-                                          AppColors.gold.withValues(alpha: 0.1),
-                                      borderRadius: BorderRadius.circular(999),
-                                      border: Border.all(
-                                          color: AppColors.gold
-                                              .withValues(alpha: 0.22))),
-                                  child: Row(
-                                      mainAxisSize: MainAxisSize.min,
-                                      children: [
-                                        const Icon(
-                                            Icons.workspace_premium_rounded,
-                                            color: AppColors.gold,
-                                            size: 14),
-                                        const SizedBox(width: 5),
-                                        Text('Milestones',
-                                            style: GoogleFonts.roboto(
-                                                fontSize: 11,
-                                                fontWeight: FontWeight.w800,
-                                                color: AppColors.gold)),
-                                      ])),
-                            ]),
-                            const SizedBox(height: 12),
-                            _badge(
-                                context,
-                                Icons.star_rounded,
-                                AppColors.green,
-                                'First Quiz',
-                                'Complete your first daily quiz',
-                                user.totalQuizzes,
-                                1),
-                            const SizedBox(height: 8),
-                            _badge(
-                                context,
-                                Icons.local_fire_department_rounded,
-                                AppColors.accent,
-                                '7 Day Streak',
-                                'Keep your quiz streak alive for a full week',
-                                user.streak,
-                                7),
-                            const SizedBox(height: 8),
-                            _badge(
-                                context,
-                                Icons.emoji_events_rounded,
-                                AppColors.gold,
-                                '30 Day Streak',
-                                'Build a month-long streak',
-                                user.streak,
-                                30),
-                            const SizedBox(height: 8),
-                            _badge(
-                                context,
-                                Icons.bolt_rounded,
-                                AppColors.purple,
-                                'Perfect Score',
-                                'Score every question correctly in one quiz',
-                                user.recentResults
-                                        .any((r) => r.score == r.totalQuestions)
-                                    ? 1
-                                    : 0,
-                                1),
-                            const SizedBox(height: 8),
-                            _badge(
-                                context,
-                                Icons.menu_book_rounded,
-                                AppColors.blue,
-                                '10 Quizzes',
-                                'Finish ten quizzes to prove the habit',
-                                user.totalQuizzes,
-                                10),
-                          ])),
-
-                      // ── Recent Quizzes ───────────────────────────────────────────────────────
-                      if (user.recentResults.isNotEmpty) ...[
-                        const SizedBox(height: 16),
-                        BriefedCard(
-                            child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                              Row(children: [
-                                Expanded(
-                                    child: Column(
-                                        crossAxisAlignment:
-                                            CrossAxisAlignment.start,
-                                        children: [
-                                      Text('RECENT QUIZZES',
-                                          style: GoogleFonts.roboto(
-                                              fontSize: 9,
-                                              fontWeight: FontWeight.w800,
-                                              color: context.hintColor,
-                                              letterSpacing: 1.5)),
-                                      const SizedBox(height: 2),
-                                      Text(
-                                          'Last ${user.recentResults.take(5).length} attempts',
-                                          style: GoogleFonts.roboto(
-                                              fontSize: 13,
-                                              fontWeight: FontWeight.w800,
-                                              color: context.textColor)),
-                                    ])),
-                                Text('${(avgPct * 100).round()}% avg',
-                                    style: GoogleFonts.roboto(
-                                        fontSize: 12,
-                                        fontWeight: FontWeight.w800,
-                                        color: AppColors.accent)),
-                              ]),
-                              const SizedBox(height: 12),
-                              ...user.recentResults.take(5).map((r) => Padding(
-                                    padding: const EdgeInsets.only(bottom: 10),
-                                    child: _RecentQuizRow(result: r),
-                                  )),
-                            ])),
-                      ],
-                    ]))));
+      backgroundColor: profileBg,
+      body: SafeArea(
+        child: SingleChildScrollView(
+          padding: const EdgeInsets.fromLTRB(20, 16, 20, 110),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              _identityHero(
+                context,
+                user: user,
+                photoUrl: authUser?.photoURL,
+                level: level,
+                levelTitle: levelTitle,
+                totalXp: totalXp,
+                xpForNext: xpForNext,
+                progress: progress,
+                strongest: strongest,
+              ),
+              const SizedBox(height: 16),
+              FutureBuilder<List<GameResult>>(
+                future: _recentGameResultsFuture,
+                builder: (context, snap) => _thisWeekStrip(
+                  context,
+                  user.recentResults,
+                  snap.data ?? const [],
+                ),
+              ),
+              const SizedBox(height: 18),
+              _tabs(context, isPro: user.isPro && !isGuest),
+              const SizedBox(height: 12),
+              AnimatedSwitcher(
+                duration: const Duration(milliseconds: 220),
+                child: _tabIndex == 0
+                    ? _quizStatsTab(context, user, isGuest)
+                    : _tabIndex == 1
+                        ? _gameStatsTab(context, user, isGuest)
+                        : _categoriesTab(context, user, catStats, isGuest),
+              ),
+              const SizedBox(height: 20),
+              FutureBuilder<List<GameResult>>(
+                future: _recentGameResultsFuture,
+                builder: (context, snap) => _recentActivity(
+                  context,
+                  user.recentResults,
+                  snap.data ?? const [],
+                  loading: snap.connectionState == ConnectionState.waiting,
+                ),
+              ),
+              const SizedBox(height: 20),
+              FutureBuilder<Map<String, dynamic>>(
+                future: _gameSummaryFuture,
+                builder: (context, snap) => _badges(
+                  context,
+                  user,
+                  snap.data ?? const {},
+                ),
+              ),
+              const SizedBox(height: 16),
+            ],
+          ),
+        ),
+      ),
+    );
   }
 
-  Widget _leaderboardRow(
-      BuildContext context, LeaderboardEntry entry, String rankLabel,
-      {required bool isLast}) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-      decoration: BoxDecoration(
-        color: entry.isYou
-            ? AppColors.accent.withValues(alpha: 0.06)
-            : Colors.transparent,
-        border: isLast
-            ? null
-            : Border(bottom: BorderSide(color: context.borderColor)),
-        borderRadius: isLast
-            ? const BorderRadius.vertical(bottom: Radius.circular(20))
-            : null,
+  Color _profileSurface(BuildContext context) {
+    return context.isDark ? _darkProfileSurface : Colors.white;
+  }
+
+  Color _profileBorder(BuildContext context, {double lightAlpha = 0.72}) {
+    return context.isDark
+        ? const Color(0xFF3A2516)
+        : const Color(0xFFF4E2CE).withValues(alpha: lightAlpha);
+  }
+
+  List<BoxShadow> _profileShadow(BuildContext context, double lightAlpha) {
+    return [
+      BoxShadow(
+        color: Colors.black.withValues(alpha: context.isDark ? 0.18 : 0.05),
+        blurRadius: 20,
+        offset: const Offset(0, 10),
       ),
-      child: Row(children: [
-        SizedBox(
-            width: 28,
-            child: Text(rankLabel,
-                style: GoogleFonts.roboto(
-                    fontSize: 14,
-                    color:
-                        rankLabel == '🥇' ? AppColors.gold : context.hintColor),
-                textAlign: TextAlign.center)),
-        const SizedBox(width: 10),
-        Container(
-            width: 36,
-            height: 36,
+    ];
+  }
+
+  // ── Avatar colors by list rank ────────────────────────────────────────────
+  static const _lbColors = [
+    Color(0xFFDB2777), Color(0xFF7C3AED), Color(0xFF16A34A),
+    Color(0xFF0EA5E9), Color(0xFF0891B2), Color(0xFF059669),
+    Color(0xFFD97706), Color(0xFF9333EA),
+  ];
+
+  String _lbInitials(String name) {
+    final parts = name.trim().split(' ').where((p) => p.isNotEmpty).toList();
+    if (parts.isEmpty) return '?';
+    if (parts.length == 1) return parts[0][0].toUpperCase();
+    return '${parts[0][0]}${parts.last[0]}'.toUpperCase();
+  }
+
+  Widget _lbInitialsCircle(LeaderboardEntry entry, double size, int rank,
+      {Color? bg, Color? fg}) {
+    final color = entry.isYou ? _accent : _lbColors[(rank - 1) % _lbColors.length];
+    return Container(
+      width: size,
+      height: size,
+      decoration: BoxDecoration(
+        color: bg ?? color,
+        shape: BoxShape.circle,
+        boxShadow: [
+          BoxShadow(
+            color: (bg ?? color).withValues(alpha: 0.3),
+            blurRadius: 0,
+            offset: const Offset(0, 2),
+          ),
+        ],
+      ),
+      child: Center(
+        child: Text(
+          _lbInitials(entry.name),
+          style: TextStyle(
+            fontFamily: AppFonts.display,
+            fontSize: size * (entry.name.contains(' ') ? 0.34 : 0.4),
+            fontWeight: FontWeight.w800,
+            color: fg ?? Colors.white,
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _lbAvatarCircle(LeaderboardEntry entry, double size, int rank) {
+    if (entry.photoUrl.isNotEmpty) {
+      return ClipOval(
+        child: Image.network(
+          entry.photoUrl,
+          width: size,
+          height: size,
+          fit: BoxFit.cover,
+          errorBuilder: (_, __, ___) => _lbInitialsCircle(entry, size, rank),
+        ),
+      );
+    }
+    return _lbInitialsCircle(entry, size, rank);
+  }
+
+  Widget _lbMedal(int rank) {
+    const medalColors = {
+      1: Color(0xFFF5C400),
+      2: Color(0xFFC0C0C0),
+      3: Color(0xFFCD7F32),
+    };
+    final fill = medalColors[rank];
+    if (fill == null) {
+      return SizedBox(
+        width: 26,
+        height: 26,
+        child: Center(
+          child: Text(
+            '$rank',
+            style: const TextStyle(
+              fontFamily: AppFonts.body,
+              fontSize: 12,
+              fontWeight: FontWeight.w800,
+              color: Color(0xFF9C8377),
+            ),
+          ),
+        ),
+      );
+    }
+    return Container(
+      width: 26,
+      height: 26,
+      decoration: BoxDecoration(
+        shape: BoxShape.circle,
+        gradient: RadialGradient(
+          center: const Alignment(-0.4, -0.4),
+          colors: [Color.lerp(fill, Colors.white, 0.3)!, fill],
+        ),
+        boxShadow: [
+          BoxShadow(
+            color: fill.withValues(alpha: 0.45),
+            blurRadius: 4,
+            offset: const Offset(0, 2),
+          ),
+        ],
+      ),
+      child: Center(
+        child: Text(
+          '$rank',
+          style: const TextStyle(
+            fontFamily: AppFonts.body,
+            fontSize: 10,
+            fontWeight: FontWeight.w800,
+            color: Colors.white,
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _lbScopeTab(BuildContext context, String label, int index, bool isDark) {
+    final active = _mainLbScope == index;
+    return Expanded(
+      child: GestureDetector(
+        onTap: () => setState(() => _mainLbScope = index),
+        child: Container(
+          padding: const EdgeInsets.symmetric(vertical: 8),
+          decoration: BoxDecoration(
+            color: active
+                ? (isDark ? const Color(0xFF3A2516) : Colors.white)
+                : Colors.transparent,
+            borderRadius: BorderRadius.circular(10),
+            boxShadow: active
+                ? [BoxShadow(
+                    color: Colors.black.withValues(alpha: isDark ? 0.35 : 0.10),
+                    blurRadius: 6,
+                    offset: const Offset(0, 2),
+                  )]
+                : null,
+          ),
+          child: Text(
+            label,
+            textAlign: TextAlign.center,
+            style: TextStyle(
+              fontFamily: AppFonts.body,
+              fontSize: 12,
+              fontWeight: FontWeight.w800,
+              color: active
+                  ? (isDark ? Colors.white : const Color(0xFF1F1612))
+                  : context.hintColor,
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _lbYouHero(
+    BuildContext context,
+    LeaderboardEntry you,
+    int rank,
+    LeaderboardEntry? next,
+  ) {
+    final gap = next != null ? (next.score - you.score).clamp(0, 99999) : 0;
+    final progress = (next != null && next.score > 0)
+        ? (you.score / next.score).clamp(0.0, 1.0)
+        : 1.0;
+
+    return Container(
+      decoration: BoxDecoration(
+        gradient: const LinearGradient(
+          colors: [Color(0xFFFF6A1A), Color(0xFFD04E00)],
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+        ),
+        borderRadius: BorderRadius.circular(22),
+        boxShadow: const [
+          BoxShadow(color: Color(0xFF7A2A00), blurRadius: 0, offset: Offset(0, 5)),
+          BoxShadow(color: Color(0x40FF6A1A), blurRadius: 24, offset: Offset(0, 16)),
+        ],
+      ),
+      child: Stack(children: [
+        Positioned(
+          right: -30,
+          top: -40,
+          child: Container(
+            width: 160,
+            height: 160,
             decoration: BoxDecoration(
-                shape: BoxShape.circle,
-                border: Border.all(
-                    color: entry.isYou
-                        ? AppColors.accent.withValues(alpha: 0.4)
-                        : context.borderColor)),
-            padding: const EdgeInsets.all(1),
-            child: _buildAvatar(entry.photoUrl, 34)),
-        const SizedBox(width: 12),
-        Expanded(
-            child:
-                Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-          Text(entry.isYou ? '${entry.name} (you)' : entry.name,
-              style: GoogleFonts.roboto(
-                  fontSize: 13,
-                  fontWeight: FontWeight.w700,
-                  color: entry.isYou ? AppColors.accent : context.textColor)),
-          Row(children: [
-            const Icon(Icons.local_fire_department_rounded,
-                color: AppColors.orange, size: 11),
-            const SizedBox(width: 3),
-            Text('${entry.streak} day streak',
-                style: GoogleFonts.roboto(
-                    fontSize: 10, color: context.hintColor))
+              shape: BoxShape.circle,
+              color: Colors.white.withValues(alpha: 0.12),
+            ),
+          ),
+        ),
+        Padding(
+          padding: const EdgeInsets.all(16),
+          child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+            Row(crossAxisAlignment: CrossAxisAlignment.center, children: [
+              Container(
+                decoration: BoxDecoration(
+                  shape: BoxShape.circle,
+                  border: Border.all(
+                    color: Colors.white.withValues(alpha: 0.5),
+                    width: 2.5,
+                  ),
+                ),
+                child: _lbInitialsCircle(you, 52, rank, bg: Colors.white, fg: _accent),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                  const Text(
+                    'YOU · GLOBAL',
+                    style: TextStyle(
+                      fontFamily: AppFonts.body,
+                      fontSize: 10,
+                      fontWeight: FontWeight.w800,
+                      color: Colors.white70,
+                      letterSpacing: 0.8,
+                    ),
+                  ),
+                  const SizedBox(height: 2),
+                  Text(
+                    'Rank #$rank',
+                    style: const TextStyle(
+                      fontFamily: AppFonts.display,
+                      fontSize: 22,
+                      fontWeight: FontWeight.w800,
+                      color: Colors.white,
+                      letterSpacing: -0.5,
+                    ),
+                  ),
+                  const SizedBox(height: 3),
+                  Row(children: [
+                    Text(
+                      '${_fmt(you.score)} XP',
+                      style: const TextStyle(
+                        fontFamily: AppFonts.body,
+                        fontSize: 12,
+                        fontWeight: FontWeight.w700,
+                        color: Colors.white,
+                      ),
+                    ),
+                    const Text(' · ', style: TextStyle(color: Colors.white54)),
+                    const Icon(Icons.local_fire_department_rounded,
+                        color: Colors.white, size: 12),
+                    const SizedBox(width: 2),
+                    Text(
+                      '${you.streak} day',
+                      style: const TextStyle(
+                        fontFamily: AppFonts.body,
+                        fontSize: 12,
+                        fontWeight: FontWeight.w700,
+                        color: Colors.white,
+                      ),
+                    ),
+                  ]),
+                ]),
+              ),
+            ]),
+            if (next != null) ...[
+              const SizedBox(height: 14),
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Text(
+                    'Catching ${next.name}',
+                    style: const TextStyle(
+                      fontFamily: AppFonts.body,
+                      fontSize: 10,
+                      fontWeight: FontWeight.w800,
+                      color: Colors.white,
+                    ),
+                  ),
+                  Text(
+                    '$gap XP to go',
+                    style: const TextStyle(
+                      fontFamily: AppFonts.body,
+                      fontSize: 10,
+                      fontWeight: FontWeight.w600,
+                      color: Colors.white70,
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 6),
+              ClipRRect(
+                borderRadius: BorderRadius.circular(4),
+                child: LinearProgressIndicator(
+                  value: progress,
+                  backgroundColor: Colors.white.withValues(alpha: 0.22),
+                  valueColor: const AlwaysStoppedAnimation<Color>(Colors.white),
+                  minHeight: 6,
+                ),
+              ),
+            ],
           ]),
-        ])),
-        Column(crossAxisAlignment: CrossAxisAlignment.end, children: [
-          Text(_fmt(entry.score),
-              style: GoogleFonts.roboto(
-                  fontSize: 14,
-                  fontWeight: FontWeight.w800,
-                  color: entry.isYou ? AppColors.accent : context.textColor)),
-          Text('pts',
-              style: GoogleFonts.roboto(
-                  fontSize: 9, color: context.hintColor)),
-        ]),
+        ),
       ]),
     );
   }
 
-  Widget _miniStat(
-      BuildContext context, String value, String label, Color color) {
-    return Expanded(
-        child: Column(children: [
-      Text(value,
-          style: GoogleFonts.dmSans(
-              fontSize: 22, fontWeight: FontWeight.w900, color: color)),
-      const SizedBox(height: 2),
-      Text(label,
-          style:
-              GoogleFonts.roboto(fontSize: 10, color: context.hintColor),
-          textAlign: TextAlign.center),
-    ]));
-  }
+  Widget _leaderboard(
+    BuildContext context,
+    bool isGuest,
+    AsyncValue<List<LeaderboardEntry>> leaderboardAsync,
+    String title, {
+    String emptyText = 'No scores yet — play a quiz!',
+    List<LeaderboardEntry> fallbackEntries = const [],
+    bool showTabs = false,
+  }) {
+    final isDark = context.isDark;
 
-  Widget _streakMetric(
-      BuildContext context, String value, String label, Color color) {
-    return Expanded(
-        child: Container(
-            margin: const EdgeInsets.only(right: 8),
-            padding: const EdgeInsets.symmetric(vertical: 9),
-            decoration: BoxDecoration(
-                color: color.withValues(alpha: 0.08),
-                borderRadius: BorderRadius.circular(13),
-                border: Border.all(color: color.withValues(alpha: 0.18))),
-            child: Column(children: [
-              Text(value,
-                  style: GoogleFonts.roboto(
-                      fontSize: 18, fontWeight: FontWeight.w900, color: color)),
-              Text(label,
-                  style: GoogleFonts.roboto(
-                      fontSize: 9,
-                      fontWeight: FontWeight.w700,
-                      color: context.hintColor)),
-            ])));
-  }
+    return Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+      // Header
+      Row(children: [
+        Text(
+          title,
+          style: TextStyle(
+            fontFamily: AppFonts.display,
+            fontSize: 20,
+            fontWeight: FontWeight.w800,
+            letterSpacing: -0.3,
+            color: context.textColor,
+          ),
+        ),
+        const Spacer(),
+        GestureDetector(
+          onTap: () {},
+          child: const Row(mainAxisSize: MainAxisSize.min, children: [
+            Text(
+              'Top 100',
+              style: TextStyle(
+                fontFamily: AppFonts.body,
+                fontSize: 12,
+                fontWeight: FontWeight.w800,
+                color: _accent,
+              ),
+            ),
+            SizedBox(width: 2),
+            Icon(Icons.chevron_right_rounded, size: 14, color: _accent),
+          ]),
+        ),
+      ]),
 
-  int _earnedBadgeCount(UserData user) {
-    return [
-      user.totalQuizzes >= 1,
-      user.streak >= 7,
-      user.streak >= 30,
-      user.recentResults.any((r) => r.score == r.totalQuestions),
-      user.totalQuizzes >= 10,
-    ].where((earned) => earned).length;
-  }
+      const SizedBox(height: 10),
 
-  Widget _badge(BuildContext ctx, IconData icon, Color color, String label,
-      String description, int progress, int target) {
-    final clamped = progress.clamp(0, target);
-    final earned = clamped >= target;
-    final pct = target == 0 ? 1.0 : (clamped / target).clamp(0.0, 1.0);
-    return Container(
-        padding: const EdgeInsets.all(10),
+      // Unified card: tabs + hero + list all inside one container
+      Container(
         decoration: BoxDecoration(
-            color: earned
-                ? color.withValues(alpha: 0.08)
-                : ctx.inputBg.withValues(alpha: 0.55),
-            borderRadius: BorderRadius.circular(16),
-            border: Border.all(
-                color:
-                    earned ? color.withValues(alpha: 0.26) : ctx.borderColor)),
-        child: Row(children: [
-          Container(
-              width: 42,
-              height: 42,
-              decoration: BoxDecoration(
-                  color: earned ? color.withValues(alpha: 0.16) : ctx.cardColor,
+          color: _profileSurface(context),
+          borderRadius: BorderRadius.circular(20),
+          border: Border.all(color: _profileBorder(context)),
+          boxShadow: _profileShadow(context, 0.08),
+        ),
+        clipBehavior: Clip.hardEdge,
+        child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+
+          // Scope tabs at top of the card
+          if (showTabs) ...[
+            Padding(
+              padding: const EdgeInsets.fromLTRB(12, 12, 12, 0),
+              child: Container(
+                decoration: BoxDecoration(
+                  color: isDark ? const Color(0xFF27170E) : const Color(0xFFF4E2CE),
                   borderRadius: BorderRadius.circular(14),
-                  border: Border.all(
-                      color: earned
-                          ? color.withValues(alpha: 0.35)
-                          : ctx.borderColor)),
-              child: Icon(earned ? icon : Icons.lock_rounded,
-                  color: earned ? color : ctx.hintColor, size: 20)),
-          const SizedBox(width: 11),
-          Expanded(
-              child: Column(
+                ),
+                padding: const EdgeInsets.all(4),
+                child: Row(children: [
+                  _lbScopeTab(context, 'Friends', 0, isDark),
+                  _lbScopeTab(context, 'Global', 1, isDark),
+                  _lbScopeTab(context, 'Country', 2, isDark),
+                ]),
+              ),
+            ),
+          ],
+
+          if (isGuest)
+            Padding(
+              padding: const EdgeInsets.all(22),
+              child: Column(children: [
+                Container(
+                  width: 56,
+                  height: 56,
+                  decoration: BoxDecoration(
+                    color: _accent.withValues(alpha: 0.10),
+                    shape: BoxShape.circle,
+                  ),
+                  child: const Icon(Icons.leaderboard_rounded, size: 28, color: _accent),
+                ),
+                const SizedBox(height: 12),
+                Text(
+                  'Compete globally',
+                  textAlign: TextAlign.center,
+                  style: TextStyle(
+                    fontFamily: AppFonts.display,
+                    fontSize: 17,
+                    fontWeight: FontWeight.w800,
+                    color: context.textColor,
+                  ),
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  'Sign in to see where you rank among all Briefed players',
+                  textAlign: TextAlign.center,
+                  style: TextStyle(
+                    fontFamily: AppFonts.body,
+                    fontSize: 12,
+                    fontWeight: FontWeight.w600,
+                    color: context.subColor,
+                  ),
+                ),
+                const SizedBox(height: 16),
+                ElevatedButton(
+                  onPressed: () => Navigator.of(context).pushNamed('/settings'),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: _accent,
+                    foregroundColor: Colors.white,
+                    elevation: 0,
+                    shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12)),
+                    padding:
+                        const EdgeInsets.symmetric(horizontal: 28, vertical: 12),
+                  ),
+                  child: const Text(
+                    'Sign In',
+                    style: TextStyle(
+                      fontFamily: AppFonts.body,
+                      fontSize: 13,
+                      fontWeight: FontWeight.w900,
+                    ),
+                  ),
+                ),
+              ]),
+            )
+          else
+            leaderboardAsync.when(
+              loading: () => const Column(children: [
+                ShimmerBox(width: double.infinity, height: 108, borderRadius: 20),
+                SizedBox(height: 10),
+                ShimmerBox(width: double.infinity, height: 54, borderRadius: 14),
+                SizedBox(height: 6),
+                ShimmerBox(width: double.infinity, height: 54, borderRadius: 14),
+                SizedBox(height: 6),
+                ShimmerBox(width: double.infinity, height: 54, borderRadius: 14),
+              ]),
+              error: (_, __) =>
+                  _leaderboardListOrEmpty(context, fallbackEntries, emptyText),
+              data: (entries) {
+                final users = entries.where((e) => !e.isSeparator).take(10).toList();
+                return _leaderboardListOrEmpty(
+                  context,
+                  users.isEmpty ? fallbackEntries : users,
+                  emptyText,
+                );
+              },
+            ),
+        ]),  // closes unified Container's Column
+      ),     // closes unified Container
+    ]);      // closes outer _leaderboard Column
+  }
+
+  Widget _leaderboardListOrEmpty(
+    BuildContext context,
+    List<LeaderboardEntry> entries,
+    String emptyText,
+  ) {
+    final users = entries.where((e) => !e.isSeparator).take(10).toList();
+    if (users.isEmpty) {
+      // Empty state — no outer container needed (we're inside the unified card)
+      return Padding(
+        padding: const EdgeInsets.all(18),
+        child: Text(
+          emptyText,
+          textAlign: TextAlign.center,
+          style: TextStyle(
+            fontFamily: AppFonts.body,
+            fontSize: 12,
+            color: context.hintColor,
+          ),
+        ),
+      );
+    }
+
+    // Find you and the person just above you
+    final youIndex = users.indexWhere((e) => e.isYou);
+    final youEntry = youIndex >= 0 ? users[youIndex] : null;
+    final youRank = youIndex >= 0 ? youIndex + 1 : null;
+    final nextEntry =
+        (youRank != null && youRank > 1) ? users[youRank - 2] : null;
+
+    // Render inside the unified card — no extra Container wrapper needed
+    return Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+      // YOU hero card — inset with padding so it sits inside the card
+      if (youEntry != null) ...[
+        Padding(
+          padding: const EdgeInsets.fromLTRB(12, 12, 12, 0),
+          child: _lbYouHero(context, youEntry, youRank!, nextEntry),
+        ),
+        const SizedBox(height: 12),
+      ],
+
+      // Ranked list rows — rendered directly (unified card clips them)
+      ...users.asMap().entries.map((e) => _leaderboardRow(
+            context,
+            e.value,
+            e.key + 1,
+            isLast: e.key == users.length - 1,
+          )),
+    ]);
+  }
+
+  Widget _leaderboardRow(
+    BuildContext context,
+    LeaderboardEntry entry,
+    int rank, {
+    required bool isLast,
+  }) {
+    final isDark = context.isDark;
+    // Alternate subtle row tint: odd ranks (1,3,5…) get a faint accent wash
+    final altTint = rank.isOdd && !entry.isYou
+        ? _accent.withValues(alpha: isDark ? 0.04 : 0.03)
+        : null;
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+      decoration: BoxDecoration(
+        color: entry.isYou
+            ? _accent.withValues(alpha: isDark ? 0.15 : 0.06)
+            : altTint,
+        border: isLast
+            ? null
+            : Border(
+                bottom: BorderSide(
+                  color: isDark
+                      ? const Color(0xFF3A2516)
+                      : const Color(0xFFF4E2CE),
+                  width: 1,
+                ),
+              ),
+      ),
+      child: Row(children: [
+        // Medal or rank number
+        SizedBox(width: 30, child: _lbMedal(rank)),
+        const SizedBox(width: 8),
+        // Colored avatar circle
+        _lbAvatarCircle(entry, 32, rank),
+        const SizedBox(width: 10),
+        // Name + streak
+        Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Row(children: [
+                Flexible(
+                  child: Text(
+                    entry.name,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: TextStyle(
+                      fontFamily: AppFonts.body,
+                      fontSize: 13,
+                      fontWeight: FontWeight.w800,
+                      color: entry.isYou ? _accent : context.textColor,
+                    ),
+                  ),
+                ),
+                if (entry.isYou) ...[
+                  const SizedBox(width: 6),
+                  Container(
+                    padding:
+                        const EdgeInsets.symmetric(horizontal: 6, vertical: 1),
+                    decoration: BoxDecoration(
+                      color: _accent,
+                      borderRadius: BorderRadius.circular(999),
+                    ),
+                    child: const Text(
+                      'YOU',
+                      style: TextStyle(
+                        fontFamily: AppFonts.body,
+                        fontSize: 8,
+                        fontWeight: FontWeight.w800,
+                        color: Colors.white,
+                        letterSpacing: 0.5,
+                      ),
+                    ),
+                  ),
+                ],
+              ]),
+              const SizedBox(height: 2),
+              Row(children: [
+                const Icon(Icons.local_fire_department_rounded,
+                    color: AppColors.orange, size: 11),
+                const SizedBox(width: 3),
+                Text(
+                  '${entry.streak} day streak',
+                  style: TextStyle(
+                    fontFamily: AppFonts.body,
+                    fontSize: 10,
+                    fontWeight: FontWeight.w600,
+                    color: context.hintColor,
+                  ),
+                ),
+              ]),
+            ],
+          ),
+        ),
+        // XP score
+        Column(
+          crossAxisAlignment: CrossAxisAlignment.end,
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Text(
+              _fmt(entry.score),
+              style: TextStyle(
+                fontFamily: AppFonts.display,
+                fontSize: 15,
+                fontWeight: FontWeight.w800,
+                color: entry.isYou ? _accent : context.textColor,
+              ),
+            ),
+            Text(
+              'XP',
+              style: TextStyle(
+                fontFamily: AppFonts.body,
+                fontSize: 9,
+                fontWeight: FontWeight.w700,
+                color: context.hintColor,
+              ),
+            ),
+          ],
+        ),
+      ]),
+    );
+  }
+
+  Widget _identityHero(
+    BuildContext context, {
+    required UserData user,
+    required String? photoUrl,
+    required int level,
+    required String levelTitle,
+    required int totalXp,
+    required int xpForNext,
+    required double progress,
+    required MapEntry<String, _CategoryStat>? strongest,
+  }) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final name = user.name.trim().isEmpty ? 'Briefed User' : user.name.trim();
+    final initial = name[0].toUpperCase();
+
+    return ScaleTransition(
+      scale: Tween<double>(begin: 0.97, end: 1).animate(
+        CurvedAnimation(parent: _heroCtrl, curve: Curves.easeOut),
+      ),
+      child: FadeTransition(
+        opacity: _heroCtrl,
+        child: Container(
+          width: double.infinity,
+          padding: const EdgeInsets.all(18),
+          decoration: BoxDecoration(
+            gradient: const LinearGradient(
+              colors: [_accent, Color(0xFFE85D04)],
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
+            ),
+            borderRadius: BorderRadius.circular(24),
+            boxShadow: [
+              const BoxShadow(
+                color: Color(0xFF7A2A00),
+                blurRadius: 0,
+                offset: Offset(0, 6),
+              ),
+              BoxShadow(
+                color: _accent.withValues(alpha: isDark ? 0.22 : 0.42),
+                blurRadius: 40,
+                offset: const Offset(0, 20),
+              ),
+            ],
+          ),
+          child: Stack(
+            children: [
+              Positioned(
+                right: -42,
+                top: -42,
+                child: Container(
+                  width: 160,
+                  height: 160,
+                  decoration: BoxDecoration(
+                    shape: BoxShape.circle,
+                    color: Colors.white.withValues(alpha: 0.12),
+                  ),
+                ),
+              ),
+              Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                Stack(children: [
+                  photoUrl != null && photoUrl.isNotEmpty
+                      ? _buildAvatar(photoUrl, 64)
+                      : CircleAvatar(
+                          radius: 32,
+                          backgroundColor: Colors.white,
+                          child: Text(initial,
+                              style: const TextStyle(
+                                  fontFamily: AppFonts.body,
+                                  color: Color(0xFF7A2A00),
+                                  fontSize: 24,
+                                  fontWeight: FontWeight.w900)),
+                        ),
+                  Positioned(
+                    right: 0,
+                    bottom: 0,
+                    child: Container(
+                      width: 22,
+                      height: 22,
+                      alignment: Alignment.center,
+                      decoration: BoxDecoration(
+                        color: const Color(0xFFFFC15A),
+                        shape: BoxShape.circle,
+                        border: Border.all(color: _accent, width: 2),
+                      ),
+                      child: Text('$level',
+                          style: const TextStyle(
+                              fontFamily: AppFonts.body,
+                              color: Color(0xFF5C2E04),
+                              fontSize: 10,
+                              fontWeight: FontWeight.w900)),
+                    ),
+                  ),
+                ]),
+                const SizedBox(width: 16),
+                Expanded(
+                  child: Padding(
+                    padding: const EdgeInsets.only(right: 34),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(name,
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: const TextStyle(
+                                fontFamily: AppFonts.display,
+                                height: 1.02,
+                                fontSize: 20,
+                                fontWeight: FontWeight.w900,
+                                color: Colors.white)),
+                        const SizedBox(height: 4),
+                        Row(children: [
+                          Container(
+                              padding: const EdgeInsets.symmetric(
+                                  horizontal: 8, vertical: 3),
+                              decoration: BoxDecoration(
+                                color: Colors.white.withValues(alpha: 0.22),
+                                borderRadius: BorderRadius.circular(999),
+                              ),
+                              child: Text('Lv. $level · $levelTitle',
+                                  overflow: TextOverflow.ellipsis,
+                                  style: const TextStyle(
+                                      fontFamily: AppFonts.body,
+                                      fontSize: 11,
+                                      fontWeight: FontWeight.w800,
+                                      color: Colors.white))),
+                          const SizedBox(width: 7),
+                          const Icon(Icons.local_fire_department_rounded,
+                              color: Colors.white, size: 14),
+                          Text('${user.streak} day',
+                              overflow: TextOverflow.ellipsis,
+                              style: TextStyle(
+                                  fontFamily: AppFonts.body,
+                                  fontSize: 12,
+                                  fontWeight: FontWeight.w800,
+                                  color: Colors.white.withValues(alpha: 0.9))),
+                        ]),
+                        const SizedBox(height: 14),
+                        ClipRRect(
+                          borderRadius: BorderRadius.circular(999),
+                          child: Stack(children: [
+                            Container(
+                                height: 10,
+                                color: Colors.white.withValues(alpha: 0.24)),
+                            FractionallySizedBox(
+                              widthFactor: progress.clamp(0.0, 1.0),
+                              child: Container(
+                                height: 10,
+                                decoration: const BoxDecoration(
+                                  color: Colors.white,
+                                ),
+                              ),
+                            ),
+                          ]),
+                        ),
+                        const SizedBox(height: 6),
+                        Row(children: [
+                          Text('${xpForNext - totalXp} XP to next level',
+                              style: TextStyle(
+                                  fontFamily: AppFonts.body,
+                                  fontSize: 11,
+                                  fontWeight: FontWeight.w700,
+                                  color: Colors.white.withValues(alpha: 0.88))),
+                          const Spacer(),
+                          Text('$totalXp / $xpForNext XP',
+                              style: const TextStyle(
+                                  fontFamily: AppFonts.body,
+                                  fontSize: 11,
+                                  fontWeight: FontWeight.w800,
+                                  color: Colors.white)),
+                        ]),
+                        if (strongest != null) ...[
+                          const SizedBox(height: 9),
+                          Container(
+                            padding: const EdgeInsets.symmetric(
+                                horizontal: 9, vertical: 5),
+                            decoration: BoxDecoration(
+                              color: Colors.white.withValues(alpha: 0.18),
+                              borderRadius: BorderRadius.circular(999),
+                            ),
+                            child: Text(
+                              '${_categoryEmoji(strongest.key)} Strongest: ${_categoryLabel(strongest.key)}',
+                              style: const TextStyle(
+                                  fontFamily: AppFonts.body,
+                                  fontSize: 10,
+                                  color: Colors.white,
+                                  fontWeight: FontWeight.w800),
+                            ),
+                          ),
+                        ],
+                      ],
+                    ),
+                  ),
+                ),
+              ]),
+              Positioned(
+                top: 0,
+                right: 0,
+                child: IconButton(
+                  tooltip: 'Settings',
+                  onPressed: () => Navigator.of(context).pushNamed('/settings'),
+                  icon: Icon(Icons.settings_rounded,
+                      color: Colors.white.withValues(alpha: 0.9), size: 20),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _thisWeekStrip(
+    BuildContext context,
+    List<QuizResult> quizzes,
+    List<GameResult> games,
+  ) {
+    final now = DateTime.now();
+    final monday = DateTime(now.year, now.month, now.day)
+        .subtract(Duration(days: now.weekday - 1));
+
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: _profileSurface(context),
+        borderRadius: BorderRadius.circular(20),
+        boxShadow: _profileShadow(context, 0.10),
+      ),
+      child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+        Row(children: [
+          Text('This week',
+              style: TextStyle(
+                  fontFamily: AppFonts.body,
+                  fontSize: 13,
+                  fontWeight: FontWeight.w900,
+                  color: context.textColor)),
+          const Spacer(),
+          Text('${quizzes.length} quiz${quizzes.length == 1 ? '' : 'zes'}',
+              style: const TextStyle(
+                  fontFamily: AppFonts.body,
+                  fontSize: 11,
+                  fontWeight: FontWeight.w800,
+                  color: _accent)),
+        ]),
+        const SizedBox(height: 12),
+        Row(
+          children: List.generate(7, (i) {
+            final day = monday.add(Duration(days: i));
+            final ds = day.toIso8601String().substring(0, 10);
+            final quiz = quizzes.where((r) => r.date == ds).toList();
+            final dayGames =
+                games.where((g) => _sameDay(g.playedAt, day)).toList();
+            final hasQuiz = quiz.isNotEmpty;
+            final hasGame = dayGames.isNotEmpty;
+            final perfect = quiz.any((r) => r.score == r.totalQuestions);
+            final today = _sameDay(day, now);
+            final quizLabel = hasQuiz
+                ? '${quiz.first.score}/${quiz.first.totalQuestions}'
+                : null;
+
+            return Expanded(
+              child: Column(children: [
+                Text('MTWTFSS'[i],
+                    style: TextStyle(
+                        fontFamily: AppFonts.body,
+                        fontSize: 10,
+                        color: context.hintColor)),
+                const SizedBox(height: 7),
+                Container(
+                  width: today ? 38 : 32,
+                  height: today ? 38 : 32,
+                  alignment: Alignment.center,
+                  decoration: BoxDecoration(
+                    shape: BoxShape.circle,
+                    gradient: hasQuiz && hasGame && !perfect
+                        ? const LinearGradient(colors: [_accent, _gamePurple])
+                        : null,
+                    color: perfect
+                        ? const Color(0xFFFFC15A)
+                        : hasQuiz && !hasGame
+                            ? _accent
+                            : hasGame && !hasQuiz
+                                ? _gamePurple
+                                : hasQuiz && hasGame
+                                    ? null
+                                    : _profileBorder(context),
+                    border: today
+                        ? Border.all(color: context.textColor, width: 2)
+                        : null,
+                    boxShadow: perfect
+                        ? [
+                            BoxShadow(
+                              color: const Color(0xFFFFD700)
+                                  .withValues(alpha: 0.38),
+                              blurRadius: 12,
+                            )
+                          ]
+                        : null,
+                  ),
+                  child: Text(
+                    hasQuiz
+                        ? quizLabel!
+                        : hasGame
+                            ? '✓'
+                            : '',
+                    style: TextStyle(
+                        fontFamily: AppFonts.body,
+                        color: Colors.white,
+                        fontSize: hasQuiz ? 8 : 10,
+                        fontWeight: FontWeight.w900),
+                  ),
+                ),
+              ]),
+            );
+          }),
+        ),
+      ]),
+    );
+  }
+
+  Widget _tabs(BuildContext context, {required bool isPro}) {
+    const labels = ['Quiz Stats', 'Game Stats', 'Categories'];
+    return Row(
+      children: List.generate(labels.length, (i) {
+        final selected = _tabIndex == i;
+        final isCategoryTab = i == 2;
+        final showLock = isCategoryTab && !isPro;
+        return Expanded(
+          child: GestureDetector(
+            onTap: () => setState(() => _tabIndex = i),
+            child: Container(
+              margin: EdgeInsets.only(right: i == labels.length - 1 ? 0 : 8),
+              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 10),
+              decoration: BoxDecoration(
+                color: selected ? _accent : Colors.transparent,
+                borderRadius: BorderRadius.circular(999),
+                boxShadow: selected
+                    ? [
+                        const BoxShadow(
+                          color: Color(0xFFE85D04),
+                          blurRadius: 0,
+                          offset: Offset(0, 3),
+                        ),
+                      ]
+                    : null,
+              ),
+              child: Row(mainAxisAlignment: MainAxisAlignment.center, children: [
+                if (showLock) ...[
+                  Icon(Icons.lock_rounded,
+                      size: 11,
+                      color: selected ? Colors.white : AppColors.gold),
+                  const SizedBox(width: 4),
+                ],
+                Flexible(
+                  child: Text(labels[i],
+                      textAlign: TextAlign.center,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: TextStyle(
+                          fontFamily: AppFonts.body,
+                          fontSize: 13,
+                          fontWeight:
+                              selected ? FontWeight.w900 : FontWeight.w700,
+                          color: selected
+                              ? Colors.white
+                              : showLock
+                                  ? AppColors.gold
+                                  : context.hintColor)),
+                ),
+              ]),
+            ),
+          ),
+        );
+      }),
+    );
+  }
+
+  Widget _quizStatsTab(BuildContext context, UserData user, bool isGuest) {
+    final results = user.recentResults;
+    final best = results.isEmpty
+        ? 0
+        : results.map((r) => r.score).reduce((a, b) => a > b ? a : b);
+    final avg = results.isEmpty
+        ? 0
+        : ((results.map((r) => r.percentage).reduce((a, b) => a + b) /
+                    results.length) *
+                100)
+            .round();
+    final avgColor = avg >= 60
+        ? AppColors.green
+        : avg >= 40
+            ? _accent
+            : AppColors.red;
+
+    return Column(
+      key: const ValueKey('quiz'),
+      children: [
+        GridView.count(
+          crossAxisCount: 2,
+          childAspectRatio: 1.75,
+          mainAxisSpacing: 10,
+          crossAxisSpacing: 10,
+          shrinkWrap: true,
+          physics: const NeverScrollableScrollPhysics(),
+          children: [
+            _statTile(
+                context, '${user.totalQuizzes}', 'quizzes completed', _accent),
+            _statTile(context, '$best/5 ✓', 'best result', AppColors.green),
+            _statTile(context, '${user.streak} 🔥', 'day streak', _accent),
+            _statTile(context, '$avg%', 'average', avgColor),
+          ],
+        ),
+        const SizedBox(height: 18),
+        _leaderboard(
+          context,
+          isGuest,
+          ref.watch(mainQuizLeaderboardProvider).when(
+                data: (entries) => AsyncData(entries),
+                loading: () {
+                  final legacy = ref.watch(leaderboardProvider);
+                  return legacy.hasValue
+                      ? AsyncData(legacy.value ?? const [])
+                      : const AsyncLoading();
+                },
+                error: (_, __) => ref.watch(leaderboardProvider),
+              ),
+          'Leaderboard',
+          emptyText: 'No main quiz scores yet',
+          showTabs: true,
+        ),
+      ],
+    );
+  }
+
+  Widget _statTile(
+      BuildContext context, String value, String label, Color color) {
+    return Container(
+      height: 90,
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(
+        color: _profileSurface(context),
+        borderRadius: BorderRadius.circular(16),
+        boxShadow: _profileShadow(context, 0.09),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          FittedBox(
+            fit: BoxFit.scaleDown,
+            alignment: Alignment.centerLeft,
+            child: Text(value,
+                style: TextStyle(
+                    fontFamily: AppFonts.display,
+                    height: 1.02,
+                    fontSize: 26,
+                    fontWeight: FontWeight.w900,
+                    color: color)),
+          ),
+          const SizedBox(height: 3),
+          Text(label,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: TextStyle(
+                  fontFamily: AppFonts.body,
+                  fontSize: 11,
+                  color: context.hintColor)),
+        ],
+      ),
+    );
+  }
+
+  Widget _gameStatsTab(BuildContext context, UserData user, bool isGuest) {
+    return FutureBuilder<Map<String, dynamic>>(
+      key: const ValueKey('games'),
+      future: _gameSummaryFuture,
+      builder: (context, snap) {
+        final data = snap.data ?? const <String, dynamic>{};
+        return _gameLeaderboardSection(context, user, isGuest, data);
+      },
+    );
+  }
+
+  Widget _gameLeaderboardSection(BuildContext context, UserData user,
+      bool isGuest, Map<String, dynamic> data) {
+    const games = [
+      ('real_or_fake', 'Real or Fake?', _gamePurple),
+      ('oldest_to_latest', 'Oldest to Latest', _gameBlue),
+      ('headline_match', 'Headline Match', AppColors.teal),
+      ('source_sleuth', 'Source Sleuth', _accent),
+    ];
+    final selected = games[_gameLeaderboardIndex];
+    return Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+      Wrap(
+        spacing: 8,
+        runSpacing: 8,
+        children: games.asMap().entries.map((entry) {
+          final selectedChip = entry.key == _gameLeaderboardIndex;
+          final game = entry.value;
+          return GestureDetector(
+            onTap: () => setState(() => _gameLeaderboardIndex = entry.key),
+            child: Container(
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 9),
+              decoration: BoxDecoration(
+                color: selectedChip ? game.$3 : Colors.transparent,
+                borderRadius: BorderRadius.circular(10),
+                border: Border.all(
+                  color: selectedChip ? game.$3 : context.borderColor,
+                ),
+              ),
+              child: Text(
+                game.$2,
+                style: TextStyle(
+                  fontFamily: AppFonts.body,
+                  fontSize: 12,
+                  fontWeight: FontWeight.w900,
+                  color: selectedChip ? Colors.white : context.hintColor,
+                ),
+              ),
+            ),
+          );
+        }).toList(),
+      ),
+      const SizedBox(height: 12),
+      _leaderboard(
+        context,
+        isGuest,
+        ref.watch(gameLeaderboardProvider(selected.$1)),
+        '${selected.$2} Leaderboard',
+        emptyText: 'No game scores yet',
+        fallbackEntries: _selfGameLeaderboardFallback(user, data, selected.$1),
+      ),
+    ]);
+  }
+
+  Widget _categoriesTab(BuildContext context, UserData user,
+      List<MapEntry<String, _CategoryStat>> stats, bool isGuest) {
+    final isPro = user.isPro && !isGuest;
+
+    if (!isPro) {
+      return Container(
+        width: double.infinity,
+        padding: const EdgeInsets.all(24),
+        decoration: BoxDecoration(
+          color: _profileSurface(context),
+          borderRadius: BorderRadius.circular(20),
+          border: Border.all(color: AppColors.gold.withValues(alpha: 0.3)),
+          boxShadow: _profileShadow(context, 0.08),
+        ),
+        child: Column(children: [
+          Container(
+            width: 52,
+            height: 52,
+            decoration: BoxDecoration(
+              gradient: const LinearGradient(
+                  colors: [AppColors.gold, Color(0xFFFF9100)]),
+              borderRadius: BorderRadius.circular(16),
+            ),
+            child:
+                const Icon(Icons.bar_chart_rounded, color: Colors.white, size: 28),
+          ),
+          const SizedBox(height: 14),
+          Text('Category Breakdown',
+              style: TextStyle(
+                  fontFamily: AppFonts.display,
+                  fontSize: 17,
+                  fontWeight: FontWeight.w800,
+                  color: context.textColor)),
+          const SizedBox(height: 6),
+          Text(
+            'See your accuracy in each topic — \nhow well are you really briefed?',
+            textAlign: TextAlign.center,
+            style: TextStyle(
+                fontFamily: AppFonts.body,
+                fontSize: 13,
+                color: context.hintColor,
+                height: 1.5),
+          ),
+          const SizedBox(height: 6),
+          Container(
+            padding:
+                const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+            decoration: BoxDecoration(
+              color: AppColors.gold.withValues(alpha: 0.12),
+              borderRadius: BorderRadius.circular(20),
+            ),
+            child: const Text('Pro feature',
+                style: TextStyle(
+                    fontFamily: AppFonts.body,
+                    fontSize: 11,
+                    fontWeight: FontWeight.w800,
+                    color: AppColors.gold,
+                    letterSpacing: 0.5)),
+          ),
+          const SizedBox(height: 20),
+          GestureDetector(
+            onTap: () => showBriefedProSheet(context, ref),
+            child: Container(
+              width: double.infinity,
+              padding: const EdgeInsets.symmetric(vertical: 14),
+              decoration: BoxDecoration(
+                gradient: const LinearGradient(
+                    colors: [AppColors.gold, Color(0xFFFF9100)]),
+                borderRadius: BorderRadius.circular(14),
+                boxShadow: [
+                  BoxShadow(
+                      color: AppColors.gold.withValues(alpha: 0.3),
+                      blurRadius: 12,
+                      offset: const Offset(0, 4))
+                ],
+              ),
+              child: const Center(
+                child: Text('Upgrade to Pro',
+                    style: TextStyle(
+                        fontFamily: AppFonts.body,
+                        fontSize: 14,
+                        fontWeight: FontWeight.w900,
+                        color: Colors.white)),
+              ),
+            ),
+          ),
+        ]),
+      );
+    }
+
+    final names = ['world', 'politics', 'sports', 'tech', 'business'];
+    final byName = {for (final e in stats) e.key.toLowerCase(): e.value};
+
+    return Column(
+      key: const ValueKey('categories'),
+      children: [
+        ...names.map((name) {
+          final stat = byName[name] ??
+              byName[_categoryAlt(name)] ??
+              const _CategoryStat();
+          final color = AppColors.categoryColor(name);
+          final pct = stat.total == 0 ? 0 : (stat.accuracy * 100).round();
+          return Container(
+            margin: const EdgeInsets.only(bottom: 10),
+            padding: const EdgeInsets.all(12),
+            decoration: BoxDecoration(
+              color: _profileSurface(context),
+              borderRadius: BorderRadius.circular(18),
+              boxShadow: _profileShadow(context, 0.06),
+            ),
+            child: Row(children: [
+              Container(
+                width: 40,
+                height: 40,
+                alignment: Alignment.center,
+                decoration: BoxDecoration(
+                  color: color.withValues(alpha: 0.16),
+                  borderRadius: BorderRadius.circular(14),
+                ),
+                child: Text(_categoryEmoji(name),
+                    style: const TextStyle(fontSize: 18)),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                Row(children: [
-                  Expanded(
-                      child: Text(label,
-                          style: GoogleFonts.roboto(
-                              fontSize: 13,
-                              fontWeight: FontWeight.w900,
-                              color: earned ? ctx.textColor : ctx.subColor))),
-                  Text(earned ? 'Unlocked' : '$clamped/$target',
-                      style: GoogleFonts.roboto(
-                          fontSize: 10,
-                          fontWeight: FontWeight.w800,
-                          color: earned ? color : ctx.hintColor)),
-                ]),
-                const SizedBox(height: 2),
-                Text(description,
-                    style: GoogleFonts.roboto(
-                        fontSize: 10, color: ctx.hintColor, height: 1.25)),
-                const SizedBox(height: 7),
-                ClipRRect(
-                    borderRadius: BorderRadius.circular(999),
-                    child: LinearProgressIndicator(
-                        value: pct,
-                        minHeight: 5,
-                        backgroundColor:
-                            ctx.borderColor.withValues(alpha: 0.45),
-                        valueColor: AlwaysStoppedAnimation(
-                            earned ? color : color.withValues(alpha: 0.55)))),
-              ])),
-        ]));
+                    Text(_categoryLabel(name),
+                        style: TextStyle(
+                            fontFamily: AppFonts.body,
+                            fontSize: 14,
+                            fontWeight: FontWeight.w900,
+                            color: context.textColor)),
+                    Text(
+                        stat.total == 0
+                            ? 'Not played yet'
+                            : '${stat.correct}/${stat.total} questions',
+                        style: TextStyle(
+                            fontFamily: AppFonts.body,
+                            fontSize: 11,
+                            color: context.hintColor)),
+                  ],
+                ),
+              ),
+              Text(stat.total == 0 ? '—' : '$pct%',
+                  style: TextStyle(
+                      fontFamily: AppFonts.display,
+                      height: 1.02,
+                      fontSize: 20,
+                      fontWeight: FontWeight.w900,
+                      color: color)),
+              const SizedBox(width: 8),
+              SizedBox(
+                width: 40,
+                height: 40,
+                child: CustomPaint(
+                  painter: _MiniArcPainter(
+                    progress: stat.total == 0 ? 0 : stat.accuracy,
+                    color: color,
+                    trackColor: context.borderColor,
+                  ),
+                ),
+              ),
+            ]),
+          );
+        }),
+        const SizedBox(height: 8),
+        _categoryLeaderboardSection(context, user, isGuest, names),
+      ],
+    );
   }
 
-  List<_StreakDay> _buildStreakDays(UserData user) {
-    final today = DateTime.now();
-    final byDate = <String, QuizResult>{};
-    for (final r in user.recentResults) {
-      byDate[r.date] = r;
-    }
-    return List.generate(35, (i) {
-      final d = today.subtract(Duration(days: 34 - i));
-      final ds = d.toIso8601String().substring(0, 10);
-      final isToday =
-          d.year == today.year && d.month == today.month && d.day == today.day;
-      return _StreakDay(date: d, result: byDate[ds], isToday: isToday);
-    });
+  Widget _categoryLeaderboardSection(
+      BuildContext context, UserData user, bool isGuest, List<String> names) {
+    final selectedName = names[_categoryLeaderboardIndex];
+    return Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+      SizedBox(
+        height: 40,
+        child: ListView.builder(
+          scrollDirection: Axis.horizontal,
+          itemCount: names.length,
+          itemBuilder: (context, i) {
+            final selected = i == _categoryLeaderboardIndex;
+            final name = names[i];
+            final chipColor = AppColors.categoryColor(name);
+            return GestureDetector(
+              onTap: () => setState(() => _categoryLeaderboardIndex = i),
+              child: Container(
+                margin: const EdgeInsets.only(right: 8),
+                padding: const EdgeInsets.symmetric(horizontal: 12),
+                alignment: Alignment.center,
+                decoration: BoxDecoration(
+                  color: selected ? chipColor : Colors.transparent,
+                  borderRadius: BorderRadius.circular(999),
+                  border: Border.all(
+                      color: selected ? chipColor : context.borderColor),
+                ),
+                child: Text(_categoryLabel(name),
+                    style: TextStyle(
+                        fontFamily: AppFonts.body,
+                        fontSize: 12,
+                        fontWeight: FontWeight.w900,
+                        color: selected ? Colors.white : context.hintColor)),
+              ),
+            );
+          },
+        ),
+      ),
+      const SizedBox(height: 12),
+      _leaderboard(
+        context,
+        isGuest,
+        ref.watch(categoryLeaderboardProvider(_categoryAlt(selectedName))),
+        '${_categoryLabel(selectedName)} Quiz Leaderboard',
+        emptyText:
+            'No ${_categoryLabel(selectedName).toLowerCase()} quiz scores yet',
+        fallbackEntries: _selfCategoryLeaderboardFallback(user, selectedName),
+      ),
+    ]);
   }
+
+  Widget _recentActivity(
+    BuildContext context,
+    List<QuizResult> quizzes,
+    List<GameResult> games, {
+    required bool loading,
+  }) {
+    final items = <_ActivityItem>[
+      ...quizzes.take(5).map(_ActivityItem.quiz),
+      ...games.take(5).map(_ActivityItem.game),
+    ]..sort((a, b) => b.date.compareTo(a.date));
+    final shown = items.take(8).toList();
+
+    return Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+      Row(children: [
+        Text('Recent Activity',
+            style: TextStyle(
+                fontFamily: AppFonts.body,
+                fontSize: 16,
+                fontWeight: FontWeight.w900,
+                color: context.textColor)),
+        const Spacer(),
+        Text('${items.length} total',
+            style: TextStyle(
+                fontFamily: AppFonts.body,
+                fontSize: 13,
+                color: context.hintColor)),
+      ]),
+      const SizedBox(height: 10),
+      Container(
+        decoration: BoxDecoration(
+          color: _profileSurface(context),
+          borderRadius: BorderRadius.circular(16),
+          boxShadow: _profileShadow(context, 0.08),
+        ),
+        child: loading
+            ? const Padding(
+                padding: EdgeInsets.all(12),
+                child: Column(children: [
+                  ShimmerBox(
+                      width: double.infinity, height: 44, borderRadius: 12),
+                  SizedBox(height: 8),
+                  ShimmerBox(
+                      width: double.infinity, height: 44, borderRadius: 12),
+                  SizedBox(height: 8),
+                  ShimmerBox(
+                      width: double.infinity, height: 44, borderRadius: 12),
+                ]),
+              )
+            : shown.isEmpty
+                ? Padding(
+                    padding: const EdgeInsets.all(22),
+                    child: Center(
+                      child: Text(
+                          'Complete quizzes and games to\nsee your activity here',
+                          textAlign: TextAlign.center,
+                          style: TextStyle(
+                              fontFamily: AppFonts.body,
+                              fontSize: 12,
+                              color: context.hintColor)),
+                    ),
+                  )
+                : Column(
+                    children: shown.asMap().entries.map((entry) {
+                      final last = entry.key == shown.length - 1;
+                      return _activityRow(context, entry.value, last: last);
+                    }).toList(),
+                  ),
+      ),
+    ]);
+  }
+
+  Widget _activityRow(BuildContext context, _ActivityItem item,
+      {required bool last}) {
+    return Container(
+      height: 56,
+      padding: const EdgeInsets.symmetric(horizontal: 12),
+      decoration: BoxDecoration(
+        border: last
+            ? null
+            : Border(bottom: BorderSide(color: context.borderColor)),
+      ),
+      child: Row(children: [
+        Container(
+          width: 36,
+          height: 36,
+          alignment: Alignment.center,
+          decoration: BoxDecoration(color: item.color, shape: BoxShape.circle),
+          child: Text(item.icon, style: const TextStyle(fontSize: 16)),
+        ),
+        const SizedBox(width: 11),
+        Expanded(
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(children: [
+                Flexible(
+                  child: Text(item.name,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: TextStyle(
+                          fontFamily: AppFonts.body,
+                          fontSize: 13,
+                          fontWeight: FontWeight.w900,
+                          color: context.textColor)),
+                ),
+                if (item.category != null) ...[
+                  const SizedBox(width: 6),
+                  Container(
+                    padding:
+                        const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                    decoration: BoxDecoration(
+                      color: AppColors.categoryColor(item.category!)
+                          .withValues(alpha: 0.16),
+                      borderRadius: BorderRadius.circular(999),
+                    ),
+                    child: Text(_categoryLabel(item.category!),
+                        style: TextStyle(
+                            fontFamily: AppFonts.body,
+                            fontSize: 9,
+                            color: AppColors.categoryColor(item.category!),
+                            fontWeight: FontWeight.w800)),
+                  ),
+                ],
+              ]),
+              Text('${item.score}/${item.total} · ${_timeAgo(item.date)}',
+                  style: TextStyle(
+                      fontFamily: AppFonts.body,
+                      fontSize: 11,
+                      color: context.hintColor)),
+            ],
+          ),
+        ),
+        const SizedBox(width: 8),
+        Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          crossAxisAlignment: CrossAxisAlignment.end,
+          children: [
+            Text('+${item.xp} XP',
+                style: const TextStyle(
+                    fontFamily: AppFonts.body,
+                    fontSize: 12,
+                    fontWeight: FontWeight.w900,
+                    color: _accent)),
+            Text('${item.percentage}%',
+                style: TextStyle(
+                    fontFamily: AppFonts.body,
+                    fontSize: 11,
+                    color: context.hintColor)),
+          ],
+        ),
+      ]),
+    );
+  }
+
+  Widget _badges(
+      BuildContext context, UserData user, Map<String, dynamic> summary) {
+    final gamesPlayed = summary['gamesPlayed'];
+    final bestScores = summary['bestScores'];
+    final badgeData = [
+      _BadgeData('First Quiz', 'Complete your first daily quiz', '⭐',
+          user.totalQuizzes >= 1),
+      _BadgeData('7 Day Streak', 'Keep your quiz streak alive for a full week',
+          '🔥', user.streak >= 7),
+      _BadgeData('30 Day Streak', 'Build a month-long streak', '🏆',
+          user.streak >= 30),
+      _BadgeData('Perfect Score', 'Score every question correctly in one quiz',
+          '⚡', user.recentResults.any((r) => r.score == r.totalQuestions)),
+      _BadgeData('10 Quizzes', 'Finish ten quizzes to prove the habit', '📚',
+          user.totalQuizzes >= 10),
+      _BadgeData('Fake Buster', 'Complete 5 Real or Fake games', '🎭',
+          _nestedInt(gamesPlayed, 'real_or_fake') >= 5),
+      _BadgeData('Historian', 'Complete 5 Oldest to Latest games', '📅',
+          _nestedInt(gamesPlayed, 'oldest_to_latest') >= 5),
+      _BadgeData(
+          'Perfect Detector',
+          'Score 10/10 on Real or Fake',
+          '🏆',
+          (_nestedMap(bestScores, 'real_or_fake')['percentage'] as num? ?? 0) >=
+              100),
+    ];
+    final earned = badgeData.where((b) => b.earned).length;
+
+    return Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+      Text('Badges',
+          style: TextStyle(
+              fontFamily: AppFonts.body,
+              fontSize: 16,
+              fontWeight: FontWeight.w900,
+              color: context.textColor)),
+      const SizedBox(height: 4),
+      Text('$earned of ${badgeData.length} unlocked',
+          style: TextStyle(
+              fontFamily: AppFonts.body,
+              fontSize: 12,
+              color: context.hintColor)),
+      const SizedBox(height: 10),
+      GridView.count(
+        crossAxisCount: 3,
+        childAspectRatio: 0.86,
+        crossAxisSpacing: 10,
+        mainAxisSpacing: 10,
+        shrinkWrap: true,
+        physics: const NeverScrollableScrollPhysics(),
+        children: badgeData.map((badge) => _badgeTile(context, badge)).toList(),
+      ),
+    ]);
+  }
+
+  Widget _badgeTile(BuildContext context, _BadgeData badge) {
+    return Container(
+      padding: const EdgeInsets.all(10),
+      decoration: BoxDecoration(
+        color: _profileSurface(context),
+        borderRadius: BorderRadius.circular(16),
+        boxShadow: _profileShadow(context, 0.06),
+      ),
+      child: Column(mainAxisAlignment: MainAxisAlignment.center, children: [
+        Container(
+          width: 48,
+          height: 48,
+          alignment: Alignment.center,
+          decoration: BoxDecoration(
+            gradient: badge.earned
+                ? const LinearGradient(colors: [Color(0xFFFFC15A), _accent])
+                : null,
+            color: badge.earned ? null : _profileBorder(context),
+            borderRadius: BorderRadius.circular(16),
+          ),
+          child: Text(badge.earned ? badge.icon : '🔒',
+              style: const TextStyle(fontSize: 22)),
+        ),
+        const SizedBox(height: 8),
+        Text(badge.name,
+            maxLines: 2,
+            overflow: TextOverflow.ellipsis,
+            textAlign: TextAlign.center,
+            style: TextStyle(
+                fontFamily: AppFonts.body,
+                fontSize: 11,
+                height: 1.1,
+                fontWeight: FontWeight.w900,
+                color: badge.earned ? context.textColor : context.hintColor)),
+      ]),
+    );
+  }
+
+  List<MapEntry<String, _CategoryStat>> _categoryStats(UserData user) {
+    final catMap = <String, _CategoryStat>{};
+    for (final r in user.recentResults) {
+      if (r.attempts.isNotEmpty) {
+        for (final attempt in r.attempts) {
+          final key = attempt.category.toLowerCase();
+          final stat = catMap.putIfAbsent(key, () => const _CategoryStat());
+          catMap[key] = stat.add(correct: attempt.correct);
+        }
+      } else {
+        for (final cat in r.categories) {
+          final key = cat.toLowerCase();
+          final stat = catMap.putIfAbsent(key, () => const _CategoryStat());
+          catMap[key] = stat.addLegacy(r.percentage);
+        }
+      }
+    }
+    final entries = catMap.entries.toList()
+      ..sort((a, b) => b.value.accuracy.compareTo(a.value.accuracy));
+    return entries;
+  }
+
+  MapEntry<String, _CategoryStat>? _strongestCategory(
+    List<MapEntry<String, _CategoryStat>> stats,
+  ) {
+    for (final entry in stats) {
+      if (entry.value.total >= 3) return entry;
+    }
+    return null;
+  }
+
+  List<LeaderboardEntry> _selfGameLeaderboardFallback(
+    UserData user,
+    Map<String, dynamic> data,
+    String gameId,
+  ) {
+    final played = _nestedInt(data['gamesPlayed'], gameId);
+    if (played <= 0) return const [];
+    final gameXp = _nestedInt(data['gameXp'], gameId);
+    return [
+      LeaderboardEntry(
+        uid: AuthService.currentUser?.uid ?? 'you',
+        name: user.name.trim().isEmpty ? 'You' : user.name,
+        photoUrl: AuthService.currentUser?.photoURL ?? user.photoUrl,
+        score: gameXp,
+        streak: user.streak,
+        isYou: true,
+      ),
+    ];
+  }
+
+  List<LeaderboardEntry> _selfCategoryLeaderboardFallback(
+    UserData user,
+    String category,
+  ) {
+    final key = _categoryAlt(category).toLowerCase();
+    final xp = user.recentResults.where((result) {
+      if (result.categories.length != 1) return false;
+      return _categoryAlt(result.categories.first).toLowerCase() == key;
+    }).fold<int>(0, (sum, result) => sum + result.pointsEarned);
+    if (xp <= 0) return const [];
+    return [
+      LeaderboardEntry(
+        uid: AuthService.currentUser?.uid ?? 'you',
+        name: user.name.trim().isEmpty ? 'You' : user.name,
+        photoUrl: AuthService.currentUser?.photoURL ?? user.photoUrl,
+        score: xp,
+        streak: user.streak,
+        isYou: true,
+      ),
+    ];
+  }
+
+  static bool _sameDay(DateTime a, DateTime b) =>
+      a.year == b.year && a.month == b.month && a.day == b.day;
+
+  static int _nestedInt(Object? source, String key) {
+    if (source is Map) return (source[key] as num? ?? 0).toInt();
+    return 0;
+  }
+
+  static Map<String, dynamic> _nestedMap(Object? source, String key) {
+    if (source is Map && source[key] is Map) {
+      return Map<String, dynamic>.from(source[key] as Map);
+    }
+    return const {};
+  }
+
+  static String _categoryAlt(String name) =>
+      name == 'tech' ? 'technology' : name;
+
+  static String _categoryLabel(String category) {
+    switch (category.toLowerCase()) {
+      case 'tech':
+      case 'technology':
+        return 'Technology';
+      case 'world':
+        return 'World';
+      case 'politics':
+        return 'Politics';
+      case 'sports':
+        return 'Sports';
+      case 'business':
+        return 'Business';
+      default:
+        return category.isEmpty
+            ? 'Quiz'
+            : '${category[0].toUpperCase()}${category.substring(1)}';
+    }
+  }
+
+  static String _categoryEmoji(String category) {
+    switch (category.toLowerCase()) {
+      case 'world':
+        return '🌍';
+      case 'politics':
+        return '🏛️';
+      case 'sports':
+        return '🏅';
+      case 'tech':
+      case 'technology':
+        return '💻';
+      case 'business':
+        return '💼';
+      default:
+        return '⚡';
+    }
+  }
+
+  static String _timeAgo(DateTime date) {
+    final diff = DateTime.now().difference(date);
+    if (diff.inMinutes < 1) return 'now';
+    if (diff.inHours < 1) return '${diff.inMinutes}m ago';
+    if (diff.inDays < 1) return '${diff.inHours}h ago';
+    return '${diff.inDays}d ago';
+  }
+}
+
+class _ActivityItem {
+  final String name;
+  final String icon;
+  final Color color;
+  final int score;
+  final int total;
+  final int xp;
+  final DateTime date;
+  final String? category;
+
+  const _ActivityItem({
+    required this.name,
+    required this.icon,
+    required this.color,
+    required this.score,
+    required this.total,
+    required this.xp,
+    required this.date,
+    this.category,
+  });
+
+  factory _ActivityItem.quiz(QuizResult result) {
+    final category =
+        result.categories.isNotEmpty ? result.categories.first : null;
+    return _ActivityItem(
+      name: 'Daily Quiz',
+      icon: '⚡',
+      color: _ProfileScreenState._accent,
+      score: result.score,
+      total: result.totalQuestions,
+      xp: result.pointsEarned,
+      date: DateTime.tryParse(result.date) ?? DateTime.now(),
+      category: category,
+    );
+  }
+
+  factory _ActivityItem.game(GameResult result) {
+    final icon = switch (result.gameId) {
+      'real_or_fake' => '🎭',
+      'oldest_to_latest' => '📅',
+      'headline_match' => '🗞️',
+      'source_sleuth' => '🕵️',
+      _ => '🎮',
+    };
+    final color = switch (result.gameId) {
+      'real_or_fake' => _ProfileScreenState._gamePurple,
+      'oldest_to_latest' => _ProfileScreenState._gameBlue,
+      'headline_match' => AppColors.teal,
+      'source_sleuth' => _ProfileScreenState._accent,
+      _ => AppColors.purple,
+    };
+    return _ActivityItem(
+      name: result.gameName,
+      icon: icon,
+      color: color,
+      score: result.score,
+      total: result.total,
+      xp: result.xpEarned,
+      date: result.playedAt,
+    );
+  }
+
+  int get percentage => total > 0 ? (score / total * 100).round() : 0;
+}
+
+class _BadgeData {
+  final String name;
+  final String description;
+  final String icon;
+  final bool earned;
+
+  const _BadgeData(this.name, this.description, this.icon, this.earned);
+}
+
+class _MiniArcPainter extends CustomPainter {
+  final double progress;
+  final Color color;
+  final Color trackColor;
+
+  const _MiniArcPainter({
+    required this.progress,
+    required this.color,
+    required this.trackColor,
+  });
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final center = Offset(size.width / 2, size.height / 2);
+    final radius = (size.shortestSide - 6) / 2;
+    final track = Paint()
+      ..color = trackColor
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = 4
+      ..strokeCap = StrokeCap.round;
+    final fill = Paint()
+      ..color = color
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = 4
+      ..strokeCap = StrokeCap.round;
+    final rect = Rect.fromCircle(center: center, radius: radius);
+    canvas.drawArc(rect, -pi / 2, pi * 2, false, track);
+    canvas.drawArc(
+        rect, -pi / 2, pi * 2 * progress.clamp(0.0, 1.0), false, fill);
+  }
+
+  @override
+  bool shouldRepaint(covariant _MiniArcPainter oldDelegate) =>
+      oldDelegate.progress != progress ||
+      oldDelegate.color != color ||
+      oldDelegate.trackColor != trackColor;
 }
 
 class _StreakDay {
@@ -8448,7 +11065,8 @@ class _StreakCalendarTile extends StatelessWidget {
                       size: 13,
                       color: Colors.white)
                   : Text(label,
-                      style: GoogleFonts.roboto(
+                      style: TextStyle(
+                          fontFamily: AppFonts.body,
                           fontSize: 9,
                           fontWeight: FontWeight.w700,
                           color: context.hintColor.withValues(alpha: 0.72)))),
@@ -8499,7 +11117,8 @@ class _RecentQuizRow extends StatelessWidget {
                     border: Border.all(color: color.withValues(alpha: 0.25))),
                 child: Center(
                     child: Text('${result.score}/${result.totalQuestions}',
-                        style: GoogleFonts.roboto(
+                        style: TextStyle(
+                            fontFamily: AppFonts.body,
                             fontSize: 15,
                             fontWeight: FontWeight.w900,
                             color: color)))),
@@ -8511,19 +11130,22 @@ class _RecentQuizRow extends StatelessWidget {
                   Row(children: [
                     Expanded(
                         child: Text(result.performanceLabel,
-                            style: GoogleFonts.roboto(
+                            style: TextStyle(
+                                fontFamily: AppFonts.body,
                                 fontSize: 14,
                                 fontWeight: FontWeight.w900,
                                 color: context.textColor))),
                     Text(result.percentageString,
-                        style: GoogleFonts.roboto(
+                        style: TextStyle(
+                            fontFamily: AppFonts.body,
                             fontSize: 13,
                             fontWeight: FontWeight.w900,
                             color: color)),
                   ]),
                   const SizedBox(height: 3),
                   Text(_formatResultDate(result.date),
-                      style: GoogleFonts.roboto(
+                      style: TextStyle(
+                          fontFamily: AppFonts.body,
                           fontSize: 10,
                           fontWeight: FontWeight.w700,
                           color: context.hintColor)),
@@ -8561,7 +11183,8 @@ class _RecentQuizRow extends StatelessWidget {
                                       .withValues(alpha: 0.1),
                                   borderRadius: BorderRadius.circular(999)),
                               child: Text(c[0].toUpperCase() + c.substring(1),
-                                  style: GoogleFonts.roboto(
+                                  style: TextStyle(
+                                      fontFamily: AppFonts.body,
                                       fontSize: 9,
                                       fontWeight: FontWeight.w800,
                                       color: AppColors.categoryColor(c)))))
@@ -8576,7 +11199,8 @@ class _RecentQuizRow extends StatelessWidget {
       Icon(icon, size: 12, color: color),
       const SizedBox(width: 3),
       Text(label,
-          style: GoogleFonts.roboto(
+          style: TextStyle(
+              fontFamily: AppFonts.body,
               fontSize: 10,
               fontWeight: FontWeight.w800,
               color: context.hintColor)),
@@ -8721,169 +11345,284 @@ class SettingsScreen extends ConsumerWidget {
     final isSignedIn = authUser != null && !authUser.isAnonymous;
     final authEmail = authUser?.email ?? authUser?.displayName;
     final hasPro = user.isPro && isSignedIn;
+    final isDark = Theme.of(context).brightness == Brightness.dark;
     return Scaffold(
         backgroundColor: context.bgColor,
-        appBar: AppBar(
-            title: const Text('Settings'),
-            leading: BackButton(color: context.subColor)),
-        body: SingleChildScrollView(
-            padding: const EdgeInsets.all(20),
-            child:
-                Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-              const _SectionLabel('APPEARANCE'),
-              BriefedCard(
-                  child: Row(children: [
-                Container(
-                    width: 40,
-                    height: 40,
-                    decoration: BoxDecoration(
-                        color: AppColors.accent.withValues(alpha: 0.12),
-                        borderRadius: BorderRadius.circular(12)),
-                    child: Icon(
-                        themeMode == ThemeMode.dark
-                            ? Icons.dark_mode_rounded
-                            : Icons.light_mode_rounded,
-                        color: AppColors.accent,
-                        size: 20)),
-                const SizedBox(width: 14),
-                Expanded(
-                    child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                      Text('Theme',
-                          style: GoogleFonts.dmSans(
-                              fontSize: 13,
-                              fontWeight: FontWeight.w700,
-                              color: context.textColor)),
-                      Text(
-                          themeMode == ThemeMode.dark
-                              ? 'Dark mode'
-                              : themeMode == ThemeMode.system
-                                  ? 'System default'
-                                  : 'Light mode',
-                          style: GoogleFonts.dmSans(
-                              fontSize: 10, color: context.hintColor)),
-                    ])),
-                Container(
-                    decoration: BoxDecoration(
-                        color: context.inputBg,
-                        borderRadius: BorderRadius.circular(12)),
-                    child: Row(mainAxisSize: MainAxisSize.min, children: [
-                      _ThemeChip(
-                          icon: Icons.light_mode_rounded,
-                          active: themeMode == ThemeMode.light,
-                          onTap: () =>
-                              ref.read(themeProvider.notifier).setLight()),
-                      _ThemeChip(
-                          icon: Icons.dark_mode_rounded,
-                          active: themeMode == ThemeMode.dark,
-                          onTap: () =>
-                              ref.read(themeProvider.notifier).setDark()),
-                      _ThemeChip(
-                          icon: Icons.phone_android_rounded,
-                          active: themeMode == ThemeMode.system,
-                          onTap: () =>
-                              ref.read(themeProvider.notifier).setSystem()),
-                    ])),
-              ])),
-              const SizedBox(height: 20),
-              const _SectionLabel('PREFERENCES'),
-              BriefedCard(
-                  padding: EdgeInsets.zero,
-                  child: Column(children: [
+        body: SafeArea(
+            child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+          Padding(
+            padding: const EdgeInsets.fromLTRB(8, 8, 20, 0),
+            child: Row(children: [
+              IconButton(
+                  icon: Icon(Icons.arrow_back_rounded, color: context.subColor),
+                  onPressed: () => Navigator.of(context).pop()),
+              Text('Settings',
+                  style: TextStyle(
+                      fontFamily: AppFonts.display,
+                      fontSize: 24,
+                      fontWeight: FontWeight.w900,
+                      color: context.textColor,
+                      letterSpacing: -0.4,
+                      height: 1.02)),
+            ]),
+          ),
+          Expanded(
+            child: SingleChildScrollView(
+              padding: const EdgeInsets.fromLTRB(20, 12, 20, 20),
+              child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+              // ── APPEARANCE ───────────────────────────────────────────────
+              _sectionCard(isDark,
+                  const [Color(0xFF7B2FBE), Color(0xFF5B1E93)],
+                  const Color(0xFF3D0F70),
+                  Icons.palette_rounded,
+                  'Appearance',
+                  Padding(
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 16, vertical: 14),
+                      child: Row(children: [
+                        Container(
+                            width: 40,
+                            height: 40,
+                            alignment: Alignment.center,
+                            decoration: BoxDecoration(
+                                color: Colors.white.withValues(alpha: 0.18),
+                                borderRadius: BorderRadius.circular(12)),
+                            child: Icon(
+                                themeMode == ThemeMode.dark
+                                    ? Icons.dark_mode_rounded
+                                    : Icons.light_mode_rounded,
+                                color: Colors.white,
+                                size: 20)),
+                        const SizedBox(width: 14),
+                        Expanded(
+                            child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                              const Text('Theme',
+                                  style: TextStyle(
+                                      fontFamily: AppFonts.body,
+                                      fontSize: 13,
+                                      fontWeight: FontWeight.w700,
+                                      color: Colors.white)),
+                              Text(
+                                  themeMode == ThemeMode.dark
+                                      ? 'Dark mode'
+                                      : themeMode == ThemeMode.system
+                                          ? 'System default'
+                                          : 'Light mode',
+                                  style: TextStyle(
+                                      fontFamily: AppFonts.body,
+                                      fontSize: 10,
+                                      color: Colors.white.withValues(
+                                          alpha: 0.7))),
+                            ])),
+                        Container(
+                            decoration: BoxDecoration(
+                                color: Colors.white.withValues(alpha: 0.12),
+                                borderRadius: BorderRadius.circular(12)),
+                            child:
+                                Row(mainAxisSize: MainAxisSize.min, children: [
+                              _ThemeChip(
+                                  icon: Icons.light_mode_rounded,
+                                  active: themeMode == ThemeMode.light,
+                                  light: true,
+                                  onTap: () => ref
+                                      .read(themeProvider.notifier)
+                                      .setLight()),
+                              _ThemeChip(
+                                  icon: Icons.dark_mode_rounded,
+                                  active: themeMode == ThemeMode.dark,
+                                  light: true,
+                                  onTap: () => ref
+                                      .read(themeProvider.notifier)
+                                      .setDark()),
+                              _ThemeChip(
+                                  icon: Icons.phone_android_rounded,
+                                  active: themeMode == ThemeMode.system,
+                                  light: true,
+                                  onTap: () => ref
+                                      .read(themeProvider.notifier)
+                                      .setSystem()),
+                            ])),
+                      ]))),
+              const SizedBox(height: 16),
+              // ── PREFERENCES ──────────────────────────────────────────────
+              _sectionCard(isDark,
+                  [AppColors.accent, const Color(0xFFE85D04)],
+                  const Color(0xFF7A2A00),
+                  Icons.tune_rounded,
+                  'Preferences',
+                  Column(children: [
                     _SettingsTile(
                         icon: Icons.language_rounded,
                         color: AppColors.blue,
                         title: 'News Categories',
                         sub: '${user.selectedCategories.length} selected',
-                        onTap: () => _showCategoriesSheet(context, ref, user)),
-                    Divider(height: 1, color: context.borderColor),
-                    _SettingsTile(
-                        icon: Icons.public_rounded,
-                        color: AppColors.green,
-                        title: 'News Country',
-                        sub: '${_countryFlag(user.country)} ${_countryName(user.country)}',
-                        onTap: () => _showCountrySheet(context, ref, user)),
-                    Divider(height: 1, color: context.borderColor),
+                        onTap: () =>
+                            _showCategoriesSheet(context, ref, user),
+                        light: true),
+                    Container(
+                        height: 1,
+                        color: Colors.white.withValues(alpha: 0.12)),
                     _SettingsTile(
                         icon: Icons.notifications_rounded,
                         color: AppColors.accent,
                         title: 'Daily Reminder',
                         sub: _formatReminderTime(
                             user.notificationHour, user.notificationMinute),
-                        onTap: () => _showNotifSheet(context, ref, user)),
+                        onTap: () => _showNotifSheet(context, ref, user),
+                        light: true),
                   ])),
-              const SizedBox(height: 20),
-              const _SectionLabel('ACCOUNT'),
-              BriefedCard(
-                  padding: EdgeInsets.zero,
-                  child: Column(children: [
+              const SizedBox(height: 16),
+              // ── ACCOUNT ───────────────────────────────────────────────────
+              _sectionCard(isDark,
+                  const [Color(0xFF1A6B45), Color(0xFF0D4D32)],
+                  const Color(0xFF063322),
+                  Icons.manage_accounts_rounded,
+                  'Account',
+                  Column(children: [
                     _SettingsTile(
                         icon: Icons.person_rounded,
                         color: AppColors.purple,
                         title: 'Edit Profile',
                         sub: user.name,
-                        onTap: () => _showEditNameDialog(context, ref, user)),
-                    Divider(height: 1, color: context.borderColor),
+                        onTap: () =>
+                            _showEditNameDialog(context, ref, user),
+                        light: true),
+                    Container(
+                        height: 1,
+                        color: Colors.white.withValues(alpha: 0.12)),
                     _SettingsTile(
                         icon: Icons.lock_rounded,
                         color: AppColors.green,
                         title: 'Privacy',
-                        sub: 'Local storage, cloud sync, ads, and purchases',
-                        onTap: () => _showPrivacySheet(context)),
-                    Divider(height: 1, color: context.borderColor),
+                        sub: 'Local storage, cloud sync, and purchases',
+                        onTap: () => _showPrivacySheet(context),
+                        light: true),
+                    Container(
+                        height: 1,
+                        color: Colors.white.withValues(alpha: 0.12)),
                     if (isSignedIn)
                       _SettingsTile(
                           icon: Icons.logout_rounded,
                           color: AppColors.red,
                           title: 'Sign Out',
                           sub: authEmail ?? 'Signed in',
-                          onTap: () => _handleSignOut(context, ref))
+                          onTap: () => _handleSignOut(context, ref),
+                          light: true)
                     else
                       _SettingsTile(
                           icon: Icons.login_rounded,
                           color: AppColors.blue,
                           title: 'Sign In / Create Account',
                           sub: 'Sync your progress across devices',
-                          onTap: () => _showAuthSheet(context, ref)),
+                          onTap: () => _showAuthSheet(context, ref),
+                          light: true),
                   ])),
-              const SizedBox(height: 20),
-              const _SectionLabel('PRO'),
-              BriefedCard(
-                  borderColor: AppColors.gold.withValues(alpha: 0.35),
-                  onTap: () => hasPro
-                      ? _showProActiveDialog(context)
-                      : _showProSheet(context, ref, user,
-                          canActivatePro: isSignedIn),
-                  child: Row(children: [
-                    Container(
-                        width: 40,
-                        height: 40,
-                        decoration: BoxDecoration(
-                            color: AppColors.gold.withValues(alpha: 0.12),
-                            borderRadius: BorderRadius.circular(12)),
-                        child: const Icon(Icons.star_rounded,
-                            color: AppColors.gold, size: 20)),
-                    const SizedBox(width: 14),
-                    Expanded(
-                        child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                          Text(hasPro ? 'Briefed Pro' : 'Upgrade to Pro',
-                              style: GoogleFonts.dmSans(
-                                  fontSize: 13,
-                                  fontWeight: FontWeight.w700,
-                                  color: AppColors.gold)),
-                          Text(
-                              hasPro
-                                  ? 'Active · Unlimited quiz replays'
-                                  : '${ProPurchaseService.fallbackPriceLabel} · Lifetime access',
-                              style: GoogleFonts.dmSans(
-                                  fontSize: 10, color: context.hintColor)),
-                        ])),
-                    const Icon(Icons.chevron_right_rounded, size: 18),
-                  ])),
-            ])));
+              const SizedBox(height: 16),
+              // ── PRO ───────────────────────────────────────────────────────
+              _sectionCard(isDark,
+                  const [Color(0xFFD97706), Color(0xFFB45309)],
+                  const Color(0xFF7A3800),
+                  Icons.star_rounded,
+                  'Pro',
+                  GestureDetector(
+                      onTap: () => hasPro
+                          ? _showProActiveDialog(context)
+                          : _showProSheet(context, ref, user,
+                              canActivatePro: isSignedIn),
+                      child: Padding(
+                          padding: const EdgeInsets.symmetric(
+                              horizontal: 16, vertical: 14),
+                          child: Row(children: [
+                            Container(
+                                width: 40,
+                                height: 40,
+                                alignment: Alignment.center,
+                                decoration: BoxDecoration(
+                                    color:
+                                        Colors.white.withValues(alpha: 0.18),
+                                    borderRadius: BorderRadius.circular(12)),
+                                child: const Icon(Icons.star_rounded,
+                                    color: Colors.white, size: 20)),
+                            const SizedBox(width: 14),
+                            Expanded(
+                                child: Column(
+                                    crossAxisAlignment:
+                                        CrossAxisAlignment.start,
+                                    children: [
+                                  Text(
+                                      hasPro
+                                          ? 'Briefed Pro'
+                                          : 'Upgrade to Pro',
+                                      style: const TextStyle(
+                                          fontFamily: AppFonts.body,
+                                          fontSize: 13,
+                                          fontWeight: FontWeight.w700,
+                                          color: Colors.white)),
+                                  Text(
+                                      hasPro
+                                          ? 'Active · Unlimited quiz replays'
+                                          : '${ProPurchaseService.fallbackPriceLabel} · Cancel anytime',
+                                      style: TextStyle(
+                                          fontFamily: AppFonts.body,
+                                          fontSize: 10,
+                                          color: Colors.white
+                                              .withValues(alpha: 0.7))),
+                                ])),
+                            Icon(Icons.chevron_right_rounded,
+                                color: Colors.white.withValues(alpha: 0.7),
+                                size: 18),
+                          ])))),
+            ])))])));
+  }
+
+  Widget _sectionCard(bool isDark, List<Color> gradient, Color shadow,
+      IconData icon, String title, Widget content) {
+    return Container(
+      width: double.infinity,
+      clipBehavior: Clip.antiAlias,
+      decoration: BoxDecoration(
+        gradient: LinearGradient(
+            colors: gradient,
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight),
+        borderRadius: BorderRadius.circular(24),
+        boxShadow: [
+          BoxShadow(color: shadow, blurRadius: 0, offset: const Offset(0, 5)),
+          BoxShadow(
+              color: gradient[0].withValues(alpha: isDark ? 0.18 : 0.30),
+              blurRadius: 28,
+              offset: const Offset(0, 14)),
+        ],
+      ),
+      child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+        Padding(
+          padding: const EdgeInsets.fromLTRB(18, 16, 18, 12),
+          child: Row(children: [
+            Container(
+                width: 32,
+                height: 32,
+                alignment: Alignment.center,
+                decoration: BoxDecoration(
+                    color: Colors.white.withValues(alpha: 0.2),
+                    borderRadius: BorderRadius.circular(10)),
+                child: Icon(icon, color: Colors.white, size: 16)),
+            const SizedBox(width: 10),
+            Text(title,
+                style: const TextStyle(
+                    fontFamily: AppFonts.display,
+                    fontSize: 16,
+                    fontWeight: FontWeight.w900,
+                    color: Colors.white,
+                    letterSpacing: -0.3,
+                    height: 1.02)),
+          ]),
+        ),
+        Container(height: 1, color: Colors.white.withValues(alpha: 0.14)),
+        content,
+      ]),
+    );
   }
 
   void _showCategoriesSheet(
@@ -8911,15 +11650,19 @@ class SettingsScreen extends ConsumerWidget {
                                     color: ctx.borderColor,
                                     borderRadius: BorderRadius.circular(2)))),
                         Text('News Categories',
-                            style: GoogleFonts.dmSans(
+                            style: TextStyle(
+                                fontFamily: AppFonts.display,
+                                height: 1.02,
                                 fontSize: 18,
                                 fontWeight: FontWeight.w800,
                                 color: ctx.textColor)),
                         const SizedBox(height: 4),
                         Text(
                             'Choose what topics appear in your quiz and briefing',
-                            style: GoogleFonts.dmSans(
-                                fontSize: 12, color: ctx.subColor)),
+                            style: TextStyle(
+                                fontFamily: AppFonts.body,
+                                fontSize: 12,
+                                color: ctx.subColor)),
                         const SizedBox(height: 20),
                         GridView.count(
                             shrinkWrap: true,
@@ -8964,7 +11707,8 @@ class SettingsScreen extends ConsumerWidget {
                                             color: on ? color : ctx.hintColor),
                                         const SizedBox(width: 8),
                                         Text(cat['label']!,
-                                            style: GoogleFonts.dmSans(
+                                            style: TextStyle(
+                                                fontFamily: AppFonts.body,
                                                 fontSize: 12,
                                                 fontWeight: FontWeight.w700,
                                                 color: on
@@ -8989,46 +11733,6 @@ class SettingsScreen extends ConsumerWidget {
                             icon: Icons.check_rounded),
                       ]));
             }));
-  }
-
-  // ── Country helpers ───────────────────────────────────────────────────────
-
-  static String _countryFlag(String code) {
-    final match = AppConstants.allCountries
-        .firstWhere((c) => c['code'] == code, orElse: () => {});
-    return match['flag'] ?? '🌐';
-  }
-
-  static String _countryName(String code) {
-    final match = AppConstants.allCountries
-        .firstWhere((c) => c['code'] == code, orElse: () => {});
-    return match['name'] ?? code.toUpperCase();
-  }
-
-  void _showCountrySheet(
-      BuildContext context, WidgetRef ref, UserData user) {
-    showModalBottomSheet(
-      context: context,
-      isScrollControlled: true,
-      backgroundColor: context.cardColor,
-      shape: const RoundedRectangleBorder(
-          borderRadius: BorderRadius.vertical(top: Radius.circular(24))),
-      constraints: BoxConstraints(
-          maxHeight: MediaQuery.of(context).size.height * 0.85),
-      builder: (_) => _CountryPickerSheet(
-        current: user.country,
-        onSelect: (code) {
-          ref.read(userProvider.notifier).updateCountry(code);
-          StorageService.clearQuestionCache();
-          StorageService.clearArticleCache();
-          ref.read(newsProvider.notifier).load(
-                country: code,
-                categories: user.selectedCategories,
-                forceRefresh: true,
-              );
-        },
-      ),
-    );
   }
 
   void _showNotifSheet(BuildContext context, WidgetRef ref, UserData user) {
@@ -9093,14 +11797,18 @@ class SettingsScreen extends ConsumerWidget {
                                     color: ctx.borderColor,
                                     borderRadius: BorderRadius.circular(2)))),
                         Text('Daily Reminder',
-                            style: GoogleFonts.dmSans(
+                            style: TextStyle(
+                                fontFamily: AppFonts.display,
+                                height: 1.02,
                                 fontSize: 18,
                                 fontWeight: FontWeight.w800,
                                 color: ctx.textColor)),
                         const SizedBox(height: 4),
                         Text("When should we remind you to take today's quiz?",
-                            style: GoogleFonts.dmSans(
-                                fontSize: 12, color: ctx.subColor)),
+                            style: TextStyle(
+                                fontFamily: AppFonts.body,
+                                fontSize: 12,
+                                color: ctx.subColor)),
                         const SizedBox(height: 20),
                         ...options.map((opt) {
                           final on = selectedHour == opt['hour'] &&
@@ -9151,7 +11859,9 @@ class SettingsScreen extends ConsumerWidget {
                                                     CrossAxisAlignment.start,
                                                 children: [
                                               Text(opt['label'] as String,
-                                                  style: GoogleFonts.dmSans(
+                                                  style: TextStyle(
+                                                      fontFamily:
+                                                          AppFonts.display,
                                                       fontSize: 14,
                                                       fontWeight:
                                                           FontWeight.w700,
@@ -9159,7 +11869,9 @@ class SettingsScreen extends ConsumerWidget {
                                                           ? ctx.textColor
                                                           : ctx.subColor)),
                                               Text(opt['sub'] as String,
-                                                  style: GoogleFonts.dmSans(
+                                                  style: TextStyle(
+                                                      fontFamily:
+                                                          AppFonts.display,
                                                       fontSize: 11,
                                                       color: ctx.hintColor)),
                                             ])),
@@ -9249,12 +11961,16 @@ class SettingsScreen extends ConsumerWidget {
                                                 _formatReminderTime(
                                                     selectedHour,
                                                     selectedMinute),
-                                                style: GoogleFonts.dmSans(
+                                                style: TextStyle(
+                                                    fontFamily:
+                                                        AppFonts.display,
                                                     fontSize: 14,
                                                     fontWeight: FontWeight.w700,
                                                     color: ctx.textColor)),
                                             Text('Choose your own time',
-                                                style: GoogleFonts.dmSans(
+                                                style: TextStyle(
+                                                    fontFamily:
+                                                        AppFonts.display,
                                                     fontSize: 11,
                                                     color: ctx.hintColor)),
                                           ])),
@@ -9284,16 +12000,20 @@ class SettingsScreen extends ConsumerWidget {
                 shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(20)),
                 title: Text('Edit Profile',
-                    style: GoogleFonts.dmSans(
-                        fontWeight: FontWeight.w800, color: ctx.textColor)),
+                    style: TextStyle(
+                        fontFamily: AppFonts.body,
+                        fontWeight: FontWeight.w800,
+                        color: ctx.textColor)),
                 content: Column(mainAxisSize: MainAxisSize.min, children: [
                   TextField(
                       controller: ctrl,
                       autofocus: true,
-                      style: GoogleFonts.dmSans(color: ctx.textColor),
+                      style: TextStyle(
+                          fontFamily: AppFonts.body, color: ctx.textColor),
                       decoration: InputDecoration(
                           labelText: 'Your name',
-                          labelStyle: GoogleFonts.dmSans(color: ctx.hintColor),
+                          labelStyle: TextStyle(
+                              fontFamily: AppFonts.body, color: ctx.hintColor),
                           filled: true,
                           fillColor: ctx.inputBg,
                           border: OutlineInputBorder(
@@ -9308,7 +12028,9 @@ class SettingsScreen extends ConsumerWidget {
                   TextButton(
                       onPressed: () => Navigator.of(ctx).pop(),
                       child: Text('Cancel',
-                          style: GoogleFonts.dmSans(color: ctx.hintColor))),
+                          style: TextStyle(
+                              fontFamily: AppFonts.body,
+                              color: ctx.hintColor))),
                   TextButton(
                       onPressed: () {
                         final name = ctrl.text.trim();
@@ -9317,8 +12039,9 @@ class SettingsScreen extends ConsumerWidget {
                         }
                         Navigator.of(ctx).pop();
                       },
-                      child: Text('Save',
-                          style: GoogleFonts.dmSans(
+                      child: const Text('Save',
+                          style: TextStyle(
+                              fontFamily: AppFonts.body,
                               color: AppColors.accent,
                               fontWeight: FontWeight.w800))),
                 ]));
@@ -9348,15 +12071,20 @@ class SettingsScreen extends ConsumerWidget {
                                   color: ctx.borderColor,
                                   borderRadius: BorderRadius.circular(2)))),
                       Text('Privacy',
-                          style: GoogleFonts.dmSans(
+                          style: TextStyle(
+                              fontFamily: AppFonts.display,
+                              height: 1.02,
                               fontSize: 18,
                               fontWeight: FontWeight.w800,
                               color: ctx.textColor)),
                       const SizedBox(height: 6),
                       Text(
-                          'Briefed stores some data on your device and uses trusted services to run accounts, sync, ads, purchases, and reminders.',
-                          style: GoogleFonts.dmSans(
-                              fontSize: 12, color: ctx.subColor, height: 1.55)),
+                          'Briefed stores some data on your device and uses trusted services to run accounts, sync, purchases, and reminders.',
+                          style: TextStyle(
+                              fontFamily: AppFonts.body,
+                              fontSize: 12,
+                              color: ctx.subColor,
+                              height: 1.55)),
                       const SizedBox(height: 18),
                       ...[
                         (
@@ -9372,8 +12100,8 @@ class SettingsScreen extends ConsumerWidget {
                           AppColors.blue
                         ),
                         (
-                          'Ads and purchases',
-                          'Free users may see Google AdMob ads, which can use advertising identifiers or ad interaction data. Briefed Pro purchases are processed by Google Play Billing.',
+                          'Purchases',
+                          'Briefed Pro is a one-time purchase processed by Google Play Billing. No subscription or recurring charges.',
                           Icons.payments_rounded,
                           AppColors.gold
                         ),
@@ -9388,6 +12116,12 @@ class SettingsScreen extends ConsumerWidget {
                           'Briefed uses news and AI/content services to fetch headlines and generate quiz content. We do not send your account details for quiz generation.',
                           Icons.api_rounded,
                           AppColors.purple
+                        ),
+                        (
+                          'Advertising',
+                          'Free users see banner ads powered by Google AdMob and occasional interstitial ads in games on your second play each day. Upgrade to Pro to remove all ads. You can manage ad personalisation in your device settings.',
+                          Icons.ad_units_rounded,
+                          AppColors.orange
                         ),
                         (
                           'Your choices',
@@ -9416,13 +12150,15 @@ class SettingsScreen extends ConsumerWidget {
                                             CrossAxisAlignment.start,
                                         children: [
                                       Text(item.$1,
-                                          style: GoogleFonts.dmSans(
+                                          style: TextStyle(
+                                              fontFamily: AppFonts.body,
                                               fontSize: 13,
                                               fontWeight: FontWeight.w700,
                                               color: ctx.textColor)),
                                       const SizedBox(height: 3),
                                       Text(item.$2,
-                                          style: GoogleFonts.dmSans(
+                                          style: TextStyle(
+                                              fontFamily: AppFonts.body,
                                               fontSize: 11,
                                               color: ctx.subColor,
                                               height: 1.55)),
@@ -9441,8 +12177,9 @@ class SettingsScreen extends ConsumerWidget {
                                   'https://sites.google.com/view/binay-briefed-contact/data-deletion'),
                               icon: const Icon(Icons.delete_outline_rounded,
                                   size: 18),
-                              label: Text('Request Data Deletion',
-                                  style: GoogleFonts.dmSans(
+                              label: const Text('Request Data Deletion',
+                                  style: TextStyle(
+                                      fontFamily: AppFonts.body,
                                       fontWeight: FontWeight.w700)))),
                     ]))));
   }
@@ -9475,7 +12212,9 @@ class SettingsScreen extends ConsumerWidget {
             ),
             const SizedBox(height: 18),
             Text('You\'re a Pro!',
-                style: GoogleFonts.dmSans(
+                style: TextStyle(
+                    fontFamily: AppFonts.display,
+                    height: 1.02,
                     fontSize: 22,
                     fontWeight: FontWeight.w900,
                     color: ctx.textColor)),
@@ -9483,8 +12222,11 @@ class SettingsScreen extends ConsumerWidget {
             Text(
               'Thanks for supporting Briefed.\nEnjoy unlimited replays, no ads,\nand all pro perks.',
               textAlign: TextAlign.center,
-              style: GoogleFonts.dmSans(
-                  fontSize: 13, height: 1.55, color: ctx.hintColor),
+              style: TextStyle(
+                  fontFamily: AppFonts.body,
+                  fontSize: 13,
+                  height: 1.55,
+                  color: ctx.hintColor),
             ),
             const SizedBox(height: 22),
             SizedBox(
@@ -9497,8 +12239,9 @@ class SettingsScreen extends ConsumerWidget {
                   padding: const EdgeInsets.symmetric(vertical: 14),
                 ),
                 onPressed: () => Navigator.of(ctx).pop(),
-                child: Text('Enjoy Briefed Pro',
-                    style: GoogleFonts.dmSans(
+                child: const Text('Enjoy Briefed Pro',
+                    style: TextStyle(
+                        fontFamily: AppFonts.body,
                         fontSize: 14,
                         fontWeight: FontWeight.w800,
                         color: AppColors.gold)),
@@ -9516,161 +12259,7 @@ class SettingsScreen extends ConsumerWidget {
     UserData user, {
     required bool canActivatePro,
   }) {
-    final hasPro = user.isPro && canActivatePro;
-    showModalBottomSheet(
-        context: context,
-        isScrollControlled: true,
-        backgroundColor: context.cardColor,
-        shape: const RoundedRectangleBorder(
-            borderRadius: BorderRadius.vertical(top: Radius.circular(24))),
-        builder: (ctx) => Padding(
-            padding: const EdgeInsets.fromLTRB(20, 8, 20, 32),
-            child: Column(mainAxisSize: MainAxisSize.min, children: [
-              Center(
-                  child: Container(
-                      width: 40,
-                      height: 4,
-                      margin: const EdgeInsets.only(bottom: 20),
-                      decoration: BoxDecoration(
-                          color: ctx.borderColor,
-                          borderRadius: BorderRadius.circular(2)))),
-              Container(
-                  width: 56,
-                  height: 56,
-                  decoration: BoxDecoration(
-                      gradient: const LinearGradient(
-                          colors: [AppColors.gold, Color(0xFFFF9100)]),
-                      borderRadius: BorderRadius.circular(18)),
-                  child: const Icon(Icons.star_rounded,
-                      color: Colors.white, size: 30)),
-              const SizedBox(height: 14),
-              Text('Briefed Pro',
-                  style: GoogleFonts.dmSans(
-                      fontSize: 22,
-                      fontWeight: FontWeight.w900,
-                      color: ctx.textColor)),
-              Text(hasPro ? 'Active' : ProPurchaseService.fallbackPriceLabel,
-                  style: GoogleFonts.dmSans(
-                      fontSize: 14,
-                      color: AppColors.gold,
-                      fontWeight: FontWeight.w700)),
-              const SizedBox(height: 20),
-              ...[
-                ('Unlimited quiz replays', Icons.replay_rounded),
-                (
-                  'Wrapped cards and deeper insights',
-                  Icons.auto_awesome_rounded
-                ),
-                (
-                  'Advanced stats and category breakdowns',
-                  Icons.bar_chart_rounded
-                ),
-                ('Early access to new games', Icons.games_rounded),
-                ('Remove all ads', Icons.block_rounded),
-              ].map((f) => Padding(
-                  padding: const EdgeInsets.only(bottom: 12),
-                  child: Row(children: [
-                    Container(
-                        width: 32,
-                        height: 32,
-                        decoration: BoxDecoration(
-                            color: AppColors.gold.withValues(alpha: 0.12),
-                            borderRadius: BorderRadius.circular(9)),
-                        child: Icon(f.$2, color: AppColors.gold, size: 16)),
-                    const SizedBox(width: 12),
-                    Text(f.$1,
-                        style: GoogleFonts.dmSans(
-                            fontSize: 13,
-                            fontWeight: FontWeight.w600,
-                            color: ctx.textColor)),
-                  ]))),
-              const SizedBox(height: 8),
-              GestureDetector(
-                  onTap: hasPro
-                      ? null
-                      : () async {
-                          if (!canActivatePro) {
-                            Navigator.of(ctx).pop();
-                            _showAuthSheet(context, ref);
-                            return;
-                          }
-                          await _startProPurchase(context, ref);
-                        },
-                  child: Container(
-                      width: double.infinity,
-                      padding: const EdgeInsets.symmetric(vertical: 16),
-                      decoration: BoxDecoration(
-                          gradient: const LinearGradient(
-                              colors: [AppColors.gold, Color(0xFFFF9100)]),
-                          borderRadius: BorderRadius.circular(16),
-                          boxShadow: [
-                            BoxShadow(
-                                color: AppColors.gold.withValues(alpha: 0.35),
-                                blurRadius: 20,
-                                offset: const Offset(0, 6))
-                          ]),
-                      child: Center(
-                          child: Text(
-                              hasPro
-                                  ? 'Pro Active'
-                                  : !canActivatePro
-                                      ? 'Sign in to Activate'
-                                      : 'Buy Pro for A\$2.99',
-                              style: GoogleFonts.dmSans(
-                                  fontSize: 15,
-                                  fontWeight: FontWeight.w900,
-                                  color: Colors.white))))),
-              const SizedBox(height: 8),
-              Text(
-                  hasPro
-                      ? 'Unlimited replay is ready on the home quiz card'
-                      : canActivatePro
-                          ? 'One-time purchase through Google Play'
-                          : 'Pro is tied to a signed-in account',
-                  style:
-                      GoogleFonts.dmSans(fontSize: 11, color: ctx.hintColor)),
-              if (canActivatePro && !hasPro) ...[
-                const SizedBox(height: 6),
-                GestureDetector(
-                    onTap: () => _restoreProPurchase(context),
-                    child: Text('Restore purchase',
-                        style: GoogleFonts.dmSans(
-                            fontSize: 12,
-                            fontWeight: FontWeight.w700,
-                            color: AppColors.gold))),
-              ],
-            ])));
-  }
-
-  Future<void> _startProPurchase(BuildContext context, WidgetRef ref) async {
-    final messenger = ScaffoldMessenger.of(context);
-    final nav = Navigator.of(context, rootNavigator: true);
-    showDialog<void>(
-        context: context,
-        barrierDismissible: false,
-        builder: (ctx) => const Center(child: CircularProgressIndicator()));
-
-    try {
-      final product = await ProPurchaseService.loadProProduct();
-      if (nav.canPop()) nav.pop();
-      await ProPurchaseService.buyPro(product);
-      messenger.showSnackBar(const SnackBar(
-          content: Text('Complete the purchase to activate Briefed Pro.')));
-    } catch (e) {
-      if (nav.canPop()) nav.pop();
-      messenger.showSnackBar(SnackBar(content: Text(e.toString())));
-    }
-  }
-
-  Future<void> _restoreProPurchase(BuildContext context) async {
-    final messenger = ScaffoldMessenger.of(context);
-    try {
-      await ProPurchaseService.restorePurchases();
-      messenger.showSnackBar(
-          const SnackBar(content: Text('Checking for previous purchases...')));
-    } catch (e) {
-      messenger.showSnackBar(SnackBar(content: Text(e.toString())));
-    }
+    showBriefedProSheet(context, ref);
   }
 
   void _showAuthSheet(BuildContext context, WidgetRef ref) {
@@ -9694,27 +12283,33 @@ class SettingsScreen extends ConsumerWidget {
                 shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(20)),
                 title: Text('Sign Out',
-                    style: GoogleFonts.dmSans(
-                        fontWeight: FontWeight.w800, color: ctx.textColor)),
+                    style: TextStyle(
+                        fontFamily: AppFonts.body,
+                        fontWeight: FontWeight.w800,
+                        color: ctx.textColor)),
                 content: Text('Are you sure you want to sign out?',
-                    style:
-                        GoogleFonts.dmSans(fontSize: 13, color: ctx.subColor)),
+                    style: TextStyle(
+                        fontFamily: AppFonts.body,
+                        fontSize: 13,
+                        color: ctx.subColor)),
                 actions: [
                   TextButton(
                       onPressed: () => Navigator.of(ctx).pop(),
                       child: Text('Cancel',
-                          style: GoogleFonts.dmSans(color: ctx.hintColor))),
+                          style: TextStyle(
+                              fontFamily: AppFonts.body,
+                              color: ctx.hintColor))),
                   TextButton(
                       onPressed: () async {
                         Navigator.of(ctx).pop();
                         await AuthService.signOut();
                         await StorageService.setIsPro(false);
                         ref.read(userProvider.notifier).reload();
-                        AdService.configure(adsEnabled: true);
                         nav.pushNamedAndRemoveUntil('/signin', (_) => false);
                       },
-                      child: Text('Sign Out',
-                          style: GoogleFonts.dmSans(
+                      child: const Text('Sign Out',
+                          style: TextStyle(
+                              fontFamily: AppFonts.body,
                               color: AppColors.red,
                               fontWeight: FontWeight.w800))),
                 ]));
@@ -9728,7 +12323,8 @@ class _SectionLabel extends StatelessWidget {
   Widget build(BuildContext context) => Padding(
       padding: const EdgeInsets.only(bottom: 8),
       child: Text(text,
-          style: GoogleFonts.dmSans(
+          style: TextStyle(
+              fontFamily: AppFonts.body,
               fontSize: 9,
               fontWeight: FontWeight.w700,
               color: context.hintColor,
@@ -9787,8 +12383,8 @@ class _CountryPickerSheetState extends State<_CountryPickerSheet> {
   @override
   Widget build(BuildContext context) {
     return Padding(
-      padding: EdgeInsets.only(
-          bottom: MediaQuery.of(context).viewInsets.bottom),
+      padding:
+          EdgeInsets.only(bottom: MediaQuery.of(context).viewInsets.bottom),
       child: Column(children: [
         // drag handle
         Container(
@@ -9800,46 +12396,52 @@ class _CountryPickerSheetState extends State<_CountryPickerSheet> {
                 borderRadius: BorderRadius.circular(2))),
         Padding(
           padding: const EdgeInsets.symmetric(horizontal: 20),
-          child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text('News Country',
-                    style: GoogleFonts.dmSans(
-                        fontSize: 18,
-                        fontWeight: FontWeight.w800,
-                        color: context.textColor)),
-                const SizedBox(height: 2),
-                Text('Your quiz and briefing will use news from this country',
-                    style: GoogleFonts.dmSans(
-                        fontSize: 12, color: context.subColor)),
-                const SizedBox(height: 14),
-                TextField(
-                  controller: _search,
-                  autofocus: false,
-                  style: GoogleFonts.dmSans(
-                      fontSize: 13, color: context.textColor),
-                  decoration: InputDecoration(
-                    hintText: 'Search countries…',
-                    hintStyle: GoogleFonts.dmSans(
-                        fontSize: 13, color: context.hintColor),
-                    prefixIcon:
-                        Icon(Icons.search_rounded, color: context.hintColor),
-                    filled: true,
-                    fillColor: context.inputBg,
-                    contentPadding: const EdgeInsets.symmetric(
-                        horizontal: 16, vertical: 12),
-                    border: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(14),
-                        borderSide: BorderSide.none),
-                  ),
-                ),
-                const SizedBox(height: 8),
-              ]),
+          child:
+              Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+            Text('News Country',
+                style: TextStyle(
+                    fontFamily: AppFonts.display,
+                    height: 1.02,
+                    fontSize: 18,
+                    fontWeight: FontWeight.w800,
+                    color: context.textColor)),
+            const SizedBox(height: 2),
+            Text('Your quiz and briefing will use news from this country',
+                style: TextStyle(
+                    fontFamily: AppFonts.body,
+                    fontSize: 12,
+                    color: context.subColor)),
+            const SizedBox(height: 14),
+            TextField(
+              controller: _search,
+              autofocus: false,
+              style: TextStyle(
+                  fontFamily: AppFonts.body,
+                  fontSize: 13,
+                  color: context.textColor),
+              decoration: InputDecoration(
+                hintText: 'Search countries…',
+                hintStyle: TextStyle(
+                    fontFamily: AppFonts.body,
+                    fontSize: 13,
+                    color: context.hintColor),
+                prefixIcon:
+                    Icon(Icons.search_rounded, color: context.hintColor),
+                filled: true,
+                fillColor: context.inputBg,
+                contentPadding:
+                    const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(14),
+                    borderSide: BorderSide.none),
+              ),
+            ),
+            const SizedBox(height: 8),
+          ]),
         ),
         Expanded(
           child: ListView.builder(
-            padding:
-                const EdgeInsets.symmetric(horizontal: 20, vertical: 4),
+            padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 4),
             itemCount: _filtered.length,
             itemBuilder: (ctx, i) {
               final c = _filtered[i];
@@ -9852,8 +12454,8 @@ class _CountryPickerSheetState extends State<_CountryPickerSheet> {
                 },
                 child: Container(
                   margin: const EdgeInsets.symmetric(vertical: 3),
-                  padding: const EdgeInsets.symmetric(
-                      horizontal: 14, vertical: 11),
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 14, vertical: 11),
                   decoration: BoxDecoration(
                     color: isSelected
                         ? AppColors.accent.withValues(alpha: 0.08)
@@ -9865,12 +12467,12 @@ class _CountryPickerSheetState extends State<_CountryPickerSheet> {
                             : Colors.transparent),
                   ),
                   child: Row(children: [
-                    Text(c['flag']!,
-                        style: const TextStyle(fontSize: 22)),
+                    Text(c['flag']!, style: const TextStyle(fontSize: 22)),
                     const SizedBox(width: 12),
                     Expanded(
                         child: Text(c['name']!,
-                            style: GoogleFonts.dmSans(
+                            style: TextStyle(
+                                fontFamily: AppFonts.body,
                                 fontSize: 13,
                                 fontWeight: isSelected
                                     ? FontWeight.w700
@@ -9897,14 +12499,24 @@ class _SettingsTile extends StatelessWidget {
   final Color color;
   final String title, sub;
   final VoidCallback onTap;
+  final bool light;
   const _SettingsTile(
       {required this.icon,
       required this.color,
       required this.title,
       required this.sub,
-      required this.onTap});
+      required this.onTap,
+      this.light = false});
   @override
   Widget build(BuildContext context) {
+    final textCol = light ? Colors.white : context.textColor;
+    final subCol =
+        light ? Colors.white.withValues(alpha: 0.7) : context.hintColor;
+    final iconBg =
+        light ? Colors.white.withValues(alpha: 0.18) : color.withValues(alpha: 0.12);
+    final iconCol = light ? Colors.white : color;
+    final chevron =
+        light ? Colors.white.withValues(alpha: 0.6) : context.hintColor;
     return GestureDetector(
         onTap: onTap,
         child: Padding(
@@ -9913,26 +12525,28 @@ class _SettingsTile extends StatelessWidget {
               Container(
                   width: 40,
                   height: 40,
+                  alignment: Alignment.center,
                   decoration: BoxDecoration(
-                      color: color.withValues(alpha: 0.12),
-                      borderRadius: BorderRadius.circular(12)),
-                  child: Icon(icon, color: color, size: 18)),
+                      color: iconBg, borderRadius: BorderRadius.circular(12)),
+                  child: Icon(icon, color: iconCol, size: 18)),
               const SizedBox(width: 14),
               Expanded(
                   child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                     Text(title,
-                        style: GoogleFonts.dmSans(
+                        style: TextStyle(
+                            fontFamily: AppFonts.body,
                             fontSize: 13,
                             fontWeight: FontWeight.w700,
-                            color: context.textColor)),
+                            color: textCol)),
                     Text(sub,
-                        style: GoogleFonts.dmSans(
-                            fontSize: 10, color: context.hintColor)),
+                        style: TextStyle(
+                            fontFamily: AppFonts.body,
+                            fontSize: 10,
+                            color: subCol)),
                   ])),
-              Icon(Icons.chevron_right_rounded,
-                  color: context.hintColor, size: 18),
+              Icon(Icons.chevron_right_rounded, color: chevron, size: 18),
             ])));
   }
 }
@@ -9940,11 +12554,21 @@ class _SettingsTile extends StatelessWidget {
 class _ThemeChip extends StatelessWidget {
   final IconData icon;
   final bool active;
+  final bool light;
   final VoidCallback onTap;
   const _ThemeChip(
-      {required this.icon, required this.active, required this.onTap});
+      {required this.icon,
+      required this.active,
+      required this.onTap,
+      this.light = false});
   @override
   Widget build(BuildContext context) {
+    final bg = active
+        ? (light ? Colors.white : context.cardColor)
+        : Colors.transparent;
+    final iconCol = active
+        ? (light ? AppColors.accent : AppColors.accent)
+        : (light ? Colors.white.withValues(alpha: 0.6) : context.hintColor);
     return GestureDetector(
         onTap: onTap,
         child: AnimatedContainer(
@@ -9953,10 +12577,12 @@ class _ThemeChip extends StatelessWidget {
             height: 34,
             margin: const EdgeInsets.all(4),
             decoration: BoxDecoration(
-                color: active ? context.cardColor : Colors.transparent,
+                color: bg,
                 borderRadius: BorderRadius.circular(9),
-                border: active ? Border.all(color: context.borderColor) : null,
-                boxShadow: active
+                border: active && !light
+                    ? Border.all(color: context.borderColor)
+                    : null,
+                boxShadow: active && !light
                     ? [
                         BoxShadow(
                             color: Colors.black.withValues(alpha: 0.06),
@@ -9964,9 +12590,7 @@ class _ThemeChip extends StatelessWidget {
                             offset: const Offset(0, 2))
                       ]
                     : []),
-            child: Icon(icon,
-                size: 16,
-                color: active ? AppColors.accent : context.hintColor)));
+            child: Icon(icon, size: 16, color: iconCol)));
   }
 }
 
@@ -10112,8 +12736,10 @@ class _AuthSheetState extends ConsumerState<_AuthSheet> {
                     border: Border.all(
                         color: AppColors.red.withValues(alpha: 0.25))),
                 child: Text(_error!,
-                    style: GoogleFonts.dmSans(
-                        fontSize: 12, color: AppColors.red))),
+                    style: const TextStyle(
+                        fontFamily: AppFonts.body,
+                        fontSize: 12,
+                        color: AppColors.red))),
             const SizedBox(height: 14),
           ],
 
@@ -10141,7 +12767,8 @@ class _AuthSheetState extends ConsumerState<_AuthSheet> {
                               child: CircularProgressIndicator(
                                   color: Colors.white, strokeWidth: 2))
                           : Text(_isSignUp ? 'Create Account' : 'Sign In',
-                              style: GoogleFonts.dmSans(
+                              style: const TextStyle(
+                                  fontFamily: AppFonts.body,
                                   fontSize: 15,
                                   fontWeight: FontWeight.w800,
                                   color: Colors.white))))),
@@ -10152,8 +12779,10 @@ class _AuthSheetState extends ConsumerState<_AuthSheet> {
             Padding(
                 padding: const EdgeInsets.symmetric(horizontal: 12),
                 child: Text('or',
-                    style: GoogleFonts.dmSans(
-                        fontSize: 11, color: context.hintColor))),
+                    style: TextStyle(
+                        fontFamily: AppFonts.body,
+                        fontSize: 11,
+                        color: context.hintColor))),
             Expanded(child: Divider(color: context.borderColor)),
           ]),
           const SizedBox(height: 14),
@@ -10174,7 +12803,8 @@ class _AuthSheetState extends ConsumerState<_AuthSheet> {
                         const _GoogleLogo(size: 26),
                         const SizedBox(width: 10),
                         Text('Continue with Google',
-                            style: GoogleFonts.dmSans(
+                            style: TextStyle(
+                                fontFamily: AppFonts.body,
                                 fontSize: 14,
                                 fontWeight: FontWeight.w700,
                                 color: context.textColor)),
@@ -10204,7 +12834,8 @@ class _AuthSheetState extends ConsumerState<_AuthSheet> {
                       : []),
               child: Text(label,
                   textAlign: TextAlign.center,
-                  style: GoogleFonts.dmSans(
+                  style: TextStyle(
+                      fontFamily: AppFonts.body,
                       fontSize: 13,
                       fontWeight: FontWeight.w700,
                       color:
@@ -10216,11 +12847,16 @@ class _AuthSheetState extends ConsumerState<_AuthSheet> {
           controller: ctrl,
           obscureText: obscure,
           keyboardType: type,
-          style: GoogleFonts.dmSans(color: context.textColor, fontSize: 14),
+          style: TextStyle(
+              fontFamily: AppFonts.body,
+              color: context.textColor,
+              fontSize: 14),
           decoration: InputDecoration(
               labelText: label,
-              labelStyle:
-                  GoogleFonts.dmSans(color: context.hintColor, fontSize: 13),
+              labelStyle: TextStyle(
+                  fontFamily: AppFonts.body,
+                  color: context.hintColor,
+                  fontSize: 13),
               prefixIcon: Icon(icon, color: context.hintColor, size: 18),
               filled: true,
               fillColor: context.inputBg,

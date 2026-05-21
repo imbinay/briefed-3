@@ -170,36 +170,32 @@ function deduplicate(articles: Article[]): Article[] {
 
 interface DomainConfig { domain: string; keywords?: string; category?: string; }
 
+// 3 domains per category × 7 categories = 21 calls per run × 12 runs/day = 252/day.
+// Guardian covers theguardian.com separately, so it is excluded here to avoid
+// duplicate calls and wasted quota.
 const CURRENTS_DOMAIN_CONFIGS: Record<Category, DomainConfig[]> = {
   world: [
     { domain: "reuters.com" }, { domain: "bbc.co.uk" }, { domain: "apnews.com" },
-    { domain: "aljazeera.com" }, { domain: "theguardian.com" },
   ],
   politics: [
-    { domain: "abc.net.au", keywords: "politics" }, { domain: "reuters.com", keywords: "politics" },
-    { domain: "bbc.co.uk", keywords: "politics" }, { domain: "politico.com" },
-    { domain: "theguardian.com", keywords: "politics" },
+    { domain: "reuters.com", keywords: "politics" }, { domain: "bbc.co.uk", keywords: "politics" },
+    { domain: "politico.com" },
   ],
   sports: [
     { domain: "espn.com" }, { domain: "bbc.co.uk", category: "sport" },
-    { domain: "theguardian.com", category: "sport" }, { domain: "foxsports.com.au" },
     { domain: "skysports.com" },
   ],
   technology: [
     { domain: "theverge.com" }, { domain: "techcrunch.com" }, { domain: "arstechnica.com" },
-    { domain: "wired.com" }, { domain: "technologyreview.com" },
   ],
   business: [
     { domain: "bloomberg.com" }, { domain: "ft.com" }, { domain: "cnbc.com" },
-    { domain: "reuters.com", keywords: "business" }, { domain: "afr.com" },
   ],
   health: [
-    { domain: "theguardian.com", keywords: "health" }, { domain: "bbc.co.uk", keywords: "health" },
-    { domain: "abc.net.au", keywords: "health" }, { domain: "newscientist.com" },
+    { domain: "bbc.co.uk", keywords: "health" }, { domain: "newscientist.com" },
     { domain: "theatlantic.com", keywords: "health" },
   ],
   entertainment: [
-    { domain: "theguardian.com", category: "culture" }, { domain: "bbc.co.uk", keywords: "entertainment" },
     { domain: "deadline.com" }, { domain: "variety.com" }, { domain: "hollywoodreporter.com" },
   ],
 };
@@ -476,7 +472,7 @@ function normalizeQuestionType(raw: string): string {
 
 async function callGroq(userMsg: string, groqKey: string): Promise<Record<string, unknown>> {
   const body = JSON.stringify({
-    model: "llama-3.3-70b-versatile",
+    model: "llama-3.1-8b-instant",
     temperature: 0.5,
     max_tokens: 600,
     messages: [
@@ -604,37 +600,41 @@ function applyDifficultyProgression(questions: QuizQuestion[]): QuizQuestion[] {
 async function generateQuestionsForArticles(
   articles: Article[], category: string, groqKey: string, geminiKey: string
 ): Promise<QuizQuestion[]> {
-  // Sequential with 4s gap — Gemini free tier is 15 RPM (60s/15 = 4s per call)
-  const results: Array<PromiseSettledResult<QuizQuestion | null>> = [];
-  for (const article of articles) {
-    results.push(await Promise.allSettled([generateQuestion(article, groqKey, geminiKey)]).then((r) => r[0]));
-    await delay(4000);
+  // Sequential with 4s gap — Gemini free tier is 15 RPM (60s/15 = 4s per call).
+  // We iterate through the entire pool (up to 10 articles) and stop as soon as
+  // we have 5 good questions so we never waste API calls beyond what we need.
+  const questions: QuizQuestion[] = [];
+  for (let i = 0; i < articles.length; i++) {
+    if (questions.length >= 5) break;
+    const result = await generateQuestion(articles[i], groqKey, geminiKey);
+    if (result !== null) questions.push(result);
+    // Only wait if there are more articles to try
+    if (questions.length < 5 && i < articles.length - 1) await delay(4000);
   }
-
-  let questions = results
-    .filter((r): r is PromiseFulfilledResult<QuizQuestion | null> => r.status === "fulfilled")
-    .map((r) => r.value)
-    .filter((q): q is QuizQuestion => q !== null);
 
   // Sort by difficulty, enforce progression, remove duplicates
   questions.sort((a, b) => (DIFFICULTY_ORDER[a.difficulty] ?? 2) - (DIFFICULTY_ORDER[b.difficulty] ?? 2));
-  if (questions.length > 5) questions = questions.slice(0, 5);
-  if (questions.length === 5) questions = applyDifficultyProgression(questions);
-  questions = enforceUniqueness(questions);
-  questions = enforceImageSlot(questions);
+  if (questions.length > 5) questions.splice(5);
+  if (questions.length === 5) questions.splice(0, 5, ...applyDifficultyProgression(questions));
+  const unique = enforceUniqueness(questions);
+  const withImage = enforceImageSlot(unique);
 
-  console.log(`${category}: generated ${questions.length} questions`);
-  return questions;
+  console.log(`${category}: generated ${withImage.length} questions from ${articles.length} candidates`);
+  return withImage;
 }
 
 async function isQuizStale(key: string): Promise<boolean> {
   try {
     const doc = await db.collection("quiz_cache").doc(key).get();
     if (!doc.exists) return true;
-    const updatedAt = (doc.data()?.["updatedAt"] as Timestamp | undefined)?.toDate();
+    const data = doc.data();
+    const updatedAt = (data?.["updatedAt"] as Timestamp | undefined)?.toDate();
     if (!updatedAt) return true;
-    // Regenerate if > 6 hours old
-    return Date.now() - updatedAt.getTime() > 6 * 60 * 60 * 1000;
+    // Stale if fewer than 5 questions (partial generation from a previous run)
+    const questions = data?.["questions"] as unknown[] | undefined;
+    if (!questions || questions.length < 5) return true;
+    // Regenerate if > 4 hours old (matches the Cloud Function schedule)
+    return Date.now() - updatedAt.getTime() > 4 * 60 * 60 * 1000;
   } catch { return true; }
 }
 
@@ -653,7 +653,12 @@ async function runQuizGeneration(
       continue;
     }
 
-    const pool = articles.filter((a) => a.quizabilityPassed && !shouldSkip(a)).slice(0, 5);
+    // Provide up to 10 candidates — generateQuestionsForArticles stops at 5 successes
+    let pool = articles.filter((a) => a.quizabilityPassed && !shouldSkip(a)).slice(0, 10);
+    if (pool.length === 0) {
+      // Fallback: any non-skipped article even if quizability didn't pass
+      pool = articles.filter((a) => !shouldSkip(a)).slice(0, 10);
+    }
     if (pool.length === 0) { console.log(`${category}: no quiz-able articles`); continue; }
 
     const questions = await generateQuestionsForArticles(pool, category, groqKey, geminiKey);
@@ -669,10 +674,12 @@ async function runQuizGeneration(
 
   // Daily mix: 1 best article from each category → 5 questions
   if (await isQuizStale("daily_mix")) {
+    // Take up to 2 quiz-able articles from each category → up to 14 candidates
+    // generateQuestionsForArticles stops as soon as it gets 5 good questions
     const mixArticles: Article[] = [];
     for (const [, articles] of articlesByCategory) {
-      const best = articles.find((a) => a.quizabilityPassed && !shouldSkip(a));
-      if (best) mixArticles.push(best);
+      const candidates = articles.filter((a) => a.quizabilityPassed && !shouldSkip(a)).slice(0, 2);
+      mixArticles.push(...candidates);
     }
 
     if (mixArticles.length >= 3) {
@@ -739,7 +746,7 @@ async function runFullPipeline(
 const ALL_SECRETS = [CURRENTS_API_KEY, GUARDIAN_API_KEY, NEWSDATA_API_KEY, GROQ_API_KEY, GEMINI_API_KEY];
 
 export const refreshNewsCache = onSchedule(
-  { schedule: "every 2 hours", timeoutSeconds: 540, memory: "512MiB", secrets: ALL_SECRETS },
+  { schedule: "every 4 hours", timeoutSeconds: 540, memory: "512MiB", secrets: ALL_SECRETS },
   async () => {
     console.log("Starting scheduled pipeline refresh");
     await runFullPipeline(

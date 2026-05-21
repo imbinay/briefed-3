@@ -3,10 +3,39 @@ import '../models/ranked_article.dart';
 
 class NewsDedupService {
   static const _stopwords = {
-    'the', 'a', 'an', 'in', 'on', 'at', 'to', 'for', 'of', 'and',
-    'or', 'but', 'is', 'are', 'was', 'were', 'says', 'say', 'after',
-    'over', 'as', 'with', 'by', 'from', 'its', 'it', 'has', 'have',
-    'had', 'will', 'would', 'about', 'that',
+    'the',
+    'a',
+    'an',
+    'in',
+    'on',
+    'at',
+    'to',
+    'for',
+    'of',
+    'and',
+    'or',
+    'but',
+    'is',
+    'are',
+    'was',
+    'were',
+    'says',
+    'say',
+    'after',
+    'over',
+    'as',
+    'with',
+    'by',
+    'from',
+    'its',
+    'it',
+    'has',
+    'have',
+    'had',
+    'will',
+    'would',
+    'about',
+    'that',
   };
 
   /// Deduplicates a list of articles from multiple sources.
@@ -61,8 +90,7 @@ class NewsDedupService {
     return _hasConsecutiveCluster(listA, listB, 3);
   }
 
-  static bool _hasConsecutiveCluster(
-      List<String> a, List<String> b, int n) {
+  static bool _hasConsecutiveCluster(List<String> a, List<String> b, int n) {
     if (a.length < n || b.length < n) return false;
     for (int i = 0; i <= a.length - n; i++) {
       final cluster = a.sublist(i, i + n).join(' ');

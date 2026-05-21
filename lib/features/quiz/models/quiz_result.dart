@@ -29,12 +29,18 @@ class NewQuizResult {
 
   String get scoreLabel {
     switch (correctCount) {
-      case 5:  return 'Perfect! 🔥';
-      case 4:  return 'Excellent! ⭐';
-      case 3:  return 'Good Work 👍';
-      case 2:  return 'Keep Going 📚';
-      case 1:  return 'Try Again 💪';
-      default: return "Don't Give Up 🧠";
+      case 5:
+        return 'Perfect! 🔥';
+      case 4:
+        return 'Excellent! ⭐';
+      case 3:
+        return 'Good Work 👍';
+      case 2:
+        return 'Keep Going 📚';
+      case 1:
+        return 'Try Again 💪';
+      default:
+        return "Don't Give Up 🧠";
     }
   }
 }

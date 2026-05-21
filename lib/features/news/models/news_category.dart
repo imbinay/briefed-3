@@ -3,7 +3,9 @@ enum NewsCategory {
   politics,
   sports,
   technology,
-  business;
+  business,
+  health,
+  entertainment;
 
   String get label {
     switch (this) {
@@ -17,6 +19,10 @@ enum NewsCategory {
         return 'Technology';
       case NewsCategory.business:
         return 'Business';
+      case NewsCategory.health:
+        return 'Health & Lifestyle';
+      case NewsCategory.entertainment:
+        return 'Entertainment';
     }
   }
 

@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:google_fonts/google_fonts.dart';
 import '../core/theme.dart';
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -31,16 +30,16 @@ class AccentButton extends StatelessWidget {
         padding: padding ?? const EdgeInsets.symmetric(vertical: 16),
         decoration: BoxDecoration(
           gradient: const LinearGradient(
-            colors: [Color(0xFFFF4500), Color(0xFFCC3700)],
+            colors: [Color(0xFFFF9A62), Color(0xFFFF5A1F), Color(0xFFE13E00)],
             begin: Alignment.topLeft,
             end: Alignment.bottomRight,
           ),
-          borderRadius: BorderRadius.circular(16),
+          borderRadius: BorderRadius.circular(18),
           boxShadow: [
             BoxShadow(
-              color: const Color(0xFFFF4500).withValues(alpha: 0.35),
-              blurRadius: 20,
-              offset: const Offset(0, 6),
+              color: AppColors.accent.withValues(alpha: 0.34),
+              blurRadius: 28,
+              offset: const Offset(0, 12),
             ),
           ],
         ),
@@ -53,7 +52,8 @@ class AccentButton extends StatelessWidget {
             ],
             Text(
               text,
-              style: GoogleFonts.dmSans(
+              style: TextStyle(
+                fontFamily: AppFonts.body,
                 fontSize: fontSize ?? 15,
                 fontWeight: FontWeight.w800,
                 color: Colors.white,
@@ -92,7 +92,15 @@ class OutlineButton extends StatelessWidget {
         decoration: BoxDecoration(
           color: Colors.transparent,
           borderRadius: BorderRadius.circular(16),
-          border: Border.all(color: context.border2Color),
+          border: Border.all(color: AppColors.accent.withValues(alpha: 0.16)),
+          boxShadow: [
+            BoxShadow(
+              color: AppColors.accent
+                  .withValues(alpha: context.isDark ? 0.10 : 0.06),
+              blurRadius: 18,
+              offset: const Offset(0, 8),
+            ),
+          ],
         ),
         child: Row(
           mainAxisAlignment: MainAxisAlignment.center,
@@ -103,10 +111,11 @@ class OutlineButton extends StatelessWidget {
             ],
             Text(
               text,
-              style: GoogleFonts.dmSans(
+              style: TextStyle(
+                fontFamily: AppFonts.body,
                 fontSize: 14,
                 fontWeight: FontWeight.w600,
-                color: context.subColor,
+                color: AppColors.accent,
               ),
             ),
           ],
@@ -143,18 +152,26 @@ class BriefedCard extends StatelessWidget {
       child: Container(
         padding: padding ?? const EdgeInsets.all(16),
         decoration: BoxDecoration(
-          color: context.cardColor,
+          color:
+              context.cardColor.withValues(alpha: context.isDark ? 0.82 : 0.94),
           borderRadius: BorderRadius.circular(borderRadius),
           border: Border.all(
-            color: borderColor ?? context.borderColor,
+            color: borderColor ??
+                Colors.white.withValues(alpha: context.isDark ? 0.06 : 0.72),
             width: 1,
           ),
           boxShadow: [
             BoxShadow(
+              color: AppColors.accent
+                  .withValues(alpha: context.isDark ? 0.12 : 0.08),
+              blurRadius: 30,
+              offset: const Offset(0, 16),
+            ),
+            BoxShadow(
               color:
-                  Colors.black.withValues(alpha: context.isDark ? 0.3 : 0.05),
+                  Colors.black.withValues(alpha: context.isDark ? 0.28 : 0.04),
               blurRadius: 12,
-              offset: const Offset(0, 2),
+              offset: const Offset(0, 6),
             ),
           ],
         ),
@@ -194,6 +211,7 @@ class CategoryTag extends StatelessWidget {
       decoration: BoxDecoration(
         color: bg,
         borderRadius: BorderRadius.circular(999),
+        border: Border.all(color: color.withValues(alpha: 0.12)),
       ),
       child: Row(
         mainAxisSize: MainAxisSize.min,
@@ -204,7 +222,8 @@ class CategoryTag extends StatelessWidget {
           ],
           Text(
             category,
-            style: GoogleFonts.dmSans(
+            style: TextStyle(
+              fontFamily: AppFonts.body,
               fontSize: small ? 9 : 11,
               fontWeight: FontWeight.w700,
               color: color,
@@ -257,6 +276,7 @@ class StatCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return BriefedCard(
+      borderRadius: 22,
       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 14),
       child: Column(
         mainAxisSize: MainAxisSize.min,
@@ -273,7 +293,8 @@ class StatCard extends StatelessWidget {
           const SizedBox(height: 8),
           Text(
             value,
-            style: GoogleFonts.dmSans(
+            style: TextStyle(
+              fontFamily: AppFonts.body,
               fontSize: 17,
               fontWeight: FontWeight.w900,
               letterSpacing: -0.5,
@@ -283,7 +304,8 @@ class StatCard extends StatelessWidget {
           const SizedBox(height: 2),
           Text(
             label.toUpperCase(),
-            style: GoogleFonts.dmSans(
+            style: TextStyle(
+              fontFamily: AppFonts.body,
               fontSize: 8,
               fontWeight: FontWeight.w700,
               letterSpacing: 1,
@@ -346,7 +368,8 @@ class TimerRing extends StatelessWidget {
                     color: AppColors.green, size: 16)
                 : Text(
                     '$timeLeft',
-                    style: GoogleFonts.dmSans(
+                    style: TextStyle(
+                      fontFamily: AppFonts.body,
                       fontSize: 12,
                       fontWeight: FontWeight.w800,
                       color: context.textColor,
@@ -537,7 +560,8 @@ class OptionButton extends StatelessWidget {
             Expanded(
               child: Text(
                 text,
-                style: GoogleFonts.dmSans(
+                style: TextStyle(
+                  fontFamily: AppFonts.body,
                   fontSize: 14,
                   fontWeight: FontWeight.w600,
                   color: textColor,
@@ -563,7 +587,8 @@ class OptionButton extends StatelessWidget {
       child: Center(
         child: Text(
           labels[index],
-          style: GoogleFonts.dmSans(
+          style: TextStyle(
+            fontFamily: AppFonts.body,
             fontSize: 12,
             fontWeight: FontWeight.w800,
             color: dimmed ? context.hintColor : context.hintColor,
@@ -630,7 +655,8 @@ class StoryRow extends StatelessWidget {
                             sourceName
                                 .substring(0, sourceName.length.clamp(0, 2))
                                 .toUpperCase(),
-                            style: GoogleFonts.dmSans(
+                            style: TextStyle(
+                              fontFamily: AppFonts.body,
                               fontSize: 7,
                               fontWeight: FontWeight.w900,
                               color: catColor,
@@ -644,7 +670,8 @@ class StoryRow extends StatelessWidget {
                           'Source: $sourceName',
                           maxLines: 1,
                           overflow: TextOverflow.ellipsis,
-                          style: GoogleFonts.dmSans(
+                          style: TextStyle(
+                            fontFamily: AppFonts.body,
                             fontSize: 11,
                             fontWeight: FontWeight.w600,
                             color: context.hintColor,
@@ -658,7 +685,8 @@ class StoryRow extends StatelessWidget {
                       const SizedBox(width: 4),
                       Text(
                         timeAgo,
-                        style: GoogleFonts.dmSans(
+                        style: TextStyle(
+                          fontFamily: AppFonts.body,
                           fontSize: 11,
                           color: context.hintColor,
                         ),
@@ -668,7 +696,8 @@ class StoryRow extends StatelessWidget {
                   const SizedBox(height: 7),
                   Text(
                     title,
-                    style: GoogleFonts.dmSans(
+                    style: TextStyle(
+                      fontFamily: AppFonts.body,
                       fontSize: 15,
                       fontWeight: FontWeight.w600,
                       color: context.textColor,
@@ -741,7 +770,8 @@ class UserAvatar extends StatelessWidget {
       child: Center(
         child: Text(
           _initials,
-          style: GoogleFonts.dmSans(
+          style: TextStyle(
+            fontFamily: AppFonts.body,
             fontSize: size * 0.36,
             fontWeight: FontWeight.w800,
             color: Colors.white,

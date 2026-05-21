@@ -25,7 +25,7 @@ class AdIds {
 class AdService {
   static InterstitialAd? _interstitial;
   static RewardedAd? _rewarded;
-  static bool _adsEnabled = true;
+  static bool _adsEnabled = false;
   static bool _loadingInterstitial = false;
   static bool _loadingRewarded = false;
   static Completer<void>? _rewardedLoadCompleter;
@@ -33,11 +33,9 @@ class AdService {
   static bool get adsEnabled => _adsEnabled;
 
   static Future<void> init() async {
-    if (!AdIds.hasAppId || !AdIds.hasAnyAdUnit) {
-      _adsEnabled = false;
-      return;
-    }
+    _adsEnabled = true;
     await MobileAds.instance.initialize();
+    preload();
   }
 
   static void configure({required bool adsEnabled}) {

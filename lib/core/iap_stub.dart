@@ -40,7 +40,9 @@ class InAppPurchase {
   static final InAppPurchase instance = InAppPurchase();
   Stream<List<PurchaseDetails>> get purchaseStream => const Stream.empty();
   Future<bool> isAvailable() async => false;
-  Future<ProductDetailsResponse> queryProductDetails(Set<String> identifiers) async => ProductDetailsResponse();
+  Future<ProductDetailsResponse> queryProductDetails(
+          Set<String> identifiers) async =>
+      ProductDetailsResponse();
   Future<void> buyNonConsumable({required PurchaseParam purchaseParam}) async {}
   Future<void> restorePurchases() async {}
   Future<void> completePurchase(PurchaseDetails purchase) async {}

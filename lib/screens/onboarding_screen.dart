@@ -99,12 +99,6 @@ const _categories = [
       bg: Color(0xFFFEF3C7),
       stories: 11),
   _Cat(
-      label: 'Science',
-      emoji: '🔬',
-      fg: Color(0xFF0891B2),
-      bg: Color(0xFFCFFAFE),
-      stories: 9),
-  _Cat(
       label: 'Entertainment',
       emoji: '🎬',
       fg: Color(0xFFDB2777),
@@ -126,7 +120,6 @@ const _catIdMap = {
   'sports': 'Sports',
   'entertainment': 'Entertainment',
   'politics': 'Politics',
-  'science': 'Science',
   'health': 'Health',
 };
 
@@ -138,7 +131,6 @@ const _labelToId = {
   'Sports': 'sports',
   'Entertainment': 'entertainment',
   'Politics': 'politics',
-  'Science': 'science',
   'Health': 'health',
 };
 
@@ -194,8 +186,8 @@ const _weeklyHeadlines = [
   [
     _HeadlineDef(cat: 'Business', catFg: Color(0xFFD97706), catBg: Color(0xFFFEF3C7), emoji: '💼',
         title: 'Markets rally as tech earnings beat expectations by wide margin', source: 'FT'),
-    _HeadlineDef(cat: 'Science', catFg: Color(0xFF0891B2), catBg: Color(0xFFCFFAFE), emoji: '🔬',
-        title: 'James Webb captures earliest galaxy ever observed', source: 'NASA'),
+    _HeadlineDef(cat: 'Health', catFg: Color(0xFF059669), catBg: Color(0xFFD1FAE5), emoji: '🩺',
+        title: 'New vaccine shows 94% efficacy in global Phase 3 trials', source: 'WHO'),
     _HeadlineDef(cat: 'Entertainment', catFg: Color(0xFFDB2777), catBg: Color(0xFFFCE7F3), emoji: '🎬',
         title: 'Record-breaking box office weekend as blockbuster season opens', source: 'Variety', highlight: true),
   ],
@@ -796,9 +788,15 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen>
         return _GoalStep(
           dark: dark,
           goal: _goal,
+          notifHour: _notifHour,
+          notifMinute: _notifMinute,
           onBack: _back,
           onContinue: _next,
           onGoalChanged: (g) => setState(() => _goal = g),
+          onTimeChanged: (h, m) => setState(() {
+            _notifHour = h;
+            _notifMinute = m;
+          }),
         );
       case 2:
         return _AllSetStep(
@@ -1307,16 +1305,22 @@ class _InterestCardState extends State<_InterestCard>
 class _GoalStep extends StatefulWidget {
   final bool dark;
   final String goal;
+  final int notifHour;
+  final int notifMinute;
   final VoidCallback onBack;
   final VoidCallback onContinue;
   final void Function(String) onGoalChanged;
+  final void Function(int hour, int minute) onTimeChanged;
 
   const _GoalStep({
     required this.dark,
     required this.goal,
+    required this.notifHour,
+    required this.notifMinute,
     required this.onBack,
     required this.onContinue,
     required this.onGoalChanged,
+    required this.onTimeChanged,
   });
 
   @override
@@ -1486,6 +1490,7 @@ class _GoalStepState extends State<_GoalStep>
                         TextSpan(
                           text: '$monthlyStories stories',
                           style: const TextStyle(
+                              fontFamily: AppFonts.body,
                               color: Color(0xFFFFD6B8),
                               fontWeight: FontWeight.w800),
                         ),
@@ -1493,6 +1498,7 @@ class _GoalStepState extends State<_GoalStep>
                         TextSpan(
                           text: '${_fmtNum(monthlyXp)} XP',
                           style: const TextStyle(
+                              fontFamily: AppFonts.body,
                               color: Color(0xFFFFD6B8),
                               fontWeight: FontWeight.w800),
                         ),
@@ -1557,7 +1563,15 @@ class _GoalStepState extends State<_GoalStep>
               ),
               GestureDetector(
                 onTap: () async {
-                  // Time picker not needed for visual polish
+                  final picked = await showTimePicker(
+                    context: context,
+                    initialTime: TimeOfDay(
+                        hour: widget.notifHour,
+                        minute: widget.notifMinute),
+                  );
+                  if (picked != null) {
+                    widget.onTimeChanged(picked.hour, picked.minute);
+                  }
                 },
                 child: Container(
                   padding:
@@ -1575,7 +1589,7 @@ class _GoalStepState extends State<_GoalStep>
                     mainAxisSize: MainAxisSize.min,
                     children: [
                       Text(
-                        '09:00',
+                        '${widget.notifHour.toString().padLeft(2, '0')}:${widget.notifMinute.toString().padLeft(2, '0')}',
                         style: TextStyle(
                           fontFamily: AppFonts.body,
                           fontSize: 12,

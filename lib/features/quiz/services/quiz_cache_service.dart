@@ -9,7 +9,7 @@ class QuizCacheService {
 
   static String cacheKey(NewsCategory cat) {
     final date = DateTime.now().toIso8601String().substring(0, 10);
-    return 'briefed_quiz_v2_${cat.name}_$date';
+    return 'briefed_quiz_v4_${cat.name}_$date';
   }
 
   static Future<List<QuizQuestion>?> load(NewsCategory cat) async {
@@ -21,7 +21,8 @@ class QuizCacheService {
       final questions = list
           .map((e) => QuizQuestion.fromJson(e as Map<String, dynamic>))
           .toList();
-      dev.log('${cat.name}: loaded ${questions.length} cached questions', name: _tag);
+      dev.log('${cat.name}: loaded ${questions.length} cached questions',
+          name: _tag);
       return questions;
     } catch (e) {
       dev.log('${cat.name}: cache load failed: $e', name: _tag);
@@ -29,7 +30,8 @@ class QuizCacheService {
     }
   }
 
-  static Future<void> save(NewsCategory cat, List<QuizQuestion> questions) async {
+  static Future<void> save(
+      NewsCategory cat, List<QuizQuestion> questions) async {
     try {
       final prefs = await SharedPreferences.getInstance();
       await prefs.setString(

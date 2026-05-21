@@ -15,6 +15,8 @@ class NewsdataNewsService {
     NewsCategory.sports: {'category': 'sports', 'country': 'au,gb,us'},
     NewsCategory.technology: {'category': 'technology'},
     NewsCategory.business: {'category': 'business', 'country': 'au'},
+    NewsCategory.health: {'category': 'health', 'country': 'au,gb,us'},
+    NewsCategory.entertainment: {'category': 'entertainment', 'country': 'au,gb,us'},
   };
 
   static Future<List<RankedArticle>> fetchCategory(
@@ -38,8 +40,7 @@ class NewsdataNewsService {
 
     dev.log('GET ${category.name} (fallback)', name: _tag);
 
-    final response =
-        await http.get(uri).timeout(const Duration(seconds: 10));
+    final response = await http.get(uri).timeout(const Duration(seconds: 10));
 
     if (response.statusCode != 200) {
       throw Exception('HTTP ${response.statusCode}');

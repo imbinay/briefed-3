@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import '../../news/models/news_category.dart';
 
-enum QuestionType { who, what, when, where, which }
+enum QuestionType { who, what, when, where, which, howMany, howMuch }
 
 enum QuestionDifficulty {
   easy,
@@ -12,42 +12,63 @@ enum QuestionDifficulty {
 
   int get points {
     switch (this) {
-      case easy:     return 10;
-      case medium:   return 20;
-      case hard:     return 30;
-      case veryHard: return 40;
-      case expert:   return 50;
+      case easy:
+        return 10;
+      case medium:
+        return 20;
+      case hard:
+        return 30;
+      case veryHard:
+        return 40;
+      case expert:
+        return 50;
     }
   }
 
   String get label {
     switch (this) {
-      case easy:     return 'Easy';
-      case medium:   return 'Medium';
-      case hard:     return 'Hard';
-      case veryHard: return 'Very Hard';
-      case expert:   return 'Expert';
+      case easy:
+        return 'Easy';
+      case medium:
+        return 'Medium';
+      case hard:
+        return 'Hard';
+      case veryHard:
+        return 'Very Hard';
+      case expert:
+        return 'Expert';
     }
   }
 
   Color get color {
     switch (this) {
-      case easy:     return const Color(0xFF00C853);
-      case medium:   return const Color(0xFFFFD600);
-      case hard:     return const Color(0xFFFF9100);
-      case veryHard: return const Color(0xFFFF1744);
-      case expert:   return const Color(0xFF7C4DFF);
+      case easy:
+        return const Color(0xFF00C853);
+      case medium:
+        return const Color(0xFFFFD600);
+      case hard:
+        return const Color(0xFFFF9100);
+      case veryHard:
+        return const Color(0xFFFF1744);
+      case expert:
+        return const Color(0xFF7C4DFF);
     }
   }
 
   static QuestionDifficulty fromString(String s) {
     switch (s.toLowerCase().replaceAll(' ', '').replaceAll('_', '')) {
-      case 'easy':     return easy;
-      case 'medium':   return medium;
-      case 'hard':     return hard;
-      case 'veryhard': return veryHard;
-      case 'expert':   return expert;
-      default:         return medium;
+      case 'easy':
+        return easy;
+      case 'medium':
+        return medium;
+      case 'hard':
+        return hard;
+      case 'veryhard':
+        return veryHard;
+      case 'expert':
+        return expert;
+      default:
+        return medium;
     }
   }
 }
@@ -153,11 +174,9 @@ class QuizQuestion {
         points: (j['points'] as num).toInt(),
         imageUrl: j['imageUrl'] as String?,
         hasImage: j['hasImage'] as bool? ?? false,
-        category:
-            NewsCategory.fromString(j['category'] as String? ?? '') ??
-                NewsCategory.world,
-        generatedAt:
-            DateTime.tryParse(j['generatedAt'] as String? ?? '') ??
-                DateTime.now(),
+        category: NewsCategory.fromString(j['category'] as String? ?? '') ??
+            NewsCategory.world,
+        generatedAt: DateTime.tryParse(j['generatedAt'] as String? ?? '') ??
+            DateTime.now(),
       );
 }

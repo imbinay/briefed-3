@@ -1,10 +1,8 @@
 import 'dart:developer' as dev;
 import '../models/news_category.dart';
 import '../models/ranked_article.dart';
-import 'currents_news_service.dart';
 import 'firestore_news_service.dart';
 import 'guardian_news_service.dart';
-import 'newsdata_news_service.dart';
 import 'news_dedup_service.dart';
 import 'news_source_config.dart';
 import 'quiz_ability_scorer.dart';
@@ -40,55 +38,44 @@ class NewsPipelineService {
       }
     }
 
-    // 2 — Try Firestore server cache (populated by Cloud Function every 2h)
-    final serverArticles = await _safeFetch(
-        'Firestore/${category.name}',
-        () => FirestoreNewsService.fetchCategory(category));
+    // 2 — Try Firestore server cache (populated by Cloud Function every 4h).
+    //     We distinguish two failure modes:
+    //       • null  → Firestore threw (outage) — serve stale cache, call NO APIs
+    //       • []    → Firestore healthy but empty (first run) — proceed to Guardian
+    final serverArticles = await _fetchFirestore(category);
+    if (serverArticles == null) {
+      // Firestore is unreachable — serve whatever is in local cache (even expired)
+      // so a temporary outage never hammers the news API quota.
+      dev.log('${category.name}: Firestore unavailable — serving stale cache', name: _tag);
+      final stale = await NewsCacheService.loadStale(category);
+      return _buildResult(category, stale ?? [], fromCache: true);
+    }
     if (serverArticles.isNotEmpty) {
       await NewsCacheService.save(category, serverArticles);
-      return _buildResult(category, serverArticles, fromCache: true);
+      return _buildResult(category, serverArticles);
     }
 
-    // 3 — Fetch PRIMARY (Currents) + SECONDARY (Guardian) in parallel
-    final futures = await Future.wait([
-      _safeFetch('Currents/${category.name}',
-          () => CurrentsNewsService.fetchCategory(category)),
-      _safeFetch('Guardian/${category.name}',
-          () => GuardianNewsService.fetchCategory(category)),
-    ]);
+    // 3 — Firestore is healthy but empty (Cloud Function hasn't run yet).
+    //     Guardian is the only direct fallback — 5 000 calls/day free tier.
+    //     Currents is intentionally excluded: the Cloud Function already consumes
+    //     the full Currents quota server-side, so client-side calls would push
+    //     the account over the free limit regardless of user count.
+    final guardianArticles = await _safeFetch('Guardian/${category.name}',
+        () => GuardianNewsService.fetchCategory(category));
 
-    var combined = [...futures[0], ...futures[1]];
+    final combined = guardianArticles;
 
-    // 3 — Deduplicate
+    // 4 — Deduplicate
     final deduped = NewsDedupService.deduplicate(combined);
 
-    // 4 — Score quiz-ability
+    // 5 — Score quiz-ability
     var scored = deduped.map(QuizAbilityScorer.score).toList();
 
-    // 5 — Discard articles older than 48 hours
+    // 6 — Discard articles older than 48 hours
     scored = scored
         .where((a) =>
             DateTime.now().difference(a.publishedAt).inHours < 48)
         .toList();
-
-    // 6 — Check if fallback is needed (fewer than 5 quiz-able)
-    final quizableCount = scored.where((a) => a.quizabilityPassed).length;
-    if (quizableCount < 5) {
-      dev.log(
-          '${category.name}: only $quizableCount quiz-able → triggering NewsData fallback',
-          name: _tag);
-      final fallback = await _safeFetch('NewsData/${category.name}',
-          () => NewsdataNewsService.fetchCategory(category));
-      if (fallback.isNotEmpty) {
-        final scoredFallback = fallback.map(QuizAbilityScorer.score).toList();
-        final merged =
-            NewsDedupService.deduplicate([...scored, ...scoredFallback]);
-        scored = merged
-            .where((a) =>
-                DateTime.now().difference(a.publishedAt).inHours < 48)
-            .toList();
-      }
-    }
 
     // 7 — Sort by finalScore descending
     scored.sort((a, b) => b.finalScore.compareTo(a.finalScore));
@@ -98,6 +85,18 @@ class NewsPipelineService {
 
     _debugLog(category, combined.length, deduped.length, scored);
     return _buildResult(category, scored);
+  }
+
+  /// Fetches from Firestore, returning:
+  ///   • non-null list  — success (may be empty if no data yet)
+  ///   • null           — Firestore threw an exception (treat as outage)
+  static Future<List<RankedArticle>?> _fetchFirestore(NewsCategory category) async {
+    try {
+      return await FirestoreNewsService.fetchCategory(category);
+    } catch (e) {
+      dev.log('Firestore/${category.name} fetch failed: $e', name: _tag);
+      return null;
+    }
   }
 
   static CategoryResult _buildResult(

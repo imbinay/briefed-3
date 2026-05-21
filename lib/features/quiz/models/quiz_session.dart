@@ -5,6 +5,7 @@ enum NewQuizStatus { idle, loading, active, revealed, finished, error }
 
 class QuizSession {
   final NewsCategory? category;
+  final bool isDailyMix;
   final List<QuizQuestion> questions;
   final int currentIndex;
   final List<int?> answers; // -1 = timeout, null = unanswered
@@ -18,6 +19,7 @@ class QuizSession {
 
   const QuizSession({
     this.category,
+    this.isDailyMix = false,
     this.questions = const [],
     this.currentIndex = 0,
     this.answers = const [],
@@ -54,6 +56,7 @@ class QuizSession {
 
   QuizSession copyWith({
     NewsCategory? category,
+    bool? isDailyMix,
     List<QuizQuestion>? questions,
     int? currentIndex,
     List<int?>? answers,
@@ -67,6 +70,7 @@ class QuizSession {
   }) =>
       QuizSession(
         category: category ?? this.category,
+        isDailyMix: isDailyMix ?? this.isDailyMix,
         questions: questions ?? this.questions,
         currentIndex: currentIndex ?? this.currentIndex,
         answers: answers ?? this.answers,

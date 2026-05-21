@@ -12,9 +12,10 @@ class NotificationService {
     bool requestPermission = true,
   }) async {
     if (!Platform.isAndroid) return false;
-    final scheduled = await _channel.invokeMethod<bool>('scheduleDailyReminder', {
-      'hour':              hour,
-      'minute':            minute,
+    final scheduled =
+        await _channel.invokeMethod<bool>('scheduleDailyReminder', {
+      'hour': hour,
+      'minute': minute,
       'requestPermission': requestPermission,
     });
     return scheduled ?? false;

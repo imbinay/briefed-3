@@ -10,7 +10,7 @@ class FirestoreNewsService {
   static const _collection = 'news_cache';
 
   // How stale the server cache can be before we skip it and go direct.
-  static const _maxCacheAge = Duration(hours: 4);
+  static const _maxCacheAge = Duration(hours: 10);
 
   static final _firestore = FirebaseFirestore.instance;
 

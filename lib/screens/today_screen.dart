@@ -5,6 +5,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../core/theme.dart';
+import '../widgets/ad_widgets.dart';
 import '../features/news/models/news_category.dart';
 import '../features/news/providers/news_pipeline_provider.dart';
 import '../features/xp/daily_tracker.dart';
@@ -22,11 +23,11 @@ const _orange = Color(0xFFFF5A1F);
 const _deepOrange = Color(0xFFD84315);
 
 const Map<String, Color> _categoryColours = {
-  'world': Color(0xFFFF6B2C),
-  'politics': Color(0xFFE85D04),
-  'sports': Color(0xFFFF7B54),
-  'technology': Color(0xFFFF8A3D),
-  'business': Color(0xFFC94C00),
+  'world': Color(0xFF2196F3),
+  'politics': Color(0xFF9C27B0),
+  'sports': Color(0xFF4CAF50),
+  'technology': Color(0xFF00BCD4),
+  'business': Color(0xFFFF9800),
   'health': Color(0xFF26A69A),
   'entertainment': Color(0xFFE91E63),
 };
@@ -72,9 +73,10 @@ class _TodayScreenState extends ConsumerState<TodayScreen>
   ];
 
   // ── Controllers ──────────────────────────────────────────────────────────
-  late AnimationController _entryCtrl; // 1 400ms master
-  late AnimationController _pulseCtrl; // repeat — flame pulse
-  late AnimationController _arrowCtrl; // repeat — game arrow
+  late AnimationController _entryCtrl;   // 1 400ms master
+  late AnimationController _pulseCtrl;   // repeat — flame pulse
+  late AnimationController _arrowCtrl;   // repeat — game arrow
+  late AnimationController _quizBtnCtrl; // repeat — Play Quiz pulse
 
   // ── Entry animations ─────────────────────────────────────────────────────
   late Animation<double> _headerFade;
@@ -99,10 +101,30 @@ class _TodayScreenState extends ConsumerState<TodayScreen>
     _loadState();
     _initAnimations();
     _entryCtrl.forward();
-    // Run migration once
     XpService.migrateIfNeeded();
-    _clockTimer = Timer.periodic(
-        const Duration(minutes: 1), (_) => _updateCountdown());
+    _clockTimer = Timer.periodic(const Duration(minutes: 1), (_) {
+      _updateCountdown();
+      if (mounted) _syncQuizBtn(ref.read(userProvider));
+    });
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) _syncQuizBtn(ref.read(userProvider));
+    });
+  }
+
+  void _syncQuizBtn(UserData user) {
+    final isPro = user.isPro &&
+        AuthService.currentUser != null &&
+        !AuthService.isGuest;
+    final lastPlayed = StorageService.getLastPlayedTimestamp();
+    final playedMoreThan2hAgo = lastPlayed != null &&
+        DateTime.now().difference(lastPlayed).inHours >= 2;
+    final shouldAnimate = !user.hasPlayedToday || (isPro && playedMoreThan2hAgo);
+    if (shouldAnimate && !_quizBtnCtrl.isAnimating) {
+      _quizBtnCtrl.repeat();
+    } else if (!shouldAnimate && _quizBtnCtrl.isAnimating) {
+      _quizBtnCtrl.stop();
+      _quizBtnCtrl.value = 0;
+    }
   }
 
   void _loadState() {
@@ -120,7 +142,19 @@ class _TodayScreenState extends ConsumerState<TodayScreen>
       if (mounted) setState(() => _nextBriefLabel = '');
       return;
     }
-    final next = last.add(const Duration(hours: 12));
+    final user = ref.read(userProvider);
+    final isPro = user.isPro &&
+        AuthService.currentUser != null &&
+        !AuthService.isGuest;
+    final DateTime next;
+    if (isPro) {
+      // Pro users get fresh questions every 4h
+      next = last.add(const Duration(hours: 4));
+    } else {
+      // Free users reset at midnight
+      final now = DateTime.now();
+      next = DateTime(now.year, now.month, now.day + 1);
+    }
     final diff = next.difference(DateTime.now());
     if (!mounted) return;
     if (diff.isNegative) {
@@ -179,6 +213,9 @@ class _TodayScreenState extends ConsumerState<TodayScreen>
 
     _pulseScale = Tween<double>(begin: 1.0, end: 1.2)
         .animate(CurvedAnimation(parent: _pulseCtrl, curve: Curves.easeInOut));
+
+    _quizBtnCtrl = AnimationController(
+        vsync: this, duration: const Duration(milliseconds: 1500));
   }
 
   @override
@@ -187,6 +224,7 @@ class _TodayScreenState extends ConsumerState<TodayScreen>
     _entryCtrl.dispose();
     _pulseCtrl.dispose();
     _arrowCtrl.dispose();
+    _quizBtnCtrl.dispose();
     super.dispose();
   }
 
@@ -208,7 +246,10 @@ class _TodayScreenState extends ConsumerState<TodayScreen>
     final xp = ref.watch(xpProvider);
     final news = ref.watch(newsProvider);
 
-    ref.listen<UserData>(userProvider, (_, __) => setState(_loadState));
+    ref.listen<UserData>(userProvider, (_, newUser) {
+      setState(_loadState);
+      _syncQuizBtn(newUser);
+    });
 
     final latestResult =
         user.recentResults.isEmpty ? null : user.recentResults.first;
@@ -281,6 +322,8 @@ class _TodayScreenState extends ConsumerState<TodayScreen>
                   const SizedBox(height: 24),
                   _buildHeadlineCard(context, heroArticle),
                 ],
+                const SizedBox(height: 24),
+                const Center(child: BriefedBannerAd()),
                 const SizedBox(height: 32),
               ],
             ),
@@ -570,6 +613,12 @@ class _TodayScreenState extends ConsumerState<TodayScreen>
   ) {
     final isDark = context.isDark;
     final read = _briefingRead;
+    final isPro = user.isPro &&
+        AuthService.currentUser != null &&
+        !AuthService.isGuest;
+    final lastPlayed = StorageService.getLastPlayedTimestamp();
+    final playedMoreThan2hAgo = lastPlayed != null &&
+        DateTime.now().difference(lastPlayed).inHours >= 2;
 
     return GestureDetector(
       onTap: read ? null : () => _onStartBriefing(context, xp),
@@ -643,7 +692,7 @@ class _TodayScreenState extends ConsumerState<TodayScreen>
                     ),
                 ]),
                 const SizedBox(height: 18),
-                Text("Today's\nheadlines",
+                const Text("Today's\nheadlines",
                     style: TextStyle(
                         fontFamily: AppFonts.display,
                         fontSize: 31,
@@ -692,7 +741,7 @@ class _TodayScreenState extends ConsumerState<TodayScreen>
                           fontWeight: FontWeight.w800,
                           color: Colors.white.withValues(alpha: 0.88))),
                   const Spacer(),
-                  Text('+250 XP',
+                  const Text('+250 XP',
                       style: TextStyle(
                           fontFamily: AppFonts.display,
                           height: 1.02,
@@ -720,7 +769,7 @@ class _TodayScreenState extends ConsumerState<TodayScreen>
                           label: FittedBox(
                             fit: BoxFit.scaleDown,
                             child: Text(read ? 'Read Again' : 'Read First',
-                                style: TextStyle(
+                                style: const TextStyle(
                                     fontFamily: AppFonts.body,
                                     fontSize: 13,
                                     fontWeight: FontWeight.w900)),
@@ -730,37 +779,60 @@ class _TodayScreenState extends ConsumerState<TodayScreen>
                     ),
                     const SizedBox(width: 10),
                     Expanded(
-                      child: SizedBox(
-                        height: 50,
-                        child: ElevatedButton.icon(
-                          style: ElevatedButton.styleFrom(
-                            backgroundColor: Colors.white,
-                            disabledBackgroundColor:
-                                Colors.white.withValues(alpha: 0.62),
-                            foregroundColor: _deepOrange,
-                            disabledForegroundColor:
-                                _deepOrange.withValues(alpha: 0.55),
-                            padding: const EdgeInsets.symmetric(horizontal: 12),
-                            shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(16)),
-                            elevation: 0,
-                          ),
-                          onPressed: user.hasPlayedToday
-                              ? null
-                              : () => _onPlayMainQuiz(context, xp),
-                          icon: const Icon(Icons.play_arrow_rounded, size: 18),
-                          label: FittedBox(
-                            fit: BoxFit.scaleDown,
-                            child: Text(
-                                user.hasPlayedToday
-                                    ? 'Quiz Complete'
-                                    : read
-                                        ? 'Ready to take quiz'
-                                        : 'Play Quiz',
-                                style: TextStyle(
-                                    fontFamily: AppFonts.body,
-                                    fontSize: 13,
-                                    fontWeight: FontWeight.w900)),
+                      child: AnimatedBuilder(
+                        animation: _quizBtnCtrl,
+                        builder: (_, child) {
+                          final t = _quizBtnCtrl.value;
+                          return Container(
+                            decoration: BoxDecoration(
+                              borderRadius: BorderRadius.circular(16),
+                              boxShadow: [
+                                BoxShadow(
+                                  color: Colors.white
+                                      .withValues(alpha: 0.55 * (1 - t)),
+                                  blurRadius: 18 * t,
+                                  spreadRadius: 10 * t,
+                                ),
+                              ],
+                            ),
+                            child: child,
+                          );
+                        },
+                        child: SizedBox(
+                          height: 50,
+                          child: ElevatedButton.icon(
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: Colors.white,
+                              disabledBackgroundColor:
+                                  Colors.white.withValues(alpha: 0.62),
+                              foregroundColor: _deepOrange,
+                              disabledForegroundColor:
+                                  _deepOrange.withValues(alpha: 0.55),
+                              padding:
+                                  const EdgeInsets.symmetric(horizontal: 12),
+                              shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(16)),
+                              elevation: 0,
+                            ),
+                            onPressed: (user.hasPlayedToday && !isPro)
+                                ? null
+                                : () => _onPlayMainQuiz(context, xp),
+                            icon: const Icon(Icons.play_arrow_rounded, size: 18),
+                            label: FittedBox(
+                              fit: BoxFit.scaleDown,
+                              child: Text(
+                                  (user.hasPlayedToday && !isPro)
+                                      ? 'Quiz Complete'
+                                      : (user.hasPlayedToday && isPro)
+                                          ? (playedMoreThan2hAgo
+                                              ? 'Play Quiz'
+                                              : 'Replay Quiz')
+                                          : 'Play Quiz',
+                                  style: const TextStyle(
+                                      fontFamily: AppFonts.body,
+                                      fontSize: 13,
+                                      fontWeight: FontWeight.w900)),
+                            ),
                           ),
                         ),
                       ),
@@ -939,7 +1011,7 @@ class _TodayScreenState extends ConsumerState<TodayScreen>
                                   ? context.textColor
                                   : context.subColor))),
                   if (t.$2)
-                    Text('✓',
+                    const Text('✓',
                         style: TextStyle(
                             fontFamily: AppFonts.body,
                             fontSize: 14,
@@ -963,8 +1035,8 @@ class _TodayScreenState extends ConsumerState<TodayScreen>
                 const SizedBox(width: 8),
                 Expanded(
                   child: Text(
-                      '${latestResult!.score}/${latestResult.totalQuestions} correct · +${latestResult.pointsEarned} XP',
-                      style: TextStyle(
+                      '${latestResult.score}/${latestResult.totalQuestions} correct · +${latestResult.pointsEarned} XP',
+                      style: const TextStyle(
                           fontFamily: AppFonts.body,
                           fontSize: 13,
                           fontWeight: FontWeight.w700,
@@ -1055,7 +1127,7 @@ class _TodayScreenState extends ConsumerState<TodayScreen>
                     fontWeight: FontWeight.w700,
                     color: context.subColor)),
             Text('$next days',
-                style: TextStyle(
+                style: const TextStyle(
                     fontFamily: AppFonts.body,
                     fontSize: 12,
                     fontWeight: FontWeight.w800,
@@ -1086,7 +1158,7 @@ class _TodayScreenState extends ConsumerState<TodayScreen>
                     fontSize: 10,
                     color: context.hintColor)),
             Text('$next days',
-                style: TextStyle(
+                style: const TextStyle(
                     fontFamily: AppFonts.body,
                     fontSize: 10,
                     fontWeight: FontWeight.w700,
@@ -1127,7 +1199,7 @@ class _TodayScreenState extends ConsumerState<TodayScreen>
                       height: 1.02,
                       letterSpacing: -0.4)),
               Text('Level ${xp.level}: ${xp.levelTitle}',
-                  style: TextStyle(
+                  style: const TextStyle(
                       fontFamily: AppFonts.body,
                       fontSize: 13,
                       fontWeight: FontWeight.w700,
@@ -1178,7 +1250,7 @@ class _TodayScreenState extends ConsumerState<TodayScreen>
               child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                Text('Last Quiz Breakdown',
+                const Text('Last Quiz Breakdown',
                     style: TextStyle(
                         fontFamily: AppFonts.body,
                         fontSize: 11,
@@ -1186,7 +1258,7 @@ class _TodayScreenState extends ConsumerState<TodayScreen>
                         color: _orange,
                         letterSpacing: 0.5)),
                 const SizedBox(height: 10),
-                _xpRow(context, '${latestResult!.score} correct answers',
+                _xpRow(context, '${latestResult.score} correct answers',
                     '+${latestResult.score * 20} XP'),
                 if (latestResult.score == latestResult.totalQuestions)
                   _xpRow(context, 'Perfect score bonus', '+50 XP'),
@@ -1283,6 +1355,8 @@ class _TodayScreenState extends ConsumerState<TodayScreen>
   }
 
   Future<void> _onPlayMainQuiz(BuildContext context, XpState xp) async {
+    // Always allow the quiz — show a gentle suggestion to read first if they
+    // haven't yet, but don't block. User can dismiss or read first.
     if (_briefingRead) {
       _startMainQuiz();
       return;
@@ -1353,7 +1427,7 @@ class _TodayScreenState extends ConsumerState<TodayScreen>
                     await _onStartBriefing(context, xp);
                   },
                   icon: const Icon(Icons.article_rounded, size: 18),
-                  label: Text('Read Briefing First',
+                  label: const Text('Read Briefing First',
                       style: TextStyle(
                           fontFamily: AppFonts.body,
                           fontSize: 14,
@@ -1374,7 +1448,7 @@ class _TodayScreenState extends ConsumerState<TodayScreen>
                     Navigator.of(sheetContext).pop();
                     _startMainQuiz();
                   },
-                  child: Text('Start Quiz Anyway',
+                  child: const Text('Start Quiz Anyway',
                       style: TextStyle(
                           fontFamily: AppFonts.body,
                           fontSize: 13,
@@ -1408,7 +1482,7 @@ class _TodayScreenState extends ConsumerState<TodayScreen>
                   color: context.textColor,
                   letterSpacing: -0.4)),
           const Spacer(),
-          Text('View all',
+          const Text('View all',
               style: TextStyle(
                   fontFamily: AppFonts.body,
                   fontSize: 13,
@@ -1485,7 +1559,7 @@ class _TodayScreenState extends ConsumerState<TodayScreen>
           const Spacer(),
           GestureDetector(
             onTap: () => ref.read(selectedTabProvider.notifier).state = 1,
-            child: Text('Explore all games →',
+            child: const Text('Explore all games →',
                 style: TextStyle(
                     fontFamily: AppFonts.body,
                     fontSize: 13,
@@ -1510,12 +1584,12 @@ class _TodayScreenState extends ConsumerState<TodayScreen>
                   onTap: () {
                     if (!unlocked) {
                       ScaffoldMessenger.of(context).showSnackBar(
-                        SnackBar(
+                        const SnackBar(
                           content: Text('Complete today\'s quiz first',
                               style: TextStyle(
                                   fontFamily: AppFonts.body, fontSize: 13)),
                           behavior: SnackBarBehavior.floating,
-                          duration: const Duration(seconds: 2),
+                          duration: Duration(seconds: 2),
                         ),
                       );
                       return;
@@ -1536,12 +1610,12 @@ class _TodayScreenState extends ConsumerState<TodayScreen>
                   onTap: () {
                     if (!unlocked) {
                       ScaffoldMessenger.of(context).showSnackBar(
-                        SnackBar(
+                        const SnackBar(
                           content: Text('Complete today\'s quiz first',
                               style: TextStyle(
                                   fontFamily: AppFonts.body, fontSize: 13)),
                           behavior: SnackBarBehavior.floating,
-                          duration: const Duration(seconds: 2),
+                          duration: Duration(seconds: 2),
                         ),
                       );
                       return;
@@ -1574,7 +1648,7 @@ class _TodayScreenState extends ConsumerState<TodayScreen>
                 color: context.textColor,
                 letterSpacing: -0.4)),
         const Spacer(),
-        Text('Quiz it',
+        const Text('Quiz it',
             style: TextStyle(
                 fontFamily: AppFonts.body,
                 fontSize: 13,
@@ -1674,9 +1748,9 @@ class _TodayScreenState extends ConsumerState<TodayScreen>
                         _orange.withValues(alpha: context.isDark ? 0.16 : 0.10),
                     borderRadius: BorderRadius.circular(10),
                   ),
-                  child: Row(mainAxisSize: MainAxisSize.min, children: [
-                    const Icon(Icons.bolt_rounded, size: 12, color: _orange),
-                    const SizedBox(width: 4),
+                  child: const Row(mainAxisSize: MainAxisSize.min, children: [
+                    Icon(Icons.bolt_rounded, size: 12, color: _orange),
+                    SizedBox(width: 4),
                     Text('Quiz me later',
                         style: TextStyle(
                             fontFamily: AppFonts.body,
@@ -1838,7 +1912,7 @@ class _HeroChip extends StatelessWidget {
         Icon(icon, size: 14, color: Colors.white),
         const SizedBox(width: 6),
         Text(label,
-            style: TextStyle(
+            style: const TextStyle(
                 fontFamily: AppFonts.body,
                 fontSize: 11,
                 fontWeight: FontWeight.w900,
@@ -1993,6 +2067,13 @@ class _CategoryQuizCardState extends State<_CategoryQuizCard>
     final total = comp['total'] ?? 5;
     final estimatedXp = correct * 15 + (correct == total ? 30 : 0);
 
+    final now = DateTime.now();
+    final midnight = DateTime(now.year, now.month, now.day + 1);
+    final diff = midnight.difference(now);
+    final h = diff.inHours;
+    final m = diff.inMinutes % 60;
+    final resetLabel = h > 0 ? 'Resets in ${h}h ${m}m' : 'Resets in ${m}m';
+
     return Padding(
       padding: const EdgeInsets.all(14),
       child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
@@ -2007,7 +2088,7 @@ class _CategoryQuizCardState extends State<_CategoryQuizCard>
               child: Icon(Icons.check_rounded, color: c, size: 20)),
           const Spacer(),
           Text('$correct/$total',
-              style: TextStyle(
+              style: const TextStyle(
                   fontFamily: AppFonts.display,
                   height: 1.02,
                   fontSize: 20,
@@ -2021,12 +2102,19 @@ class _CategoryQuizCardState extends State<_CategoryQuizCard>
                 fontSize: 15,
                 fontWeight: FontWeight.w900,
                 color: context.textColor)),
-        const SizedBox(height: 4),
+        const SizedBox(height: 2),
         Text('+$estimatedXp XP earned',
             style: TextStyle(
                 fontFamily: AppFonts.body,
                 fontSize: 11,
                 color: context.subColor)),
+        const SizedBox(height: 2),
+        Text(resetLabel,
+            style: TextStyle(
+                fontFamily: AppFonts.body,
+                fontSize: 10,
+                fontWeight: FontWeight.w700,
+                color: c.withValues(alpha: 0.70))),
       ]),
     );
   }

@@ -169,11 +169,11 @@ class UserNotifier extends StateNotifier<UserData> {
   Future<void> afterQuiz(QuizResult result) async {
     final isDailyMix = result.categories.length > 1;
 
-    // Streak, lastPlayedDate, and "quiz ready" notification only apply to the
-    // daily mix. Category quizzes earn XP and are tracked separately but must
-    // not advance the streak or gray out the main quiz card.
+    // Daily Mix and World Quiz are the same quiz — treat them identically for
+    // streak, lastPlayedDate, and the "quiz ready" notification.
+    final isWorldOrDailyMix = isDailyMix || result.categories.contains('world');
     int newStreak = state.streak;
-    if (isDailyMix) {
+    if (isWorldOrDailyMix) {
       if (!state.isPro && !kIsWeb) {
         unawaited(NotificationService.scheduleQuizReady());
       }
@@ -187,15 +187,18 @@ class UserNotifier extends StateNotifier<UserData> {
     await StorageService.setTotalQuizzes(newTotal);
     await StorageService.addQuizResult(result);
 
-    if (!isDailyMix) {
-      for (final cat in result.categories) {
-        await StorageService.setCategoryCompletion(
-          cat,
-          result.score,
-          result.totalQuestions,
-          result.pointsEarned,
-        );
-      }
+    // Always mark category completions. For daily mix, also mark 'world' so the
+    // World quiz is blocked (they serve the same content).
+    final categoriesToMark = isDailyMix
+        ? ['world']
+        : result.categories;
+    for (final cat in categoriesToMark) {
+      await StorageService.setCategoryCompletion(
+        cat,
+        result.score,
+        result.totalQuestions,
+        result.pointsEarned,
+      );
     }
 
     final xpEarned = XpService.calculateQuizXp(
@@ -217,7 +220,7 @@ class UserNotifier extends StateNotifier<UserData> {
       totalQuizzes: newTotal,
       // Only mark lastPlayedDate (which drives hasPlayedToday) for the daily
       // mix. Category quiz completions are tracked via setCategoryCompletion.
-      lastPlayedDate: isDailyMix
+      lastPlayedDate: isWorldOrDailyMix
           ? DateTime.now().toIso8601String().substring(0, 10)
           : state.lastPlayedDate,
       recentResults: history,

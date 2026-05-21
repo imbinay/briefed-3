@@ -3,7 +3,8 @@ class NotificationService {
     required int hour,
     required int minute,
     bool requestPermission = true,
-  }) async => false;
+  }) async =>
+      false;
 
   static Future<void> cancelDailyReminder() async {}
 

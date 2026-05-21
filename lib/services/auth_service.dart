@@ -2,6 +2,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:google_sign_in/google_sign_in.dart';
 import '../models/models.dart';
+import '../features/xp/xp_service.dart';
 
 class AuthService {
   static final FirebaseAuth _auth = FirebaseAuth.instance;
@@ -104,6 +105,41 @@ class AuthService {
       'streak': userData.streak,
       'updatedAt': FieldValue.serverTimestamp(),
     }, SetOptions(merge: true));
+
+    final isDailyMix = result.categories.length > 1;
+    final quizXp = XpService.calculateQuizXp(
+      correct: result.score,
+      total: result.totalQuestions,
+      isDailyMix: isDailyMix,
+      streak: userData.streak,
+    );
+    final leaderboardData = {
+      'uid': user.uid,
+      'displayName': user.displayName ?? user.email ?? '',
+      'photoUrl': user.photoURL ?? '',
+      'xp': FieldValue.increment(quizXp),
+      'quizzes': FieldValue.increment(1),
+      'lastScore': result.score,
+      'lastTotal': result.totalQuestions,
+      'lastPercentage': (result.percentage * 100).round(),
+      'streak': userData.streak,
+      'updatedAt': FieldValue.serverTimestamp(),
+    };
+    if (isDailyMix) {
+      await _firestore
+          .collection('leaderboards')
+          .doc('main_quiz')
+          .collection('users')
+          .doc(user.uid)
+          .set(leaderboardData, SetOptions(merge: true));
+    } else if (result.categories.isNotEmpty) {
+      await _firestore
+          .collection('leaderboards')
+          .doc('categories')
+          .collection(result.categories.first.toLowerCase())
+          .doc(user.uid)
+          .set(leaderboardData, SetOptions(merge: true));
+    }
 
     await userRef
         .collection('quiz_results')
